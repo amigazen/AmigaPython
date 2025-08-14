@@ -1,0 +1,12 @@
+unset DEST
+set DEST `requestfile Python:Docs DRAWERSONLY TITLE "Select destination directory" SAVEMODE NOICONS`
+
+if $DEST EQ "*$DEST"
+	echo "ABORTED..."
+else
+	echo "**** Extracting to $DEST... Please wait... ****"
+	lha -F x Python_docs_unpacked.lha $DEST
+	echo "**** Finished! ****"
+endif
+
+unset DEST

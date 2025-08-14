@@ -1,8 +1,14 @@
 This subdirectory contains some Python demo programs.
 
+For more programs, get the main Python archive and extract
+it. It contains lots of examples (most of them don't work
+on the Amiga but anyway).
+
 
 
 classes/        Some examples of how to use classes.
+
+metaclasses/    Python 1.5 metaclasses.
 
 scripts/        Some useful Python scripts that can be put in your
 		command path.  No optional built-in modules needed.

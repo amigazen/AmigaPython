@@ -1,18 +1,18 @@
 """
 High level ARexx interface.
-©1996 Irmen de Jong, disclaimer applies!
+©Irmen de Jong
 
-$VER: ARexx.py 1.2 (17.11.96)
+$VER: ARexx.py 1.5 (3.1.99)
 """
 
-import arexxll
+import ARexxll
 import string
-import dos
+import Dos
 import sys
 
-error = arexxll.error
+error = ARexxll.error
 
-errorstring = arexxll.errorstring
+errorstring = ARexxll.errorstring
 
 # ARexx result codes:
 RC_OK    =  0  # success
@@ -30,7 +30,7 @@ class port:
 	the derived classes below (publicport or privateport)!!!
 	"""
 	def __init__(self,name):
-		self.port = arexxll.port(name)
+		self.port = ARexxll.port(name)
 		self.signal = self.port.signal
 		if name:
 			self.name = self.port.name
@@ -52,6 +52,11 @@ class port:
 				return result
 	def flush(self):
 		while self.port.getmsg(): pass
+	def setstringmsgs(self,flag):
+		self.port.setstringmsgs(flag)
+	def settokenizeline(self,flag):
+		self.port.settokenizeline(flag)
+	
 
 
 class privateport(port):
@@ -111,7 +116,7 @@ class host(publicport):
 			self.setcommand(c,t,d,f)
 	def setcommand(self,cmd,template,defaults,func):
 		if template==None: parser=None
-		else: parser=dos.ArgParser(template)
+		else: parser=Dos.ArgParser(template)
 		self.commands[string.upper(cmd)]=(parser,func)
 		if defaults: self.setdefaults(cmd,defaults)
 	def setdefaults(self,cmd,defaults):
@@ -141,8 +146,8 @@ class host(publicport):
 						res=func(self,m,cmd,parser.parse(args))
 					else:
 						res=func(self,m,cmd,args)
-			except dos.error,str:
-				m.rc=RC_ERROR; m.rc2=str	# ReadArgs() probably failed
+			except Dos.error,str:
+				m.rc=RC_ERROR; m.rc2=str[0]	# ReadArgs() probably failed
 			except:
 				if self.catch:
 					m.rc=RC_ERROR; m.rc2='Unhandled exception '+sys.exc_type+' : '+sys.exc_value
@@ -206,4 +211,15 @@ def std_debug_func(host,msg,cmd,args):
 	print 'RETURNING \'the result\''
 	msg.result='the result'
 	return 1
+
+
+##### MISC UTILITY FUNCTIONS ###########################33
+
+def SendARexxMsg(Port, Message):
+ return privateport().send(Port, Message)
+
+def CallARexxFunc(Func, *Args):
+ return SendARexxMsg('REXX',
+	'"Return '+Func+'('+reduce(lambda x,y: x+','+`y`,Args,'')[1:]+')')
+
 

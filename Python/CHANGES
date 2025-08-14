@@ -1,0 +1,156 @@
+
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+                       AmigaPython Release history 
+
+
+                               Irmen de Jong
+                             irmen@bigfoot.com
+
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+
+
+NOTE:
+Sections marked *SOURCE:* contain info on changes to the source code.
+
+--------------------------------------------------------------------------
+
+
+
+dec. 1995 to dec 1996: version 1.3 releases. History stripped.
+
+(1.3 is no longer supported)
+
+12 jan. 1997	- 1st public release of version 1.4
+		  Some minor additional changes since 1.3.
+		  Includes doslib & ARexx support.
+
+31 jan. 1998	- 2nd public release of version 1.4
+		  Some minor changes. Included patches.
+		  (version 1.5 is in beta).
+
+(1.4 is no longer supported)
+
+
+6 jun. 1998	- Release 1.5.1 build number 8
+		  1st public release of version 1.5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	*SOURCE:*
+	- Major piece of work: based on new 1.5.1 sources
+
+
+20 jun. 1998	- Release 1.5.1 build number 10
+		  Patch release for 1.5.1 #8.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	- Fixes memory allocation bugs. 
+
+
+14 nov. 1998	- Release 1.5.1 build number 14
+		  2nd public release of version 1.5
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	- Import filename is now case sensitive.
+	- amiga module now has crc32 function.
+	- Dos/Doslib python module has more functions.
+	- Revamped Workbench support. Now it is possible to provide
+	  script arguments in the tooltypes, and better support for
+	  data files with a Python icon.
+	- Some minor changes and additions in the docs.
+	- Changed email address and AmigaPython homepage.
+		  
+	*SOURCE:*
+	- Added import filename case check in Python/import.c
+	- Added crc32 function in amiga module.
+	- Added various things to Dos/Doslib module:
+	  GetProgramDir, GetProgramName, Inhibit, SetFileDate, SetOwner,
+	  Info, AddBuffers, AssignAdd, AssignRemove, touch.
+	- Added 'magic tooltypes' in Amiga/wbargs.c
+	- Fixed exception handling bug in site-python/ARexx.py.
+	- Fixed typo ('if'->'elif') in os.py.
+	- Changed `doslib' to `Doslib' and `arexxll' to `ARexxll'.
+
+
+13 dec. 1998	- Release 1.5.1 build number 15
+		  Patch release for 1.5.1 #14.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	*SOURCE:*
+	- Fixes message variables bug in arexxll.
+
+
+28 apr. 1999	- Release 1.5.1 build number 18
+		  (last 1.5.1 version - going to 1.5.2)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	- Added I-Net225 version as a separate download (beta!)
+	- Created lib/lib-dynload directory to help parse for 'exec_prefix' -
+	  the warnings 'can't find... consider setting $PYTHONHOME' when
+	  starting Python from a different location than Python: should be
+	  mostly gone. (The small enhancements to the 'getfullpath' function
+	  in the source code help too, see below).
+	- time.strftime() is now more conforming, but it still doesn't pass
+	  the test :-(
+
+	*SOURCE:*
+	- Moved a bunch of #defines to Include/config.h
+	- Fixed nonfatal bugs in Modules/getpath.c (getfullpath and
+	  calculate_path)
+	- Enhanced getfullpath in Modules/getpath.c
+	- Removed unused files from Amiga/
+	- Added support for I-Net225 throughout the source tree.
+	  (this involved changes to about 20 sourcefiles and a new SMAKEFILE
+	  and SCOPTIONS). By using the correct SMAKEFILE and SCOPTIONS an
+	  AmiTCP version or I-Net225 version can be build.
+	- Added configuration options to the ARexx.py and arexxll modules:
+	  setstringmsgs and settokenizeline.
+	- Added 'Embed' demo on how to embed Python in your own programs.
+	- Added strftime implementation in Amiga/ which is more conforming
+	  to the standard than SAS/C's own version is. Sadly, it still
+	  doesn't pass the test.test_strftime.
+	- Now includes a demo on how to embed Python in your own programs.
+
+
+30 apr. 1999	- Release 1.5.2 build number 1
+		  First 1.5.2 release
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	- Based on official 1.5.2 sources and library.
+
+	*SOURCE:*
+	- Switched to large data model (DATA=FARONLY). This makes the code
+	  bigger & slower, but I can no longer compile AmigaPython with
+	  the near data model (it has too much near data).
+
+
+30 sep. 1999	- Release 1.5.2 build number 2
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	- Prints correct string when command `exit' is issued at the prompt.
+	- More missing 1.5.2 fixes (amiga module).
+	- Finally the new time.strftime passes the test!
+
+	*SOURCE:*
+	- Fixed os.error exception (in amiga module; should have been a
+	  OSError instance since 1.5.2).
+	- Replaced the strftime code again. Now the code is taken from
+	  GNU glibc 2.0.7 and passes the test in test.test_strftime.
+
+
+[ build 3 omitted; that is SlimPython, the stripped version of AmigaPython ]
+
+24 oct. 1999	- Release 1.5.2 build number 4
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	- Fixed amiga.crc32 function to comply with CRC32 standards.
+	  It now has an optional second parameter too: crc starting value.
+	- Inet-225 is no longer supported. See the readme in the INET-225
+	  directory for details.
+
+	*SOURCE:*
+	- Added fully network code free compile possibility.
+	- Replaced amiga/crc32.asm with new version. Faster & compliant.
+	- Removed I-Net support (SCOPTIONS and SMAKEFILE) because I don't
+	  have a DATA=FAR version of Inet's link library.
+	- Removed Modules/main.o from the modules.lib and made it a separate
+	  link file. See next point.
+	- Cleaned up the Embedding code in Embed. That required main.o to
+	  be removed from the modules.lib link library and replacing it with
+	  a smaller version for embedded applications.
+

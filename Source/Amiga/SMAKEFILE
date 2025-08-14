@@ -1,0 +1,48 @@
+AMITCPOBJ= getopt.o timerinit.o gettimeofday.o utime.o envvars.o fmod.o \
+	rexxvars.o crc32.o wbargs.o unixemul.o strerror.o perror.o syslog.o \
+	chmod.o chown.o printuserfault.o dosio_init.o iomode.o isatty.o \
+	_dup.o _dup2.o stat.o _fstat.o fib.o dostat.o access.o stubs.o \
+	_allocufb.o _chkufb.o _close.o _lseek.o _open.o _read.o _write.o fhopen.o \
+	strftime.o sleep.o usleep.o \
+	stackinit.o
+
+
+INET225OBJ = timerinit.o gettimeofday.o utime.o envvars.o fmod.o \
+	rexxvars.o crc32.o wbargs.o unixemul.o sleep.o usleep.o \
+	strftime.o stackinit.o
+
+
+OBJ = envvars.o fmod.o getopt.o \
+	rexxvars.o crc32.o wbargs.o unixemul.o strftime.o stackinit.o
+
+
+
+amigapythonamitcp.lib: $(AMITCPOBJ)
+	-delete >NIL: $@
+	oml $@ a <@<
+$(AMITCPOBJ)
+<
+
+amigapythoninet225.lib: $(INET225OBJ)
+	-delete >NIL: $@
+	oml $@ a <@<
+$(INET225OBJ)
+<
+
+amigapython.lib: $(OBJ)
+	-delete >NIL: $@
+	oml $@ a <@<
+$(OBJ)
+<
+
+
+clean:
+	-delete \#?.lib \#?.o
+
+
+
+stackinit.o: stackinit.c
+	sc stackinit.c DATA=FAR
+
+crc32.o: crc32.asm
+	sc CRC32.asm DEFINE=M68030	;; XXX change to M68000 if compiling for 68000!

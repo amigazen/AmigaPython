@@ -1,0 +1,16 @@
+static void reg_dealloc ( regexobject *re );
+static PyObject *makeresult ( struct re_registers *regs );
+static PyObject *regobj_match ( regexobject *re , PyObject *args );
+static PyObject *regobj_search ( regexobject *re , PyObject *args );
+static PyObject *group_from_index ( regexobject *re , PyObject *index );
+static PyObject *regobj_group ( regexobject *re , PyObject *args );
+static PyObject *regobj_getattr ( regexobject *re , char *name );
+static PyObject *newregexobject ( PyObject *pattern , PyObject *translate , PyObject *givenpat , PyObject *groupindex );
+static PyObject *regex_compile ( PyObject *self , PyObject *args );
+static PyObject *symcomp ( PyObject *pattern , PyObject *gdict );
+static PyObject *regex_symcomp ( PyObject *self , PyObject *args );
+static int update_cache ( PyObject *pat );
+static PyObject *regex_match ( PyObject *self , PyObject *args );
+static PyObject *regex_search ( PyObject *self , PyObject *args );
+static PyObject *regex_set_syntax ( PyObject *self , PyObject *args );
+static PyObject *regex_get_syntax ( PyObject *self , PyObject *args );

@@ -1,0 +1,224 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<!--Converted with LaTeX2HTML 98.2 beta6 (August 14th, 1998)
+original version by:  Nikos Drakos, CBLU, University of Leeds
+* revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
+* with significant contributions from:
+  Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
+<HTML>
+<HEAD>
+<TITLE>Python Tutorial</TITLE>
+<META NAME="description" CONTENT="Python Tutorial">
+<META NAME="keywords" CONTENT="tut">
+<META NAME="resource-type" CONTENT="document">
+<META NAME="distribution" CONTENT="global">
+<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+<LINK REL="STYLESHEET" HREF="tut.css">
+<LINK REL="next" HREF="node1.html">
+</HEAD>
+<BODY bgcolor="#ffffff">
+<div class=navigation>
+<table align=center width="100%" cellpadding=0 cellspacing=2>
+<tr>
+<td><A HREF="node1.html"><img width=32 height=32 align=bottom border=0 alt="next"
+ src="../icons/next.gif"></A></td>
+<td><A HREF="../"><img width=32 height=32 align=bottom border=0 alt="up"
+ src="../icons/up.gif"></A></td>
+<td><img width=32 height=32 align=bottom border=0 alt=""
+ src="../icons/blank.gif"></td>
+<td align=center bgcolor="#99CCFF" width="100%">
+ <b class=title>Python Tutorial</b></td>
+<td><A HREF="node2.html"><img width=32 height=32 align=bottom border=0 alt="contents"
+ src="../icons/contents.gif"></A></td>
+<td><img width=32 height=32 align=bottom border=0 alt=""
+ src="../icons/blank.gif"></td>
+<td><img width=32 height=32 align=bottom border=0 alt=""
+ src="../icons/blank.gif"></td>
+</tr></table><b class=navlabel>Next:</b> <span class=sectref><A HREF="node1.html">Front Matter</A></span>
+<b class=navlabel>Up:</b> <span class=sectref><A HREF="../">Documentation Index</A></span>
+<br><hr></div>
+<!--End of Navigation Panel-->
+
+<P>
+
+<div class=titlepage><center>
+<h1>Python Tutorial</h1>
+<p><b><font size='+2'>Guido van Rossum</font></b></p>
+<p>
+	Corporation for National Research Initiatives (CNRI) 
+<BR>
+1895 Preston White Drive, Reston, Va 20191, USA 
+<BR>
+E-mail: <span class=email>guido@CNRI.Reston.Va.US</span>, <span class=email>guido@python.org</span>
+</p>
+<p><strong>April 30, 1999</strong><br><strong>Release 1.5.2</strong></p>
+<p>
+</center></div>
+
+<P>
+
+<p><hr>
+<!--Table of Child-Links-->
+
+
+<UL>
+<LI><A NAME="tex2html11"
+ HREF="node1.html">Front Matter</A>
+<LI><A NAME="tex2html12"
+ HREF="node2.html">Contents</A>
+<LI><A NAME="tex2html13"
+ HREF="node3.html">1. Whetting Your Appetite </A>
+<UL>
+<LI><A NAME="tex2html14"
+ HREF="node3.html#SECTION003100000000000000000">1.1 Where From Here </A>
+</UL>
+<LI><A NAME="tex2html15"
+ HREF="node4.html">2. Using the Python Interpreter </A>
+<UL>
+<LI><A NAME="tex2html16"
+ HREF="node4.html#SECTION004100000000000000000">2.1 Invoking the Interpreter </A>
+<LI><A NAME="tex2html17"
+ HREF="node4.html#SECTION004200000000000000000">2.2 The Interpreter and Its Environment </A>
+</UL>
+<LI><A NAME="tex2html18"
+ HREF="node5.html">3. An Informal Introduction to Python </A>
+<UL>
+<LI><A NAME="tex2html19"
+ HREF="node5.html#SECTION005100000000000000000">3.1 Using Python as a Calculator </A>
+<LI><A NAME="tex2html20"
+ HREF="node5.html#SECTION005200000000000000000">3.2 First Steps Towards Programming </A>
+</UL>
+<LI><A NAME="tex2html21"
+ HREF="node6.html">4. More Control Flow Tools </A>
+<UL>
+<LI><A NAME="tex2html22"
+ HREF="node6.html#SECTION006100000000000000000">4.1 <tt class=keyword>if</tt> Statements </A>
+<LI><A NAME="tex2html23"
+ HREF="node6.html#SECTION006200000000000000000">4.2 <tt class=keyword>for</tt> Statements </A>
+<LI><A NAME="tex2html24"
+ HREF="node6.html#SECTION006300000000000000000">4.3 The <tt class=function>range()</tt> Function </A>
+<LI><A NAME="tex2html25"
+ HREF="node6.html#SECTION006400000000000000000">4.4 <tt class=keyword>break</tt> and <tt class=keyword>continue</tt> Statements, and
+         <tt class=keyword>else</tt> Clauses on Loops
+         </A>
+<LI><A NAME="tex2html26"
+ HREF="node6.html#SECTION006500000000000000000">4.5 <tt class=keyword>pass</tt> Statements </A>
+<LI><A NAME="tex2html27"
+ HREF="node6.html#SECTION006600000000000000000">4.6 Defining Functions </A>
+<LI><A NAME="tex2html28"
+ HREF="node6.html#SECTION006700000000000000000">4.7 More on Defining Functions </A>
+</UL>
+<LI><A NAME="tex2html29"
+ HREF="node7.html">5. Data Structures </A>
+<UL>
+<LI><A NAME="tex2html30"
+ HREF="node7.html#SECTION007100000000000000000">5.1 More on Lists </A>
+<LI><A NAME="tex2html31"
+ HREF="node7.html#SECTION007200000000000000000">5.2 The <tt class=keyword>del</tt> statement </A>
+<LI><A NAME="tex2html32"
+ HREF="node7.html#SECTION007300000000000000000">5.3 Tuples and Sequences </A>
+<LI><A NAME="tex2html33"
+ HREF="node7.html#SECTION007400000000000000000">5.4 Dictionaries </A>
+<LI><A NAME="tex2html34"
+ HREF="node7.html#SECTION007500000000000000000">5.5 More on Conditions </A>
+<LI><A NAME="tex2html35"
+ HREF="node7.html#SECTION007600000000000000000">5.6 Comparing Sequences and Other Types </A>
+</UL>
+<LI><A NAME="tex2html36"
+ HREF="node8.html">6. Modules </A>
+<UL>
+<LI><A NAME="tex2html37"
+ HREF="node8.html#SECTION008100000000000000000">6.1 More on Modules </A>
+<LI><A NAME="tex2html38"
+ HREF="node8.html#SECTION008200000000000000000">6.2 Standard Modules </A>
+<LI><A NAME="tex2html39"
+ HREF="node8.html#SECTION008300000000000000000">6.3 The <tt class=function>dir()</tt> Function </A>
+<LI><A NAME="tex2html40"
+ HREF="node8.html#SECTION008400000000000000000">6.4 Packages </A>
+</UL>
+<LI><A NAME="tex2html41"
+ HREF="node9.html">7. Input and Output </A>
+<UL>
+<LI><A NAME="tex2html42"
+ HREF="node9.html#SECTION009100000000000000000">7.1 Fancier Output Formatting </A>
+<LI><A NAME="tex2html43"
+ HREF="node9.html#SECTION009200000000000000000">7.2 Reading and Writing Files </A>
+</UL>
+<LI><A NAME="tex2html44"
+ HREF="node10.html">8. Errors and Exceptions </A>
+<UL>
+<LI><A NAME="tex2html45"
+ HREF="node10.html#SECTION0010100000000000000000">8.1 Syntax Errors </A>
+<LI><A NAME="tex2html46"
+ HREF="node10.html#SECTION0010200000000000000000">8.2 Exceptions </A>
+<LI><A NAME="tex2html47"
+ HREF="node10.html#SECTION0010300000000000000000">8.3 Handling Exceptions </A>
+<LI><A NAME="tex2html48"
+ HREF="node10.html#SECTION0010400000000000000000">8.4 Raising Exceptions </A>
+<LI><A NAME="tex2html49"
+ HREF="node10.html#SECTION0010500000000000000000">8.5 User-defined Exceptions </A>
+<LI><A NAME="tex2html50"
+ HREF="node10.html#SECTION0010600000000000000000">8.6 Defining Clean-up Actions </A>
+</UL>
+<LI><A NAME="tex2html51"
+ HREF="node11.html">9. Classes </A>
+<UL>
+<LI><A NAME="tex2html52"
+ HREF="node11.html#SECTION0011100000000000000000">9.1 A Word About Terminology </A>
+<LI><A NAME="tex2html53"
+ HREF="node11.html#SECTION0011200000000000000000">9.2 Python Scopes and Name Spaces </A>
+<LI><A NAME="tex2html54"
+ HREF="node11.html#SECTION0011300000000000000000">9.3 A First Look at Classes </A>
+<LI><A NAME="tex2html55"
+ HREF="node11.html#SECTION0011400000000000000000">9.4 Random Remarks </A>
+<LI><A NAME="tex2html56"
+ HREF="node11.html#SECTION0011500000000000000000">9.5 Inheritance </A>
+<LI><A NAME="tex2html57"
+ HREF="node11.html#SECTION0011600000000000000000">9.6 Private Variables </A>
+<LI><A NAME="tex2html58"
+ HREF="node11.html#SECTION0011700000000000000000">9.7 Odds and Ends </A>
+</UL>
+<LI><A NAME="tex2html59"
+ HREF="node12.html">10. What Now? </A>
+<LI><A NAME="tex2html60"
+ HREF="node13.html">A. Interactive Input Editing and History Substitution
+         </A>
+<UL>
+<LI><A NAME="tex2html61"
+ HREF="node13.html#SECTION0013100000000000000000">A1. Line Editing </A>
+<LI><A NAME="tex2html62"
+ HREF="node13.html#SECTION0013200000000000000000">A2. History Substitution </A>
+<LI><A NAME="tex2html63"
+ HREF="node13.html#SECTION0013300000000000000000">A3. Key Bindings </A>
+<LI><A NAME="tex2html64"
+ HREF="node13.html#SECTION0013400000000000000000">A4. Commentary </A>
+</UL>
+<LI><A NAME="tex2html65"
+ HREF="node14.html">About this document ...</A>
+</UL>
+<!--End of Table of Child-Links-->
+<p>
+<div class=navigation><hr><table align=center width="100%" cellpadding=0 cellspacing=2>
+<tr>
+<td><A HREF="node1.html"><img width=32 height=32 align=bottom border=0 alt="next"
+ src="../icons/next.gif"></A></td>
+<td><A HREF="../"><img width=32 height=32 align=bottom border=0 alt="up"
+ src="../icons/up.gif"></A></td>
+<td><img width=32 height=32 align=bottom border=0 alt=""
+ src="../icons/blank.gif"></td>
+<td align=center bgcolor="#99CCFF" width="100%">
+ <b class=title>Python Tutorial</b></td>
+<td><A HREF="node2.html"><img width=32 height=32 align=bottom border=0 alt="contents"
+ src="../icons/contents.gif"></A></td>
+<td><img width=32 height=32 align=bottom border=0 alt=""
+ src="../icons/blank.gif"></td>
+<td><img width=32 height=32 align=bottom border=0 alt=""
+ src="../icons/blank.gif"></td>
+</tr></table><b class=navlabel>Next:</b> <span class=sectref><A HREF="node1.html">Front Matter</A></span>
+<b class=navlabel>Up:</b> <span class=sectref><A HREF="../">Documentation Index</A></span>
+</div>
+<!--End of Navigation Panel-->
+<ADDRESS>
+<hr>Send comments on this document to <a href="mailto:python-docs@python.org">python-docs@python.org</a>.
+</ADDRESS>
+</BODY>
+</HTML>

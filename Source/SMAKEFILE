@@ -1,0 +1,175 @@
+
+#
+#	Toplevel SMakefile for Python 1.5.
+#
+#	Made by Irmen de Jong, 10 nov. 1995.
+#		updated: 25 march 1996 for use with AmiTCP
+#		updated: 7 may 1996, now uses 4 intermediate link libs 
+#		updated: 27 aug 1996, AMITCP and AMITCP_NET defines
+#		updated: 8 dec 1996, for Python 1.4
+#		updated: 12 jan 1998, for Python 1.5
+#			  (partitioned into 5 parts)
+#		updated: 25 dec 1998, added support for I-Net 225
+#
+#	
+#	This makefile replaces all other makefiles.
+#
+#	THIS IS THE MAKEFILE FOR AMITCP !!!!
+#
+#
+
+
+# ye old progname:
+PROGRAM = Python_030
+
+
+all: $(PROGRAM)
+
+
+#
+# define to use mempools library
+# (use mempools39 to link with V39+ only pools lib => shorter & faster)
+#
+MEMPOOLSLIB=LIB:mempoolsnb.lib
+STARTUP=LIB:c_mempools.o
+
+#
+# define if NOT using mempools library
+#
+#MEMPOOLSLIB=
+#STARTUP=LIB:c.o
+#
+
+#
+# AMIGA EXTENSIONS defines
+# AmiTCP uses 'amigapythonamitcp.lib'
+# I-Net225 uses 'amigapythoninet225.lib'
+# Not using one of them? Choose 'amigapython.lib'
+#
+## AMIGAPYTHONLIBNAM=amigapython.lib
+AMIGAPYTHONLIBNAM=amigapythonamitcp.lib
+## AMIGAPYTHONLIBNAM=amigapythoninet225.lib
+AMIGAPYTHONLIB=Amiga/$(AMIGAPYTHONLIBNAM)
+
+#
+# define if developing new module -> faster turnarounds
+# (add it to the module list if it's finished)
+#
+NEWMODULES =
+
+#
+# Network Protocol Stack link library
+# (AmiTCP needs nothing, I-Net225 needs INET:lib/unixS.lib)
+#
+TCPSTACKLIB=
+## TCPSTACKLIB=INET:lib/unixS.lib
+
+
+#
+# Link library configuration. Change to reflect correct math options etc.
+#
+CLIBS = $(AMIGAPYTHONLIB) $(MEMPOOLSLIB) $(TCPSTACKLIB) LIB:scm881nb.lib LIB:scnb.lib
+
+# Set link options to thy likes.
+# (compiler options can be changed using scopts)
+LINKOPTS = SC BATCH NOICONS
+
+LIBS = Modules/Modules.lib Parser/Parser.lib Python/Python.lib Objects/Objects.lib $(CLIBS)
+
+OBJECTS=Modules/python.o Modules/main.o $(NEWMODULES)
+
+Python.GST: amiga/make_gst.c Include/config.h Include/protos.h SCOPTIONS
+	-delete >NIL: Python.GST
+	-GST >NIL: Python.GST unload
+	-SC amiga/make_gst.c MKGST Python.GST NOOBJNAME
+
+newbuild:
+	@eval `type buildno` + 1 >buildno1
+	-@delete >NIL: buildno
+	-@rename buildno1 buildno
+	@echo "Build number is now `type buildno`"
+		
+#$(PROGRAM): Python.GST $(OBJECTS) $(LIBS) buildno
+#	@echo "Build number is `type buildno` (use 'make newbuild' to increase)"
+#	@SC Modules/getbuildinfo.c DEFINE=BUILD=`type buildno`
+#	phxlnk FROM $(STARTUP) @objects.txt TO $(PROGRAM) $(CLIBS) NODEBUG SMALLCODE 
+#delete >NIL: \#?.tmp 
+
+$(PROGRAM): Python.GST $(OBJECTS) $(LIBS) buildno
+	@echo "Build number is `type buildno` (use 'make newbuild' to increase)"
+	@SC Modules/getbuildinfo.c DEFINE=BUILD=`type buildno`
+	SLINK WITH <<
+TO $(PROGRAM)
+FROM $(STARTUP)
+Modules/getbuildinfo.o
+$(OBJECTS)
+$(LINKOPTS)
+STRIPDEBUG
+LIB $(LIBS)
+<<
+#	-delete >NIL: \#?.tmp 
+
+
+buildno:
+	echo 0 >buildno
+
+debug:
+	SLINK WITH <<
+	TO $(PROGRAM)_debug
+	FROM $(STARTUP)
+	Modules/getbuildinfo.o
+	$(OBJECTS)
+	$(LINKOPTS)
+	LIB $(LIBS)
+	<<
+	-delete >NIL: \#?.tmp 
+	
+clean:
+	-delete Parser/\#?.(o|lib) quiet
+	-delete Objects/\#?.(o|lib) quiet
+	-delete Modules/\#?.(o|lib) quiet
+	-delete Python/\#?.(o|lib) quiet
+	-delete $(PROGRAM) \#?.tmp QUIET
+	-delete $(AMIGAPYTHONLIB)
+	-delete Amiga/\#?.(o|lib)
+	-delete Python.GST >NIL:
+
+
+Modules/Modules.lib: Modules
+	@echo "******************** ENTERING MODULES/ *********************N"
+	execute <<
+cd Modules
+smake Modules.lib
+<<
+	@echo "******************** LEAVING MODULES/  *********************N"
+
+Parser/Parser.lib: Parser
+	@echo "******************** ENTERING PARSER/ *********************N"
+	execute <<
+cd Parser
+smake Parser.lib
+<<
+	@echo "******************** LEAVING PARSER/  *********************N"
+Python/Python.lib: Python
+	@echo "******************** ENTERING PYTHON/ *********************N"
+	execute <<
+cd Python
+smake Python.lib
+<<
+	@echo "******************** LEAVING PYTHON/  *********************N"
+Objects/Objects.lib: Objects
+	@echo "******************** ENTERING OBJECTS/ *********************N"
+	execute <<
+cd Objects
+smake Objects.lib
+<<
+	@echo "******************** LEAVING OBJECTS/  *********************N"
+
+$(AMIGAPYTHONLIB): Amiga
+	@echo "******************** ENTERING Amiga/ *********************N"
+	execute <<
+cd Amiga
+smake $(AMIGAPYTHONLIBNAM)
+<<
+	@echo "******************** LEAVING Amiga/  *********************N"
+

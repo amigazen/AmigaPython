@@ -1,13 +1,16 @@
 """
 AMIGA LIBRARY INTERFACE FOR dos.library
-©1996 Irmen de Jong, disclaimer applies!
+©1996,1997,1998 Irmen de Jong, disclaimer applies!
 
-$VER: dos.py 1.1 (17.11.96)
+$VER: Dos.py 1.2 (27.9.98)
 """
 
 
 import string
-from doslib import *
+import os,time
+import errno
+
+from Doslib import *
 
 
 # Bits that signal you that a user has issued a break
@@ -46,6 +49,35 @@ FORMAT_INT	= 1	# yy-mm-dd
 FORMAT_USA	= 2	# mm-dd-yy
 FORMAT_CDN	= 3	# dd-mm-yy
 
+
+### EXAMINE struct members (FileInfoBlock)
+fib_FileName	= 0
+fib_Size		= 1
+fib_DirEntryType= 2		# if <0: file, if >0: dir
+fib_Protection	= 3
+fib_DiskKey		= 4
+fib_NumBlocks	= 5
+fib_Date		= 6
+fib_Comment		= 7
+fib_OwnerUID	= 8
+fib_OwnerGID	= 9
+
+
+### INFO struct members (InfoData)
+id_NumSoftErrors	= 0
+id_UnitNumber		= 1
+id_DiskState		= 2		# see defines below
+id_NumBlocks		= 3
+id_NumBlocksUsed	= 4
+id_BytesPerBlock	= 5
+id_DiskType			= 6		# 4-byte FileSystem type code
+#id_VolumeNode  not used in Python
+id_InUse			= 7		# flag, zero if not in use
+
+### INFO struct DiskState types
+ID_WRITE_PROTECTED	= 80
+ID_VALIDATING		= 81
+ID_VALIDATED		= 82
 
 
 #### ARGPARSER ##################################
@@ -156,3 +188,38 @@ class ArgParser:
 			raise ValueError,'clashing keywords'
 
 		return (defdict,tuple(types))
+
+
+
+
+##################### Various Functions #################
+
+def touch(file, tme=None):
+	if not tme:
+		tme=time.time()
+	tme = time2DS(tme)
+	# first, check if the file exists
+	try:
+		os.stat(file)
+		# file exists... continue
+	except os.error, x:
+		if(x[0]==errno.ENOENT):
+			# file does not exist, create it first
+			open(file,'w')
+		else:
+			# other error...
+			raise os.error,x
+
+	# now, set the filedate
+	SetFileDate(file,tme)
+
+
+def AddBuffers(drive, buffers):
+	return os.system('c:addbuffers >NIL: "%s" %d'%(drive,buffers))
+
+def AssignAdd(name, target):
+	return os.system('c:assign >NIL: "%s" "%s" ADD'%(name,target))
+
+def AssignRemove(name):
+	return os.system('c:assign >NIL: "%s" REMOVE'%name)
+

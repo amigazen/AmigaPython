@@ -1,0 +1,227 @@
+
+README text for the source code for Amiga Python 1.5
+
+
+Contents:
+----------
+ Requirements
+ Installation/Build instructions
+ AmiTCP / I-Net225 / No Network versions
+ 68000 or 68010 version
+ Changing other compiler options
+ Notes
+ IMPORTANT
+ THANKS
+ Disclaimer & copyright.
+
+
+
+Requirements
+------------
+
+- SAS/C 6.5x
+  Sorry but you must change *A LOT* to compile with other compilers.
+  Please use the latest version of SAS/C (6.58).
+
+- Networking SDK: AmiTCP SDK version 4.3, on Aminet (in comm/tcp).
+  Maybe version 3 works too (haven't tried it).
+
+  Sorry but the INET-225 support is gone for now. Details are in the
+  INET-225 directory.
+
+- Some 8 Mb free harddisk space to compile all code.
+
+- Regular AmigaPython distribution to actually run AmigaPython,
+  because it contains the needed library files and testset.
+
+
+
+Installation/Build instructions
+-------------------------------
+
+First extract the archive.  Duh, you probably figured this out otherwise
+you would't be reading this.
+
+Copy the contents of the LinkLib/ directory to LIB:.  These files are my
+memory pools startup and library code to accelerate malloc() and other
+memory allocation functions.
+
+Then cd to the root directory containing the main SMAKEFILE, and type
+'smake'.  After some time you'll end up with a Python executable in this
+drawer called 'Python_030'.
+
+You should ignore the warnings.
+
+When compilation finishes, RUN THE TESTSET with your new executable!  This
+is very important!  The testset is part of the Python library and you
+should look in the Python distribution for these files, and more info
+(Aminet:  dev/lang/Python15.lha).
+
+The executable should be placed in the Python:  directory, which will be
+created by the installer script from the above mentioned distribution.
+Usually you would rename the Python executable to 'Python'.
+
+
+
+AmiTCP / I-Net225 / No Network versions
+---------------------------------------
+
+By default, AmiTCP is assumed to be used as TCP stack.  I've added some
+checks in the code to make sure -at runtime- that AmiTCP exists.  If it
+doesn't, AmigaPython runs fine but you just can't use any network
+functionality.
+
+If you would like to have a fully "clean" "No-network" version, do the
+following:
+- Copy SCOPTIONS_NONET to SCOPTIONS, and SMAKEFILE_NONET to SMAKEFILE.
+- Change in Modules/SMAKEFILE the $(NETOBJECTS) to $(OBJECTS) where
+   indicated.
+- Recompile everything.
+This will solve any problems that could be caused by network/AmiTCP code,
+but it also makes AmigaPython less powerful.
+
+Sorry but the INET-225 support is gone for now.  Details are in the
+INET-225 directory.
+
+
+68000 or 68010 version
+----------------------
+
+AmigaPython doesn't run on a 68000 or 68010 CPU out-of-the-box.  You'll
+have to change compiler options to CPU=ANY and MATH=IEEE (instead of
+CPU=68030 and MATH=881).  BUT there is at least one other place I know of
+that requires additional changes to make it work:  the crc32 code in the
+Amiga directory.  You'll have to edit the SMAKEFILE in the Amiga directory
+and look for a comment "...change to M68000...".  Change the DEFINE on that
+line accordingly.  Otherwise the 68020+ version is assembled...  KRASH.
+You probably want to change the "Python_030" name in the SMAKEFILE to
+"Python_000" too.
+
+AmigaPython should run nicely out-of-the-box on a 68020 system provided it
+also has a FPU (68881/2).  I can't test this myself so please notify me if
+I'm wrong.
+
+
+Changing other compiler options
+-------------------------------
+
+In the rare event that you would want to change compiler options and things
+like that, look in the following files:  SCOPTIONS, SMAKEFILE,
+include/config.h, include/config.c, include/osdefs.h.  If you change
+anything you'd better rebuild the thing from scratch.  (type 'smake clean'
+and then 'smake').
+
+
+Notes
+-----
+
+Documentation and library files are NOT included.  Grab the distribution
+release from Aminet (dev/lang/Python.lha) to get them.  Only then you'll
+be able to actually do something with Python.
+
+Ofcourse the main Python site (http://www.python.org/) is a vital source of
+information.
+
+Some tests from the testset fail, others are skipped because they cannot
+run on the Amiga.  The crypt, grp, pwd, select and socket tests fail if
+bsdsocket.library (AmiTCP) or socket.library (I-Net 225) and/or
+usergroup.library cannot be opened.
+
+Contact me for any information (irmen@bigfoot.com).
+My Amiga Python Homepage: http://www.bigfoot.com/~irmen/python.html
+
+
+
+*** IMPORTANT ***
+-----------------
+
+I don't fancy ten different versions of AmigaPython floating around.  So
+*please* if you made a change or enhancement or fix, contact me and if it's
+good it will be merged in the `official' AmigaPython version (mine).  That
+way, everyone can profit from it.  Thanks!
+
+
+*** THANKS ***
+--------------
+
+Ofcourse this product could never have happened without the support of various
+people. Amongst others I'd like to thank:
+
+Guido van Rossum - for creating Python in the first place
+Mike Meyer for his various suggestions and problem reports
+Kent Polk for his various suggestions and problem reports
+Lyster E. Wick for his various contributions (NewIcons/ARexx/WB/bugreports)
+Marc Christiansen for his detailed description of the strftime and
+  amiga.crc32 problems (and persuading me to fix them)
+Bablos to make me start polishing up the embedded python code.
+
+And ofcourse thanks to my friends who supported me in the first phase of
+this project and pushed me to continue this work (that was LONG ago, in the
+Python 1.2 days).
+
+If you think your name is missing here, drop me a line!
+
+To every AmigaPython user out there: thanks for your interest!
+
+
+
+					Irmen de Jong
+					irmen@bigfoot.com
+					October 19, 1999
+
+
+
+
+
+	DISCLAIMER:
+
+I  tried  to  make this program error-free and safe to use, for your and my
+own  benefit.   This  disclamer  applies  to the (small) part of the code I
+wrote  myself.   The  disclamer  from  the  copyright notice from Stichting
+Mathematisch  Centrum  (included  below)  applies  to the rest of the code,
+written by Guido van Rossum and others.
+  
+I  provide  this program "as is".  USE THE PROGRAM AT YOUR OWN RISK.  In no
+event will I be liable for damages to you - whether they arise from the use
+of  this  program  or  the  inability to use it, whether they are direct or
+consequential,  including,  but  not  limited  to,  the loss of data or the
+generation of inaccurate data.  No warranties are made.
+
+
+		Irmen de Jong.
+
+
+
+
+
+	PYTHON COPYRIGHT NOTICE:
+
+
+Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
+The Netherlands.
+
+                        All Rights Reserved
+
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
+provided that the above copyright notice appear in all copies and that
+both that copyright notice and this permission notice appear in
+supporting documentation, and that the names of Stichting Mathematisch
+Centrum or CWI or Corporation for National Research Initiatives or
+CNRI not be used in advertising or publicity pertaining to
+distribution of the software without specific, written prior
+permission.
+
+While CWI is the initial source for this software, a modified version
+is made available by the Corporation for National Research Initiatives
+(CNRI) at the Internet address ftp://ftp.python.org.
+
+STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
+CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
+DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+

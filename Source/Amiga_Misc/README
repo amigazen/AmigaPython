@@ -1,0 +1,4 @@
+This drawer contains Amiga specific code and other stuff.
+
+Also  check  out the lib/site-python directory, it contains `site-specific'
+(=Amiga specific) python modules.

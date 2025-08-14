@@ -1,0 +1,9 @@
+static PyObject *binascii_a2b_uu ( PyObject *self , PyObject *args );
+static PyObject *binascii_b2a_uu ( PyObject *self , PyObject *args );
+static PyObject *binascii_a2b_base64 ( PyObject *self , PyObject *args );
+static PyObject *binascii_b2a_base64 ( PyObject *self , PyObject *args );
+static PyObject *binascii_a2b_hqx ( PyObject *self , PyObject *args );
+static PyObject *binascii_rlecode_hqx ( PyObject *self , PyObject *args );
+static PyObject *binascii_b2a_hqx ( PyObject *self , PyObject *args );
+static PyObject *binascii_rledecode_hqx ( PyObject *self , PyObject *args );
+static PyObject *binascii_crc_hqx ( PyObject *self , PyObject *args );

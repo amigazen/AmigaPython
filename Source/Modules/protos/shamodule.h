@@ -1,0 +1,14 @@
+static void longReverse ( SHA_INT32 *buffer , int byteCount , int Endianness );
+static void SHAcopy ( SHAobject *src , SHAobject *dest );
+static void sha_transform ( SHAobject *sha_info );
+static void sha_init ( SHAobject *sha_info );
+static void sha_update ( SHAobject *sha_info , SHA_BYTE *buffer , int count );
+static void sha_final ( unsigned char digest [20 ], SHAobject *sha_info );
+static SHAobject *newSHAobject ( void );
+static void SHA_dealloc ( PyObject *ptr );
+static PyObject *SHA_copy ( SHAobject *self , PyObject *args );
+static PyObject *SHA_digest ( SHAobject *self , PyObject *args );
+static PyObject *SHA_hexdigest ( SHAobject *self , PyObject *args );
+static PyObject *SHA_update ( SHAobject *self , PyObject *args );
+static PyObject *SHA_getattr ( PyObject *self , char *name );
+static PyObject *SHA_new ( PyObject *self , PyObject *args , PyObject *kwdict );

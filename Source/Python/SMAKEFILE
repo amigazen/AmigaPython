@@ -1,0 +1,76 @@
+
+COMPILERSTRING=*" [SAS/C 6.x]*"
+
+
+OBJECTS = modsupport.o pythonrun.o errors.o bltinmodule.o \
+	ceval.o compile.o frozen.o getargs.o \
+	getcompiler.o getcopyright.o getmtime.o \
+	getversion.o getplatform.o graminit.o import.o \
+	importdl.o marshal.o structmember.o sysmodule.o \
+	traceback.o sigcheck.o hypot.o mystrtoul.o pystate.o
+
+Python.lib: $(OBJECTS)
+	-delete >NIL: Python.lib
+	oml Python.lib a <@<
+$(OBJECTS)
+<
+
+
+# sigcheck.o: sigcheck.c
+#	SC sigcheck.c $(COPTS) NOOPTINLINE
+#
+
+bltinmodule.o : bltinmodule.c /include/mymath.h /include/eval.h /include/compile.h /include/node.h /include/Python.h
+
+ceval.o : ceval.c /include/thread.h /include/opcode.h /include/eval.h /include/frameobject.h /include/compile.h /include/Python.h
+	SC ceval.c DEFINE=MAX_RECURSION_DEPTH=1000 NOOPTGLOBAL
+
+compile.o : compile.c /include/structmember.h /include/opcode.h /include/compile.h /include/graminit.h /include/token.h /include/node.h /include/Python.h
+
+errors.o : errors.c /include/Python.h
+
+fmod.o : fmod.c /include/mymath.h /include/config.h
+
+frozen.o : frozen.c /include/Python.h
+
+getargs.o : getargs.c /include/Python.h
+
+getcompiler.o : getcompiler.c /include/Python.h
+	sc getcompiler.c DEFINE "COMPILER=$(COMPILERSTRING)"
+
+getcopyright.o : getcopyright.c /include/Python.h
+
+getmtime.o : getmtime.c /include/myproto.h /include/config.h
+
+getplatform.o : getplatform.c 
+	sc getplatform.c DEFINE=PLATFORM="amiga"
+
+getversion.o : getversion.c /include/patchlevel.h /include/Python.h
+
+graminit.o : graminit.c /include/grammar.h /include/pgenheaders.h
+
+hypot.o : hypot.c /include/mymath.h /include/myproto.h /include/config.h
+
+import.o : import.c importdl.h /include/osdefs.h /include/eval.h /include/compile.h /include/marshal.h /include/errcode.h /include/token.h /include/node.h /include/Python.h
+
+importdl.o : importdl.c importdl.h /include/osdefs.h /include/Python.h
+
+marshal.o : marshal.c /include/marshal.h /include/compile.h /include/longintrepr.h /include/Python.h
+
+modsupport.o : modsupport.c /include/Python.h
+
+mystrtoul.o : mystrtoul.c 
+
+pyfpe.o : pyfpe.c /include/pyfpe.h /include/config.h
+
+pystate.o : pystate.c /include/Python.h
+
+pythonrun.o : pythonrun.c /include/thread.h /include/marshal.h /include/eval.h /include/compile.h /include/errcode.h /include/parsetok.h /include/node.h /include/grammar.h /include/Python.h
+
+sigcheck.o : sigcheck.c /include/Python.h
+
+structmember.o : structmember.c /include/structmember.h /include/Python.h
+
+sysmodule.o : sysmodule.c /include/osdefs.h /include/Python.h
+
+traceback.o : traceback.c /include/osdefs.h /include/structmember.h /include/frameobject.h /include/compile.h /include/Python.h

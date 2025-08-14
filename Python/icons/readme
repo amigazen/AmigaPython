@@ -4,3 +4,7 @@ This directory contains some sample icons.
 def_py.info is for python source files (.py)
 def_pyc.info is for python bytecode files (.pyc)
 
+
+The NewIcons drawer contains the same icons in NewIcon format.
+
+

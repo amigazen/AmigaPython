@@ -1,0 +1,18 @@
+static void string_dealloc ( PyObject *op );
+static int string_print ( PyStringObject *op , FILE *fp , int flags );
+static PyObject *string_repr ( PyStringObject *op );
+static int string_length ( PyStringObject *a );
+static PyObject *string_concat ( PyStringObject *a , PyObject *bb );
+static PyObject *string_repeat ( PyStringObject *a , int n );
+static PyObject *string_slice ( PyStringObject *a , int i , int j );
+static PyObject *string_item ( PyStringObject *a , int i );
+static int string_compare ( PyStringObject *a , PyStringObject *b );
+static long string_hash ( PyStringObject *a );
+static int string_buffer_getreadbuf ( PyStringObject *self , int index , const void **ptr );
+static int string_buffer_getwritebuf ( PyStringObject *self , int index , const void **ptr );
+static int string_buffer_getsegcount ( PyStringObject *self , int *lenp );
+static int string_buffer_getcharbuf ( PyStringObject *self , int index , const char **ptr );
+static PyObject *getnextarg ( PyObject *args , int arglen , int *p_argidx );
+static int formatfloat ( char *buf , int flags , int prec , int type , PyObject *v );
+static int formatint ( char *buf , int flags , int prec , int type , PyObject *v );
+static int formatchar ( char *buf , PyObject *v );

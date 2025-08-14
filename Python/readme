@@ -1,9 +1,9 @@
 
 
-                           PYTHON 1.4 RELEASE 2
+                               PYTHON 1.5.2
                           NOTES ON THE AMIGA PORT
 
-                             January 31, 1998.
+                             October 24, 1999.
 
 	
            Conversion and Amiga specific code by Irmen de Jong.
@@ -23,8 +23,7 @@
 	1. What's new?	
 	2. General remarks.
 	3. Troubleshooting.
-	4. Future.
-	5. Modification history.
+	4. Thanks.
 
 
 +----------------------+
@@ -33,18 +32,12 @@
 |                      |
 +----------------------+
 
-IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.4 Jan 12 1997):
+IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.5.2 build 1):
 
-    - Included the bugfixes which were available as a patch file, see below.
-    - Some minor other fixes and changes.
-    - Distributing the source code along with this archive.
-      Look for `Python14_Src.lha' in the same place.
-    - Recompiled with SAS/C 6.58.
-
-  Fixed bugs:
-    - possible enforcer hit or crash at exit (caused by wrong mempools code)
-    - roundoff errors in mathmodule. random.py works again
-    - readlink code (os.readlink) now works correctly
+    - Prints correct string when command `exit' is issued at the prompt.
+    - Fixed some missing 1.5.2 issues, like the os.error exception type.
+    - A new time.strftime which passes the test.
+    - Fixed amiga.crc32 function to comply with CRC32 standards.
 
 
 +----------------------+
@@ -53,39 +46,50 @@ IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.4 Jan 12 1997):
 |                      |
 +----------------------+
 
-* All tests in Lib/test ran successfully with my version.
+* The MAIN PYTHON SITE is <http://www.python.org>. All general documentation
+  can be obtained from here (Python tutorial, language reference, library
+  reference and much more).
+
+* The above mentioned documentation is also available on Aminet, as
+  dev/lang/Python152_Doc.lha.
+
+* The AmigaPython homepage is at http://www.bigfoot.com/~irmen/python.html
+  (note the new address!). Check it out for news, future plans, bugs etc.
+  You can also obtain the beta I-Net 225 version here.
+
+* In the `Docs/Amiga' directory you can find the docs for the Amiga specific
+  modules and features. Read them, they contain vital information!
+
+* The Python library contains an extensive test set.
   To try it yourself, type (after installation):
-  cd Python:lib/test
-  //Python -c "import autotest"  (and have patience...)
-  //Python -c "import autotest"  (and have patience...)
+	Python -c "import test.autotest" (and have patience...)
+	Python -c "import test.autotest" (and have patience...)
   (Yes: do it TWICE because the generated .pyc files need to be checked too).
-  Both runs should report 'all tests OK'.
+  (You can also start the RunTest.py script from the Workbench).
+  Some tests cannot run on the Amiga - they will be skipped.
+  The report at the end should say something like:
+	31 tests OK.
+	18 tests skipped:  .....
+  If you don't start AmiTCP first, test_socket and test_select will fail.
+  If usergroup.library cannot be opened, crypt, grp and pwd will fail.
 
 * To  see  some  command  line  options,  use  the -?  option, or any other
   unrecognised option.
 
-* The  `Docs'  directory  contains  2 text files regarding regular expression
-  syntax,  and  some  other  documents.   You might want to copy other python
-  documentation in here.
-
-* In the `Docs/Amiga' directory you can find the docs for the Amiga specific
-  modules and features. Read them, they contain vital information!
+* To run a speed benchmark, type:
+	Python -c "import test.pystone; test.pystone.main()"
+  and have some patience. On my system, I get 366 pystones/second.
 
 * In the `Icons' directory there are some icon suggestions.
   def_py.info is an icon for Python source files (.py)
   def_pyc.info is an icon for Pytnon bytecode files (.pyc)
 
 * The following modules are built-in in this release:
-	amiga		arexxll		array		binascii
-	cmath		crypt		doslib		environment
-	errno		grp		imp		marshal
-	math		md5		new		operator
-	pwd		regex		rotor		select
-	socket		soundex		strop		struct
-	sys		syslog		time		timing
-	urlop
+  ARexxll Doslib amiga array binascii cPickle cStringIO cmath crypt
+  environment errno grp imp marshal math md5 new operator pcre pwd regex
+  rotor select sha socket soundex strop struct sys syslog time
 
-  Amiga specific: amiga, arexxll, doslib, environment
+  Amiga specific: amiga, ARexxll, Doslib, environment
   Needs usergroup.library: crypt, grp, pwd.
   Needs AmiTCP's bsdsocket.library: select, socket, syslog.
 
@@ -93,13 +97,7 @@ IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.4 Jan 12 1997):
   Amiga  related  questions  about  Python,  or  just  for fun.  General
   questions are better asked on the usenet newsgroup comp.lang.python.  A lot
   of   information,   including  an  online  manual,  can  be  obtained  from
-  <http://www.python.org/>,  or  <http://www.cwi.nl/www.python.org/>  if  your
-  site is close to the Netherlands.  Read the FAQ before asking!
-
-* Version 1.3 is no longer supported by me. Please upgrade to 1.4.
-
-* Version 1.5 has already been released.  Amiga Python 1.5 is at the time
-  of writing in beta. 
+  <http://www.python.org/>. Read the FAQ before asking!
 
 
 +-----------------------+
@@ -117,14 +115,7 @@ IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.4 Jan 12 1997):
 
 * When I start python, I get "This program requires a math co-processor"!
 
-  You have installed the wrong version. Pick the one with IEEE math.
-
-* Python seems so slow!
-
-  This  is  because Python is an interpreted language.  Some programs execute
-  slow because of this.  Other programs can run fast, because they are written
-  better, or make heavy use of the fast built-in (compiled) modules. Keep in
-  mind that function calls in Python have quite big overhead.
+  You should upgrade your computer to at least a 68030 with a FPU.
 
 * I   get   "Couldn't   open   bsdsocket.library"   or   "Couldn't   open
   usergroup.library" errors!
@@ -144,46 +135,42 @@ IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.4 Jan 12 1997):
   The default l:queue-handler is buggy.  Make sure you have installed a fixed
   l:queue-handler (I'm using util/sys/HWGQueue.lha from Aminet)
 
+* I cannot import Dos or ARexx!
+
+  Try `import site' first.
+
 * Other errors
 
-  Mail me at ijong@gak.nl with a clear description of the problem.
+  Mail me at irmen@bigfoot.com with a clear description of the problem.
 
 
-+----------------------+
-|                      |
-|  4. Future           |
-|                      |
-+----------------------+
++-----------------------+
+|                       |
+|  4. Thanks            |
+|                       |
++-----------------------+
 
-A bunch of ideas which might be implemented someday in the future:
-   - interfaces to other Amiga libraries
-   - GUI module for building python apps with a GUI
-   - Support for other networking packages like I-Net
-   - Use Executive's API (sysinfo.library, if available) for process stuff?
-   - split python in several shared libraries
-   - bugfixes (are there any bugs? Let me know)
+Ofcourse this product could never have happened without the support of various
+people. Amongst others I'd like to thank:
 
+Guido van Rossum - for creating Python in the first place
+Mike Meyer for his various suggestions and problem reports
+Kent Polk for his various suggestions and problem reports
+Lyster E. Wick for his various contributions (NewIcons/ARexx/WB/bugreports)
+Marc Christiansen for his detailed description of the strftime and
+  amiga.crc32 problems (and persuading me to fix them)
+Bablos to make me start polishing up the embedded python code.
 
-+---------------+
-|               |
-|  5. History   |
-|               |
-+---------------+
+And ofcourse thanks to my friends who supported me in the first phase of
+this project and pushed me to continue this work (that was LONG ago, in the
+Python 1.2 days).
 
+If you think your name is missing here, drop me a line!
 
-dec. 1995 to dec 1996: version 1.3 releases. History stripped.
-1.3 is no longer supported.
+To every AmigaPython user out there: thanks for your interest!
 
-12 jan. 1997	- 1st public release of version 1.4
-		  Some minor additional changes since 1.3.
-		  Includes doslib & ARexx support.
-
-31 jan. 1998	- 2nd public release of version 1.4
-		  Some minor changes. Included patches.
-		  (version 1.5 is in beta).
 
 
 
 					Irmen de Jong
-					(ijong@gak.nl)
-
+					(irmen@bigfoot.com)
