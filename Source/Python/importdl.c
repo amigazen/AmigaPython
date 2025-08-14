@@ -1,3 +1,4 @@
+
 /* Support for dynamic loading of extension modules */
 
 #include "Python.h"
@@ -18,10 +19,7 @@ extern dl_funcptr _PyImport_GetDynLoadFunc(const char *name,
 
 
 PyObject *
-_PyImport_LoadDynamicModule(name, pathname, fp)
-	char *name;
-	char *pathname;
-	FILE *fp;
+_PyImport_LoadDynamicModule(char *name, char *pathname, FILE *fp)
 {
 	PyObject *m, *d, *s;
 	char *lastdot, *shortname, *packagecontext;

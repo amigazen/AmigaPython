@@ -1,3 +1,4 @@
+
 /* Buffer object implementation */
 
 #include "Python.h"
@@ -14,15 +15,9 @@ typedef struct {
 #endif
 } PyBufferObject;
 
-#include "protos/bufferobject.h"
-
 
 static PyObject *
-_PyBuffer_FromMemory(base, ptr, size, readonly)
-	PyObject *base;
-	void *ptr;
-	int size;
-	int readonly;
+_PyBuffer_FromMemory(PyObject *base, void *ptr, int size, int readonly)
 {
 	PyBufferObject * b;
 
@@ -49,12 +44,8 @@ _PyBuffer_FromMemory(base, ptr, size, readonly)
 }
 
 static PyObject *
-_PyBuffer_FromObject(base, offset, size, proc, readonly)
-	PyObject *base;
-	int offset;
-	int size;
-	getreadbufferproc proc;
-	int readonly;
+_PyBuffer_FromObject(PyObject *base, int offset, int size,
+                     getreadbufferproc proc, int readonly)
 {
 	PyBufferProcs *pb = base->ob_type->tp_as_buffer;
 	void *p;
@@ -92,10 +83,7 @@ _PyBuffer_FromObject(base, offset, size, proc, readonly)
 
 
 PyObject *
-PyBuffer_FromObject(base, offset, size)
-	PyObject *base;
-	int offset;
-	int size;
+PyBuffer_FromObject(PyObject *base, int offset, int size)
 {
 	PyBufferProcs *pb = base->ob_type->tp_as_buffer;
 
@@ -112,10 +100,7 @@ PyBuffer_FromObject(base, offset, size)
 }
 
 PyObject *
-PyBuffer_FromReadWriteObject(base, offset, size)
-	PyObject *base;
-	int offset;
-	int size;
+PyBuffer_FromReadWriteObject(PyObject *base, int offset, int size)
 {
 	PyBufferProcs *pb = base->ob_type->tp_as_buffer;
 
@@ -133,25 +118,21 @@ PyBuffer_FromReadWriteObject(base, offset, size)
 }
 
 PyObject *
-PyBuffer_FromMemory(ptr, size)
-	void *ptr;
-	int size;
+PyBuffer_FromMemory(void *ptr, int size)
 {
 	return _PyBuffer_FromMemory(NULL, ptr, size, 1);
 }
 
 PyObject *
-PyBuffer_FromReadWriteMemory(ptr, size)
-	void *ptr;
-	int size;
+PyBuffer_FromReadWriteMemory(void *ptr, int size)
 {
 	return _PyBuffer_FromMemory(NULL, ptr, size, 0);
 }
 
 PyObject *
-PyBuffer_New(size)
-	int size;
+PyBuffer_New(int size)
 {
+	PyObject *o;
 	PyBufferObject * b;
 
 	if (size < 0) {
@@ -160,10 +141,10 @@ PyBuffer_New(size)
 		return NULL;
 	}
 	/* PyObject_New is inlined */
-	b = (PyBufferObject *) PyObject_MALLOC(sizeof(*b) + size);
-	if ( b == NULL )
+	o = PyObject_MALLOC(sizeof(*b) + size);
+	if ( o == NULL )
 		return PyErr_NoMemory();
-	PyObject_INIT((PyObject *)b, &PyBuffer_Type);
+	b = (PyBufferObject *) PyObject_INIT(o, &PyBuffer_Type);
 
 	b->b_base = NULL;
 	b->b_ptr = (void *)(b + 1);
@@ -173,23 +154,20 @@ PyBuffer_New(size)
 	b->b_hash = -1;
 #endif
 
-	return (PyObject *) b;
+	return o;
 }
 
 /* Methods */
 
 static void
-buffer_dealloc(self)
-	PyBufferObject *self;
+buffer_dealloc(PyBufferObject *self)
 {
 	Py_XDECREF(self->b_base);
 	PyObject_DEL(self);
 }
 
 static int
-buffer_compare(self, other)
-	PyBufferObject *self;
-	PyBufferObject *other;
+buffer_compare(PyBufferObject *self, PyBufferObject *other)
 {
 	int len_self = self->b_size;
 	int len_other = other->b_size;
@@ -204,36 +182,34 @@ buffer_compare(self, other)
 }
 
 static PyObject *
-buffer_repr(self)
-	PyBufferObject *self;
+buffer_repr(PyBufferObject *self)
 {
 	char buf[300];
 	char *status = self->b_readonly ? "read-only" : "read-write";
 
 	if ( self->b_base == NULL )
 	{
-		sprintf(buf, "<%s buffer ptr %lx, size %d at %lx>",
+		sprintf(buf, "<%s buffer ptr %p, size %d at %p>",
 			status,
-			(long)self->b_ptr,
+			self->b_ptr,
 			self->b_size,
-			(long)self);
+			self);
 	}
 	else
 	{
-		sprintf(buf, "<%s buffer for %lx, ptr %lx, size %d at %lx>",
+		sprintf(buf, "<%s buffer for %p, ptr %p, size %d at %p>",
 			status,
-			(long)self->b_base,
-			(long)self->b_ptr,
+			self->b_base,
+			self->b_ptr,
 			self->b_size,
-			(long)self);
+			self);
 	}
 
 	return PyString_FromString(buf);
 }
 
 static long
-buffer_hash(self)
-	PyBufferObject *self;
+buffer_hash(PyBufferObject *self)
 {
 	register int len;
 	register unsigned char *p;
@@ -266,8 +242,7 @@ buffer_hash(self)
 }
 
 static PyObject *
-buffer_str(self)
-	PyBufferObject *self;
+buffer_str(PyBufferObject *self)
 {
 	return PyString_FromStringAndSize(self->b_ptr, self->b_size);
 }
@@ -275,16 +250,13 @@ buffer_str(self)
 /* Sequence methods */
 
 static int
-buffer_length(self)
-	PyBufferObject *self;
+buffer_length(PyBufferObject *self)
 {
 	return self->b_size;
 }
 
 static PyObject *
-buffer_concat(self, other)
-	PyBufferObject *self;
-	PyObject *other;
+buffer_concat(PyBufferObject *self, PyObject *other)
 {
 	PyBufferProcs *pb = other->ob_type->tp_as_buffer;
 	char *p1;
@@ -336,9 +308,7 @@ buffer_concat(self, other)
 }
 
 static PyObject *
-buffer_repeat(self, count)
-	PyBufferObject *self;
-	int count;
+buffer_repeat(PyBufferObject *self, int count)
 {
 	PyObject *ob;
 	register char *p;
@@ -365,9 +335,7 @@ buffer_repeat(self, count)
 }
 
 static PyObject *
-buffer_item(self, idx)
-	PyBufferObject *self;
-	int idx;
+buffer_item(PyBufferObject *self, int idx)
 {
 	if ( idx < 0 || idx >= self->b_size )
 	{
@@ -378,10 +346,7 @@ buffer_item(self, idx)
 }
 
 static PyObject *
-buffer_slice(self, left, right)
-	PyBufferObject *self;
-	int left;
-	int right;
+buffer_slice(PyBufferObject *self, int left, int right)
 {
 	if ( left < 0 )
 		left = 0;
@@ -402,10 +367,7 @@ buffer_slice(self, left, right)
 }
 
 static int
-buffer_ass_item(self, idx, other)
-	PyBufferObject *self;
-	int idx;
-	PyObject *other;
+buffer_ass_item(PyBufferObject *self, int idx, PyObject *other)
 {
 	PyBufferProcs *pb;
 	void *p;
@@ -452,11 +414,7 @@ buffer_ass_item(self, idx, other)
 }
 
 static int
-buffer_ass_slice(self, left, right, other)
-	PyBufferObject *self;
-	int left;
-	int right;
-	PyObject *other;
+buffer_ass_slice(PyBufferObject *self, int left, int right, PyObject *other)
 {
 	PyBufferProcs *pb;
 	void *p;
@@ -513,10 +471,7 @@ buffer_ass_slice(self, left, right, other)
 /* Buffer methods */
 
 static int
-buffer_getreadbuf(self, idx, pp)
-	PyBufferObject *self;
-	int idx;
-	void ** pp;
+buffer_getreadbuf(PyBufferObject *self, int idx, void **pp)
 {
 	if ( idx != 0 ) {
 		PyErr_SetString(PyExc_SystemError,
@@ -528,10 +483,7 @@ buffer_getreadbuf(self, idx, pp)
 }
 
 static int
-buffer_getwritebuf(self, idx, pp)
-	PyBufferObject *self;
-	int idx;
-	void ** pp;
+buffer_getwritebuf(PyBufferObject *self, int idx, void **pp)
 {
 	if ( self->b_readonly )
 	{
@@ -542,9 +494,7 @@ buffer_getwritebuf(self, idx, pp)
 }
 
 static int
-buffer_getsegcount(self, lenp)
-	PyBufferObject *self;
-	int *lenp;
+buffer_getsegcount(PyBufferObject *self, int *lenp)
 {
 	if ( lenp )
 		*lenp = self->b_size;
@@ -552,10 +502,7 @@ buffer_getsegcount(self, lenp)
 }
 
 static int
-buffer_getcharbuf(self, idx, pp)
-	PyBufferObject *self;
-	int idx;
-	const char ** pp;
+buffer_getcharbuf(PyBufferObject *self, int idx, const char **pp)
 {
 	if ( idx != 0 ) {
 		PyErr_SetString(PyExc_SystemError,
@@ -608,4 +555,3 @@ PyTypeObject PyBuffer_Type = {
 	Py_TPFLAGS_DEFAULT,	/*tp_flags*/
 	0,		/*tp_doc*/
 };
-

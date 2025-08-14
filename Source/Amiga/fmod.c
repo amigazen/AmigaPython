@@ -5,8 +5,6 @@
 
 #include <errno.h>
 #include "config.h"
-#include "myproto.h"
-#include "mymath.h"
 
 
 /* Only use this function for FFP or IEEE math */

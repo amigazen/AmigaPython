@@ -4,20 +4,23 @@
  * regular expression matching engine
  *
  * partial history:
- * 99-10-24 fl  created (based on existing template matcher code)
- * 00-03-06 fl  first alpha, sort of (0.5)
- * 00-06-30 fl  added fast search optimization (0.9.3)
- * 00-06-30 fl  added assert (lookahead) primitives, etc (0.9.4)
- * 00-07-02 fl  added charset optimizations, etc (0.9.5)
- * 00-07-03 fl  store code in pattern object, lookbehind, etc
- * 00-07-08 fl  added regs attribute
- * 00-07-21 fl  reset lastindex in scanner methods (0.9.6)
- * 00-08-01 fl  fixes for 1.6b1 (0.9.8)
- * 00-08-03 fl  added recursion limit
- * 00-08-07 fl  use PyOS_CheckStack() if available
- * 00-08-08 fl  changed findall to return empty strings instead of None
- * 00-08-27 fl  properly propagate memory errors
- * 00-09-02 fl  return -1 instead of None for start/end/span
+ * 1999-10-24 fl  created (based on existing template matcher code)
+ * 2000-03-06 fl  first alpha, sort of (0.5)
+ * 2000-06-30 fl  added fast search optimization (0.9.3)
+ * 2000-06-30 fl  added assert (lookahead) primitives, etc (0.9.4)
+ * 2000-07-02 fl  added charset optimizations, etc (0.9.5)
+ * 2000-07-03 fl  store code in pattern object, lookbehind, etc
+ * 2000-07-08 fl  added regs attribute
+ * 2000-07-21 fl  reset lastindex in scanner methods (0.9.6)
+ * 2000-08-01 fl  fixes for 1.6b1 (0.9.8)
+ * 2000-08-03 fl  added recursion limit
+ * 2000-08-07 fl  use PyOS_CheckStack() if available
+ * 2000-08-08 fl  changed findall to return empty strings instead of None
+ * 2000-08-27 fl  properly propagate memory errors
+ * 2000-09-02 fl  return -1 instead of None for start/end/span
+ * 2000-09-20 fl  added expand method
+ * 2000-09-21 fl  don't use the buffer interface for unicode strings
+ * 2000-10-03 fl  fixed assert_not primitive; support keyword arguments
  *
  * Copyright (c) 1997-2000 by Secret Labs AB.  All rights reserved.
  *
@@ -37,12 +40,6 @@ char copyright[] = " SRE 0.9.8 Copyright (c) 1997-2000 by Secret Labs AB ";
 #include "Python.h"
 
 #include "sre.h"
-
-#if defined(HAVE_LIMITS_H)
-#include <limits.h>
-#else
-#define INT_MAX 2147483647
-#endif
 
 #include <ctype.h>
 
@@ -778,8 +775,6 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
             i = SRE_MATCH(state, pattern + 2, level + 1);
             if (i <= 0)
                 return i;
-            if (pattern[1] > 0 && state->ptr != ptr)
-                return SRE_ERROR_STATE;
             pattern += pattern[0];
             break;
 
@@ -795,8 +790,6 @@ SRE_MATCH(SRE_STATE* state, SRE_CODE* pattern, int level)
                 return i;
             if (i)
                 return 0;
-            if (pattern[1] > 0 && state->ptr != ptr)
-                return SRE_ERROR_STATE;
             pattern += pattern[0];
             break;
 
@@ -1045,7 +1038,7 @@ SRE_SEARCH(SRE_STATE* state, SRE_CODE* pattern)
     SRE_CHAR* end = state->end;
     int status = 0;
     int prefix_len = 0;
-    int prefix_skip;
+    int prefix_skip = 0;
     SRE_CODE* prefix = NULL;
     SRE_CODE* charset = NULL;
     SRE_CODE* overlap = NULL;
@@ -1291,6 +1284,17 @@ state_init(SRE_STATE* state, PatternObject* pattern, PyObject* string,
 
     state->lastindex = -1;
 
+#if defined(HAVE_UNICODE)
+    if (PyUnicode_Check(string)) {
+        /* unicode strings doesn't always support the buffer interface */
+        ptr = (void*) PyUnicode_AS_DATA(string);
+        bytes = PyUnicode_GET_DATA_SIZE(string);
+        size = PyUnicode_GET_SIZE(string);
+        state->charsize = sizeof(Py_UNICODE);
+
+    } else {
+#endif
+
     /* get pointer to string buffer */
     buffer = string->ob_type->tp_as_buffer;
     if (!buffer || !buffer->bf_getreadbuffer || !buffer->bf_getsegcount ||
@@ -1307,7 +1311,6 @@ state_init(SRE_STATE* state, PatternObject* pattern, PyObject* string,
     }
 
     /* determine character size */
-
 #if PY_VERSION_HEX >= 0x01060000
     size = PyObject_Size(string);
 #else
@@ -1324,6 +1327,10 @@ state_init(SRE_STATE* state, PatternObject* pattern, PyObject* string,
         PyErr_SetString(PyExc_TypeError, "buffer size mismatch");
         return NULL;
     }
+
+#if defined(HAVE_UNICODE)
+    }
+#endif
 
     /* adjust boundaries */
     if (start < 0)
@@ -1507,7 +1514,7 @@ pattern_dealloc(PatternObject* self)
 }
 
 static PyObject*
-pattern_match(PatternObject* self, PyObject* args)
+pattern_match(PatternObject* self, PyObject* args, PyObject* kw)
 {
     SRE_STATE state;
     int status;
@@ -1515,7 +1522,9 @@ pattern_match(PatternObject* self, PyObject* args)
     PyObject* string;
     int start = 0;
     int end = INT_MAX;
-    if (!PyArg_ParseTuple(args, "O|ii:match", &string, &start, &end))
+    static char* kwlist[] = { "pattern", "pos", "endpos", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O|ii:match", kwlist,
+                                     &string, &start, &end))
         return NULL;
 
     string = state_init(&state, self, string, start, end);
@@ -1542,7 +1551,7 @@ pattern_match(PatternObject* self, PyObject* args)
 }
 
 static PyObject*
-pattern_search(PatternObject* self, PyObject* args)
+pattern_search(PatternObject* self, PyObject* args, PyObject* kw)
 {
     SRE_STATE state;
     int status;
@@ -1550,7 +1559,9 @@ pattern_search(PatternObject* self, PyObject* args)
     PyObject* string;
     int start = 0;
     int end = INT_MAX;
-    if (!PyArg_ParseTuple(args, "O|ii:search", &string, &start, &end))
+    static char* kwlist[] = { "pattern", "pos", "endpos", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O|ii:search", kwlist,
+                                     &string, &start, &end))
         return NULL;
 
     string = state_init(&state, self, string, start, end);
@@ -1600,12 +1611,14 @@ call(char* function, PyObject* args)
 }
 
 static PyObject*
-pattern_sub(PatternObject* self, PyObject* args)
+pattern_sub(PatternObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* template;
     PyObject* string;
     PyObject* count = Py_False; /* zero */
-    if (!PyArg_ParseTuple(args, "OO|O:sub", &template, &string, &count))
+    static char* kwlist[] = { "repl", "string", "count", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "OO|O:sub", kwlist,
+                                     &template, &string, &count))
         return NULL;
 
     /* delegate to Python code */
@@ -1613,12 +1626,14 @@ pattern_sub(PatternObject* self, PyObject* args)
 }
 
 static PyObject*
-pattern_subn(PatternObject* self, PyObject* args)
+pattern_subn(PatternObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* template;
     PyObject* string;
     PyObject* count = Py_False; /* zero */
-    if (!PyArg_ParseTuple(args, "OO|O:subn", &template, &string, &count))
+    static char* kwlist[] = { "repl", "string", "count", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "OO|O:subn", kwlist,
+                                     &template, &string, &count))
         return NULL;
 
     /* delegate to Python code */
@@ -1626,11 +1641,13 @@ pattern_subn(PatternObject* self, PyObject* args)
 }
 
 static PyObject*
-pattern_split(PatternObject* self, PyObject* args)
+pattern_split(PatternObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* string;
     PyObject* maxsplit = Py_False; /* zero */
-    if (!PyArg_ParseTuple(args, "O|O:split", &string, &maxsplit))
+    static char* kwlist[] = { "source", "maxsplit", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O|O:split", kwlist,
+                                     &string, &maxsplit))
         return NULL;
 
     /* delegate to Python code */
@@ -1638,7 +1655,7 @@ pattern_split(PatternObject* self, PyObject* args)
 }
 
 static PyObject*
-pattern_findall(PatternObject* self, PyObject* args)
+pattern_findall(PatternObject* self, PyObject* args, PyObject* kw)
 {
     SRE_STATE state;
     PyObject* list;
@@ -1648,7 +1665,9 @@ pattern_findall(PatternObject* self, PyObject* args)
     PyObject* string;
     int start = 0;
     int end = INT_MAX;
-    if (!PyArg_ParseTuple(args, "O|ii:findall", &string, &start, &end))
+    static char* kwlist[] = { "source", "pos", "endpos", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "O|ii:findall", kwlist,
+                                     &string, &start, &end))
         return NULL;
 
     string = state_init(&state, self, string, start, end);
@@ -1738,14 +1757,14 @@ error:
 }
 
 static PyMethodDef pattern_methods[] = {
-    {"match", (PyCFunction) pattern_match, 1},
-    {"search", (PyCFunction) pattern_search, 1},
-    {"sub", (PyCFunction) pattern_sub, 1},
-    {"subn", (PyCFunction) pattern_subn, 1},
-    {"split", (PyCFunction) pattern_split, 1},
-    {"findall", (PyCFunction) pattern_findall, 1},
+    {"match", (PyCFunction) pattern_match, METH_VARARGS|METH_KEYWORDS},
+    {"search", (PyCFunction) pattern_search, METH_VARARGS|METH_KEYWORDS},
+    {"sub", (PyCFunction) pattern_sub, METH_VARARGS|METH_KEYWORDS},
+    {"subn", (PyCFunction) pattern_subn, METH_VARARGS|METH_KEYWORDS},
+    {"split", (PyCFunction) pattern_split, METH_VARARGS|METH_KEYWORDS},
+    {"findall", (PyCFunction) pattern_findall, METH_VARARGS|METH_KEYWORDS},
     /* experimental */
-    {"scanner", (PyCFunction) pattern_scanner, 1},
+    {"scanner", (PyCFunction) pattern_scanner, METH_VARARGS},
     {NULL, NULL}
 };
 
@@ -1858,6 +1877,20 @@ match_getslice(MatchObject* self, PyObject* index, PyObject* def)
 }
 
 static PyObject*
+match_expand(MatchObject* self, PyObject* args)
+{
+    PyObject* template;
+    if (!PyArg_ParseTuple(args, "O:expand", &template))
+        return NULL;
+
+    /* delegate to Python code */
+    return call(
+        "_expand",
+        Py_BuildValue("OOO", self->pattern, self, template)
+        );
+}
+
+static PyObject*
 match_group(MatchObject* self, PyObject* args)
 {
     PyObject* result;
@@ -1893,13 +1926,14 @@ match_group(MatchObject* self, PyObject* args)
 }
 
 static PyObject*
-match_groups(MatchObject* self, PyObject* args)
+match_groups(MatchObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* result;
     int index;
 
     PyObject* def = Py_None;
-    if (!PyArg_ParseTuple(args, "|O:groups", &def))
+    static char* kwlist[] = { "default", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|O:groups", kwlist, &def))
         return NULL;
 
     result = PyTuple_New(self->groups-1);
@@ -1920,14 +1954,15 @@ match_groups(MatchObject* self, PyObject* args)
 }
 
 static PyObject*
-match_groupdict(MatchObject* self, PyObject* args)
+match_groupdict(MatchObject* self, PyObject* args, PyObject* kw)
 {
     PyObject* result;
     PyObject* keys;
     int index;
 
     PyObject* def = Py_None;
-    if (!PyArg_ParseTuple(args, "|O:groupdict", &def))
+    static char* kwlist[] = { "default", NULL };
+    if (!PyArg_ParseTupleAndKeywords(args, kw, "|O:groups", kwlist, &def))
         return NULL;
 
     result = PyDict_New();
@@ -2088,12 +2123,13 @@ match_regs(MatchObject* self)
 }
 
 static PyMethodDef match_methods[] = {
-    {"group", (PyCFunction) match_group, 1},
-    {"start", (PyCFunction) match_start, 1},
-    {"end", (PyCFunction) match_end, 1},
-    {"span", (PyCFunction) match_span, 1},
-    {"groups", (PyCFunction) match_groups, 1},
-    {"groupdict", (PyCFunction) match_groupdict, 1},
+    {"group", (PyCFunction) match_group, METH_VARARGS},
+    {"start", (PyCFunction) match_start, METH_VARARGS},
+    {"end", (PyCFunction) match_end, METH_VARARGS},
+    {"span", (PyCFunction) match_span, METH_VARARGS},
+    {"groups", (PyCFunction) match_groups, METH_VARARGS|METH_KEYWORDS},
+    {"groupdict", (PyCFunction) match_groupdict, METH_VARARGS|METH_KEYWORDS},
+    {"expand", (PyCFunction) match_expand, METH_VARARGS},
     {NULL, NULL}
 };
 

@@ -1,3 +1,4 @@
+
 /* Thread package.
    This is intended to be usable independently from Python.
    The implementation for system foobar is in a file thread_foobar.h
@@ -19,7 +20,7 @@
 #include <stdlib.h>
 #else
 #ifdef Py_DEBUG
-extern char *getenv();
+extern char *getenv(const char *);
 #endif
 #endif
 
@@ -57,23 +58,12 @@ extern char *getenv();
 #define SUN_LWP
 #endif
 
-#ifdef __MWERKS__
+#if defined(__MWERKS__) && !defined(__BEOS__)
 #define _POSIX_THREADS
 #endif
 
 #endif /* _POSIX_THREADS */
 
-#ifdef __STDC__
-#define _P(args)		args
-#define _P0()			(void)
-#define _P1(v,t)		(t)
-#define _P2(v1,t1,v2,t2)	(t1,t2)
-#else
-#define _P(args)		()
-#define _P0()			()
-#define _P1(v,t)		(v) t;
-#define _P2(v1,t1,v2,t2)	(v1,v2) t1; t2;
-#endif /* __STDC__ */
 
 #ifdef Py_DEBUG
 static int thread_debug = 0;
@@ -86,9 +76,9 @@ static int thread_debug = 0;
 
 static int initialized;
 
-static void PyThread__init_thread(); /* Forward */
+static void PyThread__init_thread(void); /* Forward */
 
-void PyThread_init_thread _P0()
+void PyThread_init_thread(void)
 {
 #ifdef Py_DEBUG
 	char *p = getenv("THREADDEBUG");
@@ -119,12 +109,13 @@ void PyThread_init_thread _P0()
 #include "thread_lwp.h"
 #endif
 
-#ifdef _GNU_PTH
+#ifdef HAVE_PTH
 #include "thread_pth.h"
-#else
+#undef _POSIX_THREADS
+#endif
+
 #ifdef _POSIX_THREADS
 #include "thread_pthread.h"
-#endif
 #endif
 
 #ifdef C_THREADS

@@ -1,3 +1,4 @@
+
 /* MD5 module */
 
 /* This module provides an interface to the RSA Data Security,
@@ -16,14 +17,12 @@ typedef struct {
         MD5_CTX	md5;		/* the context holder */
 } md5object;
 
-#include "protos/md5module.h"
-
 staticforward PyTypeObject MD5type;
 
 #define is_md5object(v)		((v)->ob_type == &MD5type)
 
 static md5object *
-newmd5object()
+newmd5object(void)
 {
 	md5object *md5p;
 
@@ -39,8 +38,7 @@ newmd5object()
 /* MD5 methods */
 
 static void
-md5_dealloc(md5p)
-	md5object *md5p;
+md5_dealloc(md5object *md5p)
 {
 	PyObject_Del(md5p);
 }
@@ -49,9 +47,7 @@ md5_dealloc(md5p)
 /* MD5 methods-as-attributes */
 
 static PyObject *
-md5_update(self, args)
-	md5object *self;
-	PyObject *args;
+md5_update(md5object *self, PyObject *args)
 {
 	unsigned char *cp;
 	int len;
@@ -74,12 +70,9 @@ arguments.";
 
 
 static PyObject *
-md5_digest(self, args)
-	md5object *self;
-	PyObject *args;
+md5_digest(md5object *self, PyObject *args)
 {
-
-	MD5_CTX mdContext;
+ 	MD5_CTX mdContext;
 	unsigned char aDigest[16];
 
 	if (!PyArg_NoArgs(args))
@@ -101,9 +94,42 @@ including null bytes.";
 
 
 static PyObject *
-md5_copy(self, args)
-	md5object *self;
-	PyObject *args;
+md5_hexdigest(md5object *self, PyObject *args)
+{
+ 	MD5_CTX mdContext;
+	unsigned char digest[16];
+	unsigned char hexdigest[32];
+	int i, j;
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
+
+	/* make a temporary copy, and perform the final */
+	mdContext = self->md5;
+	MD5Final(digest, &mdContext);
+
+	/* Make hex version of the digest */
+	for(i=j=0; i<16; i++) {
+		char c;
+		c = (digest[i] >> 4) & 0xf;
+		c = (c>9) ? c+'a'-10 : c + '0';
+		hexdigest[j++] = c;
+		c = (digest[i] & 0xf);
+		c = (c>9) ? c+'a'-10 : c + '0';
+		hexdigest[j++] = c;
+	}
+	return PyString_FromStringAndSize((char*)hexdigest, 32);
+}
+
+
+static char hexdigest_doc [] =
+"hexdigest() -> string\n\
+\n\
+Like digest(), but returns the digest as a string of hexadecimal digits.";
+
+
+static PyObject *
+md5_copy(md5object *self, PyObject *args)
 {
 	md5object *md5p;
 
@@ -125,16 +151,15 @@ Return a copy (``clone'') of the md5 object.";
 
 
 static PyMethodDef md5_methods[] = {
-	{"update",		(PyCFunction)md5_update, 0, update_doc},
-	{"digest",		(PyCFunction)md5_digest, 0, digest_doc},
-	{"copy",		(PyCFunction)md5_copy, 0, copy_doc},
-	{NULL,			NULL}		/* sentinel */
+	{"update",    (PyCFunction)md5_update,    METH_OLDARGS, update_doc},
+	{"digest",    (PyCFunction)md5_digest,    METH_OLDARGS, digest_doc},
+	{"hexdigest", (PyCFunction)md5_hexdigest, METH_OLDARGS, hexdigest_doc},
+	{"copy",      (PyCFunction)md5_copy,      METH_OLDARGS, copy_doc},
+	{NULL, NULL}			     /* sentinel */
 };
 
 static PyObject *
-md5_getattr(self, name)
-	md5object *self;
-	char *name;
+md5_getattr(md5object *self, char *name)
 {
 	return Py_FindMethod(md5_methods, (PyObject *)self, name);
 }
@@ -146,7 +171,7 @@ algorithm (see also Internet RFC 1321). Its use is quite\n\
 straightforward: use the new() to create an md5 object. You can now\n\
 feed this object with arbitrary strings using the update() method, and\n\
 at any point you can ask it for the digest (a strong kind of 128-bit\n\
-checksum, a.k.a. ``fingerprint'') of the contatenation of the strings\n\
+checksum, a.k.a. ``fingerprint'') of the concatenation of the strings\n\
 fed to it so far using the digest() method.\n\
 \n\
 Functions:\n\
@@ -200,9 +225,7 @@ statichere PyTypeObject MD5type = {
 /* MD5 functions */
 
 static PyObject *
-MD5_new(self, args)
-	PyObject *self;
-	PyObject *args;
+MD5_new(PyObject *self, PyObject *args)
 {
 	md5object *md5p;
 	unsigned char *cp = NULL;
@@ -230,8 +253,8 @@ is made.";
 /* List of functions exported by this module */
 
 static PyMethodDef md5_functions[] = {
-	{"new",		(PyCFunction)MD5_new, 1, new_doc},
-	{"md5",		(PyCFunction)MD5_new, 1, new_doc}, /* Backward compatibility */
+	{"new",		(PyCFunction)MD5_new, METH_VARARGS, new_doc},
+	{"md5",		(PyCFunction)MD5_new, METH_VARARGS, new_doc}, /* Backward compatibility */
 	{NULL,		NULL}	/* Sentinel */
 };
 
@@ -239,7 +262,7 @@ static PyMethodDef md5_functions[] = {
 /* Initialize this module. */
 
 DL_EXPORT(void)
-initmd5()
+initmd5(void)
 {
 	PyObject *m, *d;
 

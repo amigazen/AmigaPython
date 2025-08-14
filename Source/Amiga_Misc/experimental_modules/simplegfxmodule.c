@@ -3,6 +3,10 @@
 
 	Simple Graphics module.
 
+	©Irmen de Jong
+
+
+	29-okt-00	Fixup for Python 2.0
 
 **************************************************************************/
 
@@ -12,8 +16,7 @@
 #include <proto/intuition.h>
 #include <proto/exec.h>
 #include <proto/graphics.h>
-#include "allobjects.h"
-#include "modsupport.h"
+#include "Python.h"
 
 typedef struct {
 	PyObject_HEAD
@@ -68,7 +71,7 @@ static PyObject *win_wait(windowobject *w, PyObject *args)
 		ULONG sigs = Wait(w->signal | SIGBREAKF_CTRL_C);   /* XXX Abort with ^C */
 		if(sigs & SIGBREAKF_CTRL_C)
 		{
-			PyErr_SetNone(KeyboardInterrupt);
+			PyErr_SetNone(PyExc_KeyboardInterrupt);
 			return NULL;
 		}
 		Py_INCREF(Py_None);
@@ -192,16 +195,16 @@ static PyObject *win_lineto(windowobject *w, PyObject *args)
 	} else return NULL;
 }
 
-static struct methodlist win_methods[] = {
-	{"close", (method)win_close, 0},
-	{"getmsg", (method)win_getmsg, 0},
-	{"wait", (method)win_wait, 0},
-	{"gzz",(method)win_gzz,1},
-	{"pen",(method)win_pen,1},
-	{"clear",(method)win_clear,1},
-	{"plot",(method)win_plot,1},
-	{"line",(method)win_line,1},
-	{"lineto",(method)win_lineto,1},
+static PyMethodDef win_methods[] = {
+	{"close", (PyCFunction)win_close, METH_OLDARGS},
+	{"getmsg", (PyCFunction)win_getmsg, METH_OLDARGS},
+	{"wait", (PyCFunction)win_wait, METH_OLDARGS},
+	{"gzz", (PyCFunction)win_gzz,METH_VARARGS},
+	{"pen", (PyCFunction)win_pen,METH_VARARGS},
+	{"clear", (PyCFunction)win_clear,METH_VARARGS},
+	{"plot", (PyCFunction)win_plot,METH_VARARGS},
+	{"line", (PyCFunction)win_line,METH_VARARGS},
+	{"lineto", (PyCFunction)win_lineto,METH_VARARGS},
 	{NULL,      NULL}       /* sentinel */
 };
 
@@ -232,8 +235,8 @@ win_repr(windowobject *w)
 	return PyString_FromString(buf);
 }
 
-static typeobject Windowtype = {
-	OB_HEAD_INIT(&Typetype)
+static PyTypeObject Windowtype = {
+	PyObject_HEAD_INIT(&PyType_Type)
 	0,          /*ob_size*/
 	"window",        /*tp_name*/
 	sizeof(windowobject),    /*tp_size*/
@@ -297,8 +300,8 @@ SimpleGFX_openwindow(PyObject *self, PyObject *args)
 
 /*** FUNCTIONS FROM THE MODULE ***/
 
-static struct methodlist SimpleGFX_global_methods[] = {
-	{"window",  SimpleGFX_openwindow, 1},
+static PyMethodDef SimpleGFX_global_methods[] = {
+	{"window",  SimpleGFX_openwindow, METH_VARARGS},
 	{NULL,      NULL}       /* sentinel */
 };
 ///

@@ -429,10 +429,13 @@ class PyShell(OutputWindow):
     def short_title(self):
         return self.shell_title
 
+    COPYRIGHT = \
+              'Type "copyright", "credits" or "license" for more information.'
+
     def begin(self):
         self.resetoutput()
         self.write("Python %s on %s\n%s\nIDLE %s -- press F1 for help\n" %
-                   (sys.version, sys.platform, sys.copyright,
+                   (sys.version, sys.platform, self.COPYRIGHT,
                     idlever.IDLE_VERSION))
         try:
             sys.ps1
@@ -709,12 +712,6 @@ def main():
         if o == '-t':
             PyShell.shell_title = a
 
-    if not edit:
-        if cmd:
-            sys.argv = ["-c"] + args
-        else:
-            sys.argv = args or [""]
-
     for i in range(len(sys.path)):
         sys.path[i] = os.path.abspath(sys.path[i])
 
@@ -732,7 +729,7 @@ def main():
             sys.path.insert(0, dir)
 
     global flist, root
-    root = Tk()
+    root = Tk(className="Idle")
     fixwordbreaks(root)
     root.withdraw()
     flist = PyShellFileList(root)
@@ -740,6 +737,12 @@ def main():
     if edit:
         for filename in args:
             flist.open(filename)
+    else:
+        if cmd:
+            sys.argv = ["-c"] + args
+        else:
+            sys.argv = args or [""]
+
 
     shell = PyShell(flist)
     interp = shell.interp

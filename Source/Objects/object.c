@@ -1,12 +1,16 @@
+
 /* Generic object operations; and implementation of None (NoObject) */
 
 #include "Python.h"
+
+#ifdef macintosh
+#include "macglue.h"
+#endif
 
 /* just for trashcan: */
 #include "compile.h"
 #include "frameobject.h"
 #include "traceback.h"
-#include "protos/object.h"
 
 #if defined( Py_TRACE_REFS ) || defined( Py_REF_DEBUG )
 DL_IMPORT(long) _Py_RefTotal;
@@ -22,7 +26,7 @@ extern int tuple_zero_allocs, fast_tuple_allocs;
 extern int quick_int_allocs, quick_neg_int_allocs;
 extern int null_strings, one_strings;
 void
-dump_counts()
+dump_counts(void)
 {
 	PyTypeObject *tp;
 
@@ -39,7 +43,7 @@ dump_counts()
 }
 
 PyObject *
-get_counts()
+get_counts(void)
 {
 	PyTypeObject *tp;
 	PyObject *result;
@@ -66,8 +70,7 @@ get_counts()
 }
 
 void
-inc_count(tp)
-	PyTypeObject *tp;
+inc_count(PyTypeObject *tp)
 {
 	if (tp->tp_alloc == 0) {
 		/* first time; insert in linked list */
@@ -83,15 +86,17 @@ inc_count(tp)
 #endif
 
 PyObject *
-PyObject_Init(op, tp)
-	PyObject *op;
-	PyTypeObject *tp;
+PyObject_Init(PyObject *op, PyTypeObject *tp)
 {
 	if (op == NULL) {
 		PyErr_SetString(PyExc_SystemError,
 				"NULL object passed to PyObject_Init");
 		return op;
   	}
+#ifdef WITH_CYCLE_GC
+	if (PyType_IS_GC(tp))
+		op = (PyObject *) PyObject_FROM_GC(op);
+#endif
 	/* Any changes should be reflected in PyObject_INIT (objimpl.h) */
 	op->ob_type = tp;
 	_Py_NewReference(op);
@@ -99,16 +104,17 @@ PyObject_Init(op, tp)
 }
 
 PyVarObject *
-PyObject_InitVar(op, tp, size)
-	PyVarObject *op;
-	PyTypeObject *tp;
-	int size;
+PyObject_InitVar(PyVarObject *op, PyTypeObject *tp, int size)
 {
 	if (op == NULL) {
 		PyErr_SetString(PyExc_SystemError,
 				"NULL object passed to PyObject_InitVar");
 		return op;
 	}
+#ifdef WITH_CYCLE_GC
+	if (PyType_IS_GC(tp))
+		op = (PyVarObject *) PyObject_FROM_GC(op);
+#endif
 	/* Any changes should be reflected in PyObject_INIT_VAR */
 	op->ob_size = size;
 	op->ob_type = tp;
@@ -117,40 +123,52 @@ PyObject_InitVar(op, tp, size)
 }
 
 PyObject *
-_PyObject_New(tp)
-	PyTypeObject *tp;
+_PyObject_New(PyTypeObject *tp)
 {
 	PyObject *op;
 	op = (PyObject *) PyObject_MALLOC(_PyObject_SIZE(tp));
 	if (op == NULL)
 		return PyErr_NoMemory();
+#ifdef WITH_CYCLE_GC
+	if (PyType_IS_GC(tp))
+		op = (PyObject *) PyObject_FROM_GC(op);
+#endif
 	return PyObject_INIT(op, tp);
 }
 
 PyVarObject *
-_PyObject_NewVar(tp, size)
-	PyTypeObject *tp;
-	int size;
+_PyObject_NewVar(PyTypeObject *tp, int size)
 {
 	PyVarObject *op;
 	op = (PyVarObject *) PyObject_MALLOC(_PyObject_VAR_SIZE(tp, size));
 	if (op == NULL)
 		return (PyVarObject *)PyErr_NoMemory();
+#ifdef WITH_CYCLE_GC
+	if (PyType_IS_GC(tp))
+		op = (PyVarObject *) PyObject_FROM_GC(op);
+#endif
 	return PyObject_INIT_VAR(op, tp, size);
 }
 
 void
-_PyObject_Del(op)
-	PyObject *op;
+_PyObject_Del(PyObject *op)
 {
+#ifdef WITH_CYCLE_GC
+	if (op && PyType_IS_GC(op->ob_type)) {
+		op = (PyObject *) PyObject_AS_GC(op);
+	}
+#endif
 	PyObject_FREE(op);
 }
 
+#ifndef WITH_CYCLE_GC
+/* extension modules might need these */
+void _PyGC_Insert(PyObject *op) { }
+void _PyGC_Remove(PyObject *op) { }
+#endif
+
 int
-PyObject_Print(op, fp, flags)
-	PyObject *op;
-	FILE *fp;
-	int flags;
+PyObject_Print(PyObject *op, FILE *fp, int flags)
 {
 	int ret = 0;
 	if (PyErr_CheckSignals())
@@ -167,12 +185,12 @@ PyObject_Print(op, fp, flags)
 	}
 	else {
 		if (op->ob_refcnt <= 0)
-			fprintf(fp, "<refcnt %u at %lx>",
-				op->ob_refcnt, (long)op);
+			fprintf(fp, "<refcnt %u at %p>",
+				op->ob_refcnt, op);
 		else if (op->ob_type->tp_print == NULL) {
 			if (op->ob_type->tp_repr == NULL) {
-				fprintf(fp, "<%s object at %lx>",
-					op->ob_type->tp_name, (long)op);
+				fprintf(fp, "<%s object at %p>",
+					op->ob_type->tp_name, op);
 			}
 			else {
 				PyObject *s;
@@ -203,8 +221,7 @@ PyObject_Print(op, fp, flags)
 }
 
 PyObject *
-PyObject_Repr(v)
-	PyObject *v;
+PyObject_Repr(PyObject *v)
 {
 	if (PyErr_CheckSignals())
 		return NULL;
@@ -218,8 +235,8 @@ PyObject_Repr(v)
 		return PyString_FromString("<NULL>");
 	else if (v->ob_type->tp_repr == NULL) {
 		char buf[120];
-		sprintf(buf, "<%.80s object at %lx>",
-			v->ob_type->tp_name, (long)v);
+		sprintf(buf, "<%.80s object at %p>",
+			v->ob_type->tp_name, v);
 		return PyString_FromString(buf);
 	}
 	else {
@@ -229,11 +246,12 @@ PyObject_Repr(v)
 			return NULL;
 		if (PyUnicode_Check(res)) {
 			PyObject* str;
-			str = PyUnicode_AsEncodedString(res, NULL, NULL);
-			if (str) {
-				Py_DECREF(res);
+			str = PyUnicode_AsUnicodeEscapeString(res);
+			Py_DECREF(res);
+			if (str)
 				res = str;
-			}
+			else
+				return NULL;
 		}
 		if (!PyString_Check(res)) {
 			PyErr_Format(PyExc_TypeError,
@@ -247,8 +265,7 @@ PyObject_Repr(v)
 }
 
 PyObject *
-PyObject_Str(v)
-	PyObject *v;
+PyObject_Str(PyObject *v)
 {
 	PyObject *res;
 	
@@ -272,14 +289,15 @@ PyObject_Str(v)
 	}
 	if (res == NULL)
 		return NULL;
-    if (PyUnicode_Check(res)) {
-        PyObject* str;
-        str = PyUnicode_AsEncodedString(res, NULL, NULL);
-        if (str) {
-            Py_DECREF(res);
-            res = str;
-        }
-    }
+	if (PyUnicode_Check(res)) {
+		PyObject* str;
+		str = PyUnicode_AsEncodedString(res, NULL, NULL);
+		Py_DECREF(res);
+		if (str)
+			res = str;
+		else
+		    	return NULL;
+	}
 	if (!PyString_Check(res)) {
 		PyErr_Format(PyExc_TypeError,
 			     "__str__ returned non-string (type %.200s)",
@@ -291,8 +309,7 @@ PyObject_Str(v)
 }
 
 static PyObject *
-do_cmp(v, w)
-	PyObject *v, *w;
+do_cmp(PyObject *v, PyObject *w)
 {
 	long c;
 	/* __rcmp__ actually won't be called unless __cmp__ isn't defined,
@@ -309,15 +326,19 @@ do_cmp(v, w)
 
 PyObject *_PyCompareState_Key;
 
-/* _PyCompareState_nesting is incremented beforing call compare (for
+/* _PyCompareState_nesting is incremented before calling compare (for
    some types) and decremented on exit.  If the count exceeds the
    nesting limit, enable code to detect circular data structures.
 */
+#ifdef macintosh
+#define NESTING_LIMIT 60
+#else
 #define NESTING_LIMIT 500
+#endif
 int _PyCompareState_nesting = 0;
 
 static PyObject*
-get_inprogress_dict()
+get_inprogress_dict(void)
 {
 	PyObject *tstate_dict, *inprogress;
 
@@ -342,16 +363,17 @@ get_inprogress_dict()
 }
 
 static PyObject *
-make_pair(v, w)
-	PyObject *v, *w;
+make_pair(PyObject *v, PyObject *w)
 {
 	PyObject *pair;
+	Py_uintptr_t iv = (Py_uintptr_t)v;
+	Py_uintptr_t iw = (Py_uintptr_t)w;
 
 	pair = PyTuple_New(2);
 	if (pair == NULL) {
 		return NULL;
 	}
-	if ((long)v <= (long)w) {
+	if (iv <= iw) {
 		PyTuple_SET_ITEM(pair, 0, PyLong_FromVoidPtr((void *)v));
 		PyTuple_SET_ITEM(pair, 1, PyLong_FromVoidPtr((void *)w));
 	} else {
@@ -362,12 +384,17 @@ make_pair(v, w)
 }
 
 int
-PyObject_Compare(v, w)
-	PyObject *v, *w;
+PyObject_Compare(PyObject *v, PyObject *w)
 {
 	PyTypeObject *vtp, *wtp;
 	int result;
 
+#if defined(USE_STACKCHECK)
+	if (PyOS_CheckStack()) {
+		PyErr_SetString(PyExc_MemoryError, "Stack overflow");
+        return -1;
+	}
+#endif
 	if (v == NULL || w == NULL) {
 		PyErr_BadInternalCall();
 		return -1;
@@ -379,11 +406,13 @@ PyObject_Compare(v, w)
 		int c;
 		if (!PyInstance_Check(v))
 			return -PyObject_Compare(w, v);
-		if (++_PyCompareState_nesting > NESTING_LIMIT) {
+		_PyCompareState_nesting++;
+		if (_PyCompareState_nesting > NESTING_LIMIT) {
 			PyObject *inprogress, *pair;
 
 			inprogress = get_inprogress_dict();
 			if (inprogress == NULL) {
+				_PyCompareState_nesting--;
 				return -1;
 			}
 			pair = make_pair(v, w);
@@ -391,20 +420,21 @@ PyObject_Compare(v, w)
 				/* already comparing these objects.  assume
 				   they're equal until shown otherwise */
 				Py_DECREF(pair);
-				--_PyCompareState_nesting;
+				_PyCompareState_nesting--;
 				return 0;
 			}
 			if (PyDict_SetItem(inprogress, pair, pair) == -1) {
+				_PyCompareState_nesting--;
 				return -1;
 			}
 			res = do_cmp(v, w);
-			_PyCompareState_nesting--;
 			/* XXX DelItem shouldn't fail */
 			PyDict_DelItem(inprogress, pair);
 			Py_DECREF(pair);
 		} else {
 			res = do_cmp(v, w);
 		}
+		_PyCompareState_nesting--;
 		if (res == NULL)
 			return -1;
 		if (!PyInt_Check(res)) {
@@ -460,56 +490,153 @@ PyObject_Compare(v, w)
 		return strcmp(vname, wname);
 	}
 	if (vtp->tp_compare == NULL) {
-		return (v < w) ? -1 : 1;
+		Py_uintptr_t iv = (Py_uintptr_t)v;
+		Py_uintptr_t iw = (Py_uintptr_t)w;
+		return (iv < iw) ? -1 : 1;
 	}
-	if (++_PyCompareState_nesting > NESTING_LIMIT
+	_PyCompareState_nesting++;
+	if (_PyCompareState_nesting > NESTING_LIMIT
 	    && (vtp->tp_as_mapping 
 		|| (vtp->tp_as_sequence && !PyString_Check(v)))) {
 		PyObject *inprogress, *pair;
 
 		inprogress = get_inprogress_dict();
 		if (inprogress == NULL) {
+			_PyCompareState_nesting--;
 			return -1;
 		}
 		pair = make_pair(v, w);
 		if (PyDict_GetItem(inprogress, pair)) {
 			/* already comparing these objects.  assume
 			   they're equal until shown otherwise */
-			_PyCompareState_nesting--;
 			Py_DECREF(pair);
+			_PyCompareState_nesting--;
 			return 0;
 		}
 		if (PyDict_SetItem(inprogress, pair, pair) == -1) {
+			_PyCompareState_nesting--;
 			return -1;
 		}
 		result = (*vtp->tp_compare)(v, w);
-		_PyCompareState_nesting--;
 		PyDict_DelItem(inprogress, pair); /* XXX shouldn't fail */
 		Py_DECREF(pair);
 	} else {
 		result = (*vtp->tp_compare)(v, w);
 	}
+	_PyCompareState_nesting--;
 	return result;
 }
 
+
+/* Set of hash utility functions to help maintaining the invariant that
+	iff a==b then hash(a)==hash(b)
+
+   All the utility functions (_Py_Hash*()) return "-1" to signify an error.
+*/
+
 long
-PyObject_Hash(v)
-	PyObject *v;
+_Py_HashDouble(double v)
+{
+	double intpart, fractpart;
+	int expo;
+	long hipart;
+	long x;		/* the final hash value */
+	/* This is designed so that Python numbers of different types
+	 * that compare equal hash to the same value; otherwise comparisons
+	 * of mapping keys will turn out weird.
+	 */
+
+#ifdef MPW /* MPW C modf expects pointer to extended as second argument */
+{
+	extended e;
+	fractpart = modf(v, &e);
+	intpart = e;
+}
+#else
+	fractpart = modf(v, &intpart);
+#endif
+	if (fractpart == 0.0) {
+		/* This must return the same hash as an equal int or long. */
+		if (intpart > LONG_MAX || -intpart > LONG_MAX) {
+			/* Convert to long and use its hash. */
+			PyObject *plong;	/* converted to Python long */
+			if (Py_IS_INFINITY(intpart))
+				/* can't convert to long int -- arbitrary */
+				v = v < 0 ? -271828.0 : 314159.0;
+			plong = PyLong_FromDouble(v);
+			if (plong == NULL)
+				return -1;
+			x = PyObject_Hash(plong);
+			Py_DECREF(plong);
+			return x;
+		}
+		/* Fits in a C long == a Python int, so is its own hash. */
+		x = (long)intpart;
+		if (x == -1)
+			x = -2;
+		return x;
+	}
+	/* The fractional part is non-zero, so we don't have to worry about
+	 * making this match the hash of some other type.
+	 * Use frexp to get at the bits in the double.
+	 * Since the VAX D double format has 56 mantissa bits, which is the
+	 * most of any double format in use, each of these parts may have as
+	 * many as (but no more than) 56 significant bits.
+	 * So, assuming sizeof(long) >= 4, each part can be broken into two
+	 * longs; frexp and multiplication are used to do that.
+	 * Also, since the Cray double format has 15 exponent bits, which is
+	 * the most of any double format in use, shifting the exponent field
+	 * left by 15 won't overflow a long (again assuming sizeof(long) >= 4).
+	 */
+	v = frexp(v, &expo);
+	v *= 2147483648.0;	/* 2**31 */
+	hipart = (long)v;	/* take the top 32 bits */
+	v = (v - (double)hipart) * 2147483648.0; /* get the next 32 bits */
+	x = hipart + (long)v + (expo << 15);
+	if (x == -1)
+		x = -2;
+	return x;
+}
+
+long
+_Py_HashPointer(void *p)
+{
+#if SIZEOF_LONG >= SIZEOF_VOID_P
+	return (long)p;
+#else
+	/* convert to a Python long and hash that */
+	PyObject* longobj;
+	long x;
+	
+	if ((longobj = PyLong_FromVoidPtr(p)) == NULL) {
+		x = -1;
+		goto finally;
+	}
+	x = PyObject_Hash(longobj);
+	
+finally:
+	Py_XDECREF(longobj);
+	return x;
+#endif
+}
+
+
+long
+PyObject_Hash(PyObject *v)
 {
 	PyTypeObject *tp = v->ob_type;
 	if (tp->tp_hash != NULL)
 		return (*tp->tp_hash)(v);
-	if (tp->tp_compare == NULL)
-		return (long) v; /* Use address as hash value */
+	if (tp->tp_compare == NULL) {
+		return _Py_HashPointer(v); /* Use address as hash value */
+	}
 	/* If there's a cmp but no hash defined, the object can't be hashed */
 	PyErr_SetString(PyExc_TypeError, "unhashable type");
 	return -1;
 }
 
 PyObject *
-PyObject_GetAttrString(v, name)
-	PyObject *v;
-	char *name;
+PyObject_GetAttrString(PyObject *v, char *name)
 {
 	if (v->ob_type->tp_getattro != NULL) {
 		PyObject *w, *res;
@@ -534,9 +661,7 @@ PyObject_GetAttrString(v, name)
 }
 
 int
-PyObject_HasAttrString(v, name)
-	PyObject *v;
-	char *name;
+PyObject_HasAttrString(PyObject *v, char *name)
 {
 	PyObject *res = PyObject_GetAttrString(v, name);
 	if (res != NULL) {
@@ -548,10 +673,7 @@ PyObject_HasAttrString(v, name)
 }
 
 int
-PyObject_SetAttrString(v, name, w)
-	PyObject *v;
-	char *name;
-	PyObject *w;
+PyObject_SetAttrString(PyObject *v, char *name, PyObject *w)
 {
 	if (v->ob_type->tp_setattro != NULL) {
 		PyObject *s;
@@ -578,21 +700,36 @@ PyObject_SetAttrString(v, name, w)
 	}
 }
 
+/* Internal API needed by PyObject_GetAttr(): */
+extern 
+PyObject *_PyUnicode_AsDefaultEncodedString(PyObject *unicode,
+				  const char *errors);
+
 PyObject *
-PyObject_GetAttr(v, name)
-	PyObject *v;
-	PyObject *name;
+PyObject_GetAttr(PyObject *v, PyObject *name)
 {
+	/* The Unicode to string conversion is done here because the
+	   existing tp_getattro slots expect a string object as name
+	   and we wouldn't want to break those. */
+	if (PyUnicode_Check(name)) {
+		name = _PyUnicode_AsDefaultEncodedString(name, NULL);
+		if (name == NULL)
+			return NULL;
+	}
+
+	if (!PyString_Check(name)) {
+		PyErr_SetString(PyExc_TypeError,
+				"attribute name must be string");
+		return NULL;
+	}
 	if (v->ob_type->tp_getattro != NULL)
 		return (*v->ob_type->tp_getattro)(v, name);
 	else
-		return PyObject_GetAttrString(v, PyString_AsString(name));
+	return PyObject_GetAttrString(v, PyString_AS_STRING(name));
 }
 
 int
-PyObject_HasAttr(v, name)
-	PyObject *v;
-	PyObject *name;
+PyObject_HasAttr(PyObject *v, PyObject *name)
 {
 	PyObject *res = PyObject_GetAttr(v, name);
 	if (res != NULL) {
@@ -604,19 +741,35 @@ PyObject_HasAttr(v, name)
 }
 
 int
-PyObject_SetAttr(v, name, value)
-	PyObject *v;
-	PyObject *name;
-	PyObject *value;
+PyObject_SetAttr(PyObject *v, PyObject *name, PyObject *value)
 {
 	int err;
-	Py_INCREF(name);
-	PyString_InternInPlace(&name);
-	if (v->ob_type->tp_setattro != NULL)
-		err = (*v->ob_type->tp_setattro)(v, name, value);
+
+	/* The Unicode to string conversion is done here because the
+	   existing tp_setattro slots expect a string object as name
+	   and we wouldn't want to break those. */
+	if (PyUnicode_Check(name)) {
+		name = PyUnicode_AsEncodedString(name, NULL, NULL);
+		if (name == NULL)
+			return -1;
+	}
 	else
-		err = PyObject_SetAttrString(
-			v, PyString_AsString(name), value);
+		Py_INCREF(name);
+	
+	if (!PyString_Check(name)){
+		PyErr_SetString(PyExc_TypeError,
+				"attribute name must be string");
+		err = -1;
+	}
+	else {
+		PyString_InternInPlace(&name);
+		if (v->ob_type->tp_setattro != NULL)
+			err = (*v->ob_type->tp_setattro)(v, name, value);
+		else
+			err = PyObject_SetAttrString(v, 
+				        PyString_AS_STRING(name), value);
+	}
+	
 	Py_DECREF(name);
 	return err;
 }
@@ -625,8 +778,7 @@ PyObject_SetAttr(v, name, value)
    Return -1 if an error occurred */
 
 int
-PyObject_IsTrue(v)
-	PyObject *v;
+PyObject_IsTrue(PyObject *v)
 {
 	int res;
 	if (v == Py_None)
@@ -651,8 +803,7 @@ PyObject_IsTrue(v)
    Return -1 if an error occurred */
 
 int
-PyObject_Not(v)
-	PyObject *v;
+PyObject_Not(PyObject *v)
 {
 	int res;
 	res = PyObject_IsTrue(v);
@@ -668,8 +819,7 @@ PyObject_Not(v)
 */
 
 int
-PyNumber_CoerceEx(pv, pw)
-	PyObject **pv, **pw;
+PyNumber_CoerceEx(PyObject **pv, PyObject **pw)
 {
 	register PyObject *v = *pv;
 	register PyObject *w = *pw;
@@ -694,8 +844,7 @@ PyNumber_CoerceEx(pv, pw)
 }
 
 int
-PyNumber_Coerce(pv, pw)
-	PyObject **pv, **pw;
+PyNumber_Coerce(PyObject **pv, PyObject **pw)
 {
 	int err = PyNumber_CoerceEx(pv, pw);
 	if (err <= 0)
@@ -708,8 +857,7 @@ PyNumber_Coerce(pv, pw)
 /* Test whether an object can be called */
 
 int
-PyCallable_Check(x)
-	PyObject *x;
+PyCallable_Check(PyObject *x)
 {
 	if (x == NULL)
 		return 0;
@@ -742,8 +890,7 @@ so there is exactly one (which is indestructible, by the way).
 
 /* ARGSUSED */
 static PyObject *
-none_repr(op)
-	PyObject *op;
+none_repr(PyObject *op)
 {
 	return PyString_FromString("None");
 }
@@ -776,15 +923,14 @@ PyObject _Py_NoneStruct = {
 static PyObject refchain = {&refchain, &refchain};
 
 void
-_Py_ResetReferences()
+_Py_ResetReferences(void)
 {
 	refchain._ob_prev = refchain._ob_next = &refchain;
 	_Py_RefTotal = 0;
 }
 
 void
-_Py_NewReference(op)
-	PyObject *op;
+_Py_NewReference(PyObject *op)
 {
 	_Py_RefTotal++;
 	op->ob_refcnt = 1;
@@ -798,8 +944,7 @@ _Py_NewReference(op)
 }
 
 void
-_Py_ForgetReference(op)
-	register PyObject *op;
+_Py_ForgetReference(register PyObject *op)
 {
 #ifdef SLOW_UNREF_CHECK
         register PyObject *p;
@@ -826,19 +971,15 @@ _Py_ForgetReference(op)
 }
 
 void
-_Py_Dealloc(op)
-	PyObject *op;
+_Py_Dealloc(PyObject *op)
 {
 	destructor dealloc = op->ob_type->tp_dealloc;
 	_Py_ForgetReference(op);
-	if (_PyTrash_delete_nesting < PyTrash_UNWIND_LEVEL-1)
-		op->ob_type = NULL;
 	(*dealloc)(op);
 }
 
 void
-_Py_PrintReferences(fp)
-	FILE *fp;
+_Py_PrintReferences(FILE *fp)
 {
 	PyObject *op;
 	fprintf(fp, "Remaining objects:\n");
@@ -851,9 +992,7 @@ _Py_PrintReferences(fp)
 }
 
 PyObject *
-_Py_GetObjects(self, args)
-	PyObject *self;
-	PyObject *args;
+_Py_GetObjects(PyObject *self, PyObject *args)
 {
 	int i, n;
 	PyObject *t = NULL;
@@ -889,14 +1028,13 @@ PyTypeObject *_Py_cobject_hack = &PyCObject_Type;
 
 
 /* Hack to force loading of abstract.o */
-int (*_Py_abstract_hack) Py_FPROTO((PyObject *)) = &PyObject_Length;
+int (*_Py_abstract_hack)(PyObject *) = &PyObject_Size;
 
 
-/* Python's malloc wrappers (see mymalloc.h) */
+/* Python's malloc wrappers (see pymem.h) */
 
-ANY *
-PyMem_Malloc(nbytes)
-	size_t nbytes;
+void *
+PyMem_Malloc(size_t nbytes)
 {
 #if _PyMem_EXTRA > 0
 	if (nbytes == 0)
@@ -905,10 +1043,8 @@ PyMem_Malloc(nbytes)
 	return PyMem_MALLOC(nbytes);
 }
 
-ANY *
-PyMem_Realloc(p, nbytes)
-	ANY *p;
-	size_t nbytes;
+void *
+PyMem_Realloc(void *p, size_t nbytes)
 {
 #if _PyMem_EXTRA > 0
 	if (nbytes == 0)
@@ -918,8 +1054,7 @@ PyMem_Realloc(p, nbytes)
 }
 
 void
-PyMem_Free(p)
-	ANY *p;
+PyMem_Free(void *p)
 {
 	PyMem_FREE(p);
 }
@@ -927,24 +1062,20 @@ PyMem_Free(p)
 
 /* Python's object malloc wrappers (see objimpl.h) */
 
-ANY *
-PyObject_Malloc(nbytes)
-	size_t nbytes;
+void *
+PyObject_Malloc(size_t nbytes)
 {
 	return PyObject_MALLOC(nbytes);
 }
 
-ANY *
-PyObject_Realloc(p, nbytes)
-	ANY *p;
-	size_t nbytes;
+void *
+PyObject_Realloc(void *p, size_t nbytes)
 {
 	return PyObject_REALLOC(p, nbytes);
 }
 
 void
-PyObject_Free(p)
-	ANY *p;
+PyObject_Free(void *p)
 {
 	PyObject_FREE(p);
 }
@@ -965,8 +1096,7 @@ PyObject_Free(p)
 #define KEY "Py_Repr"
 
 int
-Py_ReprEnter(obj)
-	PyObject *obj;
+Py_ReprEnter(PyObject *obj)
 {
 	PyObject *dict;
 	PyObject *list;
@@ -994,8 +1124,7 @@ Py_ReprEnter(obj)
 }
 
 void
-Py_ReprLeave(obj)
-	PyObject *obj;
+Py_ReprLeave(PyObject *obj)
 {
 	PyObject *dict;
 	PyObject *list;
@@ -1053,11 +1182,9 @@ int _PyTrash_delete_nesting = 0;
 PyObject * _PyTrash_delete_later = NULL;
 
 void
-_PyTrash_deposit_object(op)
-	PyObject *op;
+_PyTrash_deposit_object(PyObject *op)
 {
 	int typecode;
-	PyObject *hold = _PyTrash_delete_later;
 
 	if (PyTuple_Check(op))
 		typecode = Py_TRASHCAN_TUPLE;
@@ -1069,6 +1196,10 @@ _PyTrash_deposit_object(op)
 		typecode = Py_TRASHCAN_FRAME;
 	else if (PyTraceBack_Check(op))
 		typecode = Py_TRASHCAN_TRACEBACK;
+	else /* We have a bug here -- those are the only types in GC */ {
+		Py_FatalError("Type not supported in GC -- internal bug");
+		return; /* pacify compiler -- execution never here */
+	}
 	op->ob_refcnt = typecode;
 
 	op->ob_type = (PyTypeObject*)_PyTrash_delete_later;
@@ -1076,7 +1207,7 @@ _PyTrash_deposit_object(op)
 }
 
 void
-_PyTrash_destroy_chain()
+_PyTrash_destroy_chain(void)
 {
 	while (_PyTrash_delete_later) {
 		PyObject *shredder = _PyTrash_delete_later;
@@ -1106,4 +1237,3 @@ _PyTrash_destroy_chain()
 		--_PyTrash_delete_nesting;
 	}
 }
-

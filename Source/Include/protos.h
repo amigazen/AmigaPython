@@ -1,6 +1,8 @@
 #ifndef _PROTOS_H
 #define _PROTOS_H
 
+#include <stdio.h>
+
 /* from Modules/main.c: */
 int Py_Main(int argc, char **argv);
 void Py_GetArgcArgv(int *argc, char ***argv);
@@ -16,7 +18,7 @@ extern int checksocketlib(void); /* in main.c */
 extern int checkusergrouplib(void); /* in main.c */
 #endif
 
-extern double hypot Py_PROTO((double x, double y));
+extern double hypot (double x, double y);
 
 
 #ifdef _AMIGA
@@ -62,48 +64,49 @@ int getopt(int argc, char * const argv[], char const *opts);
 #endif /* !AMITCP */
 
 /**** all initfuncs for the modules ****/
-extern void PyMarshal_Init Py_PROTO((void));
-extern void initimp Py_PROTO((void));
-extern void initamiga Py_PROTO((void));
-extern void initARexx Py_PROTO((void));
-extern void initamiga_exec Py_PROTO((void));
-extern void initarray Py_PROTO((void));
-extern void initbinascii Py_PROTO((void));
-extern void initcmath Py_PROTO((void));
-extern void initcrypt Py_PROTO((void));
-extern void initDoslib Py_PROTO((void));
-extern void initexeclib Py_PROTO((void));
-extern void initenvironment Py_PROTO((void));
-extern void initerrno Py_PROTO((void));
-extern void initgetpath Py_PROTO((void));
-extern void initgrp Py_PROTO((void));
-extern void initmath Py_PROTO((void));
-extern void initmd5 Py_PROTO((void));
-extern void initnew Py_PROTO((void));
-extern void initoperator Py_PROTO((void));
-extern void initpwd Py_PROTO((void));
-extern void initregex Py_PROTO((void));
-extern void initrotor Py_PROTO((void));
-extern void initselect Py_PROTO((void));
-extern void initsha Py_PROTO((void));
-extern void initsocket Py_PROTO((void));
-extern void initsoundex Py_PROTO((void));
-extern void initstrop Py_PROTO((void));
-extern void initstruct Py_PROTO((void));
-extern void initsyslog Py_PROTO((void));
-extern void inittime Py_PROTO((void));
-extern void inittiming Py_PROTO((void));
-extern void initurlop Py_PROTO((void));
-extern void initavl Py_PROTO((void));
-extern void initsimplegfx Py_PROTO((void));
-extern void initcStringIO Py_PROTO((void));
-extern void initcPickle Py_PROTO((void));
-extern void initpcre Py_PROTO((void));
-extern void init_codecs Py_PROTO((void));
-extern void init_sre Py_PROTO((void));
-extern void initzlib Py_PROTO((void));
-extern void initunicodedata Py_PROTO((void));
+extern void PyMarshal_Init (void);
+extern void initimp (void);
+extern void initamiga (void);
+extern void initARexx (void);
+extern void initamiga_exec (void);
+extern void initarray (void);
+extern void initbinascii (void);
+extern void initcmath (void);
+extern void initcrypt (void);
+extern void initDoslib (void);
+extern void initExeclib (void);
+extern void initenvironment (void);
+extern void initerrno (void);
+extern void initgetpath (void);
+extern void initgrp (void);
+extern void initmath (void);
+extern void initmd5 (void);
+extern void initnew (void);
+extern void initoperator (void);
+extern void initpwd (void);
+extern void initregex (void);
+extern void initrotor (void);
+extern void initselect (void);
+extern void initsha (void);
+extern void init_socket (void);
+extern void initsoundex (void);
+extern void initstrop (void);
+extern void initstruct (void);
+extern void initsyslog (void);
+extern void inittime (void);
+extern void inittiming (void);
+extern void initurlop (void);
+extern void initavl (void);
+extern void initsimplegfx (void);
+extern void initcStringIO (void);
+extern void initcPickle (void);
+extern void initpcre (void);
+extern void init_codecs (void);
+extern void init_sre (void);
+extern void initzlib (void);
+extern void initunicodedata (void);
+extern void initpyexpat (void);
 
-int PyOS_CheckStack Py_PROTO((void));
+int PyOS_CheckStack (void);
 
 #endif

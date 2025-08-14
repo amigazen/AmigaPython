@@ -1,0 +1,4 @@
+FROM LIB:c.o "gennmtab/gennmtab.o"
+TO "gennmtab/gennmtab"
+LIB LIB:sc.lib LIB:amiga.lib
+

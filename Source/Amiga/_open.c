@@ -21,6 +21,7 @@ RCS_ID_C="$Id: _open.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 
 #include <bsdsocket.h>
 #include "Python.h"
+#include "protos.h"
 
 #include "netlib.h"
 

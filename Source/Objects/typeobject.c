@@ -1,14 +1,12 @@
+
 /* Type object implementation */
 
 #include "Python.h"
-#include "protos/typeobject.h"
 
 /* Type object implementation */
 
 static PyObject *
-type_getattr(t, name)
-	PyTypeObject *t;
-	char *name;
+type_getattr(PyTypeObject *t, char *name)
 {
 	if (strcmp(name, "__name__") == 0)
 		return PyString_FromString(t->tp_name);
@@ -26,8 +24,7 @@ type_getattr(t, name)
 }
 
 static PyObject *
-type_repr(v)
-	PyTypeObject *v;
+type_repr(PyTypeObject *v)
 {
 	char buf[100];
 	sprintf(buf, "<type '%.80s'>", v->tp_name);

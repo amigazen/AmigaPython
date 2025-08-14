@@ -1,3 +1,4 @@
+
 /* List a node on a file */
 
 #include "pgenheaders.h"
@@ -5,12 +6,11 @@
 #include "node.h"
 
 /* Forward */
-static void list1node Py_PROTO((FILE *, node *));
-static void listnode Py_PROTO((FILE *, node *));
+static void list1node(FILE *, node *);
+static void listnode(FILE *, node *);
 
 void
-PyNode_ListTree(n)
-	node *n;
+PyNode_ListTree(node *n)
 {
 	listnode(stdout, n);
 }
@@ -18,9 +18,7 @@ PyNode_ListTree(n)
 static int level, atbol;
 
 static void
-listnode(fp, n)
-	FILE *fp;
-	node *n;
+listnode(FILE *fp, node *n)
 {
 	level = 0;
 	atbol = 1;
@@ -28,9 +26,7 @@ listnode(fp, n)
 }
 
 static void
-list1node(fp, n)
-	FILE *fp;
-	node *n;
+list1node(FILE *fp, node *n)
 {
 	if (n == 0)
 		return;

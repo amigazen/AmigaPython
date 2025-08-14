@@ -1,7 +1,7 @@
 """Extension management for Windows.
 
 Under Windows it is unlikely the .obj files are of use, as special compiler options
-are needed (primarily to toggle the behaviour of "public" symbols.
+are needed (primarily to toggle the behavior of "public" symbols.
 
 I dont consider it worth parsing the MSVC makefiles for compiler options.  Even if
 we get it just right, a specific freeze application may have specific compiler
@@ -54,7 +54,7 @@ class CExtension:
 	def GetLinkerLibs(self):
 		return self.linkerLibs
 
-def checkextensions(unknown, extra_inis):
+def checkextensions(unknown, extra_inis, prefix):
         # Create a table of frozen extensions
 
 	defaultMapName = os.path.join( os.path.split(sys.argv[0])[0], "extensions_win32.ini")
@@ -68,7 +68,7 @@ def checkextensions(unknown, extra_inis):
 	for mod in unknown:
 		for ini in extra_inis:
 #			print "Looking for", mod, "in", win32api.GetFullPathName(ini),"...",
-			defn = get_extension_defn( mod, ini )
+			defn = get_extension_defn( mod, ini, prefix )
 			if defn is not None:
 #				print "Yay - found it!"
 				ret.append( defn )
@@ -79,8 +79,9 @@ def checkextensions(unknown, extra_inis):
 		
 	return ret
 
-def get_extension_defn(moduleName, mapFileName):
+def get_extension_defn(moduleName, mapFileName, prefix):
 	if win32api is None: return None
+	os.environ['PYTHONPREFIX'] = prefix
 	dsp = win32api.GetProfileVal(moduleName, "dsp", "", mapFileName)
 	if dsp=="":
 		return None

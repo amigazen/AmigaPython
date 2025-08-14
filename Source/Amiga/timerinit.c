@@ -97,9 +97,7 @@ RCS_ID_C="$Id: timerinit.c,v 4.3 1994/10/04 07:43:47 jraja Exp $";
 
 #include "config.h"
 
-#ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
-#endif
 
 #include <constructor.h>
 

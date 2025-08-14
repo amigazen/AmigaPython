@@ -1,3 +1,4 @@
+
 /* Range object implementation */
 
 #include "Python.h"
@@ -10,13 +11,9 @@ typedef struct {
 	int	reps;
 } rangeobject;
 
-#include "protos/rangeobject.h"
-
 
 PyObject *
-PyRange_New(start, len, step, reps)
-	long start, len, step;
-	int reps;
+PyRange_New(long start, long len, long step, int reps)
 {
 	rangeobject *obj = PyObject_NEW(rangeobject, &PyRange_Type);
 
@@ -29,16 +26,13 @@ PyRange_New(start, len, step, reps)
 }
 
 static void
-range_dealloc(r)
-	rangeobject *r;
+range_dealloc(rangeobject *r)
 {
 	PyObject_DEL(r);
 }
 
 static PyObject *
-range_item(r, i)
-	rangeobject *r;
-	int i;
+range_item(rangeobject *r, int i)
 {
 	if (i < 0 || i >= r->len * r->reps) {
 		PyErr_SetString(PyExc_IndexError,
@@ -50,61 +44,49 @@ range_item(r, i)
 }
 
 static int
-range_length(r)
-	rangeobject *r;
+range_length(rangeobject *r)
 {
 	return r->len * r->reps;
 }
 
-static int
-range_print(r, fp, flags)
-	rangeobject *r;
-	FILE *fp;
-	int flags;
-{
-	int i, j;
-
-	fprintf(fp, "(");
-	for (i = 0; i < r->reps; ++i)
-		for (j = 0; j < r->len; ++j) {
-			if (j > 0 || i > 0)
-				fprintf(fp, ", ");
-
-			fprintf(fp, "%ld", r->start + j * r->step);
-		}
-
-	if (r->len == 1 && r->reps == 1)
-		fprintf(fp, ",");
-	fprintf(fp, ")");
-	return 0;
-}
-
 static PyObject *
-range_repr(r)
-	rangeobject *r;
+range_repr(rangeobject *r)
 {
-	char buf[80];
-	sprintf(buf, "(xrange(%ld, %ld, %ld) * %d)",
+	/* buffers must be big enough to hold 3 longs + an int +
+	 * a bit of "(xrange(...) * ...)" text.
+	 */
+	char buf1[250];
+	char buf2[250];
+
+	if (r->start == 0 && r->step == 1)
+		sprintf(buf1, "xrange(%ld)", r->start + r->len * r->step);
+
+	else if (r->step == 1)
+		sprintf(buf1, "xrange(%ld, %ld)",
+			r->start,
+			r->start + r->len * r->step);
+
+	else
+		sprintf(buf1, "xrange(%ld, %ld, %ld)",
 			r->start,
 			r->start + r->len * r->step,
-			r->step,
-			r->reps);
-	return PyString_FromString(buf);
+			r->step);
+
+	if (r->reps != 1)
+		sprintf(buf2, "(%s * %d)", buf1, r->reps);
+
+	return PyString_FromString(r->reps == 1 ? buf1 : buf2);
 }
 
 static PyObject *
-range_concat(r, obj)
-	rangeobject *r;
-	PyObject *obj;
+range_concat(rangeobject *r, PyObject *obj)
 {
 	PyErr_SetString(PyExc_TypeError, "cannot concatenate xrange objects");
 	return NULL;
 }
 
 static PyObject *
-range_repeat(r, n)
-	rangeobject *r;
-	int n;
+range_repeat(rangeobject *r, int n)
 {
 	if (n < 0)
 		return (PyObject *) PyRange_New(0, 0, 1, 1);
@@ -123,8 +105,7 @@ range_repeat(r, n)
 }
 
 static int
-range_compare(r1, r2)
-	rangeobject *r1, *r2;
+range_compare(rangeobject *r1, rangeobject *r2)
 {
 	if (r1->start != r2->start)
 		return r1->start - r2->start;
@@ -140,9 +121,7 @@ range_compare(r1, r2)
 }
 
 static PyObject *
-range_slice(r, low, high)
-	rangeobject *r;
-	int low, high;
+range_slice(rangeobject *r, int low, int high)
 {
 	if (r->reps != 1) {
 		PyErr_SetString(PyExc_TypeError,
@@ -173,15 +152,13 @@ range_slice(r, low, high)
 }
 
 static PyObject *
-range_tolist(self, args)
-rangeobject *self;
-PyObject *args;
+range_tolist(rangeobject *self, PyObject *args)
 {
 	PyObject *thelist;
 	int j;
 	int len = self->len * self->reps;
 
-	if (! PyArg_Parse(args, ""))
+	if (! PyArg_ParseTuple(args, ":tolist"))
 		return NULL;
 
 	if ((thelist = PyList_New(len)) == NULL)
@@ -196,16 +173,31 @@ PyObject *args;
 }
 
 static PyObject *
-range_getattr(r, name)
-	rangeobject *r;
-	char *name;
+range_getattr(rangeobject *r, char *name)
 {
 	static PyMethodDef range_methods[] = {
-		{"tolist",	(PyCFunction)range_tolist},
+		{"tolist",	(PyCFunction)range_tolist, METH_VARARGS,
+                 "tolist() -> list\n"
+                 "Return a list object with the same values."},
 		{NULL,		NULL}
 	};
 
 	return Py_FindMethod(range_methods, (PyObject *) r, name);
+}
+
+static int
+range_contains(rangeobject *r, PyObject *obj)
+{
+	long num = PyInt_AsLong(obj);
+
+	if (num < 0 && PyErr_Occurred())
+		return -1;
+
+	if (num < r->start || (num - r->start) % r->step)
+		return 0;
+	if (num > (r->start + (r->len * r->step)))
+		return 0;
+	return 1;
 }
 
 static PySequenceMethods range_as_sequence = {
@@ -216,6 +208,7 @@ static PySequenceMethods range_as_sequence = {
 	(intintargfunc)range_slice, /*sq_slice*/
 	0,		/*sq_ass_item*/
 	0,		/*sq_ass_slice*/
+	(objobjproc)range_contains, /*sq_contains*/
 };
 
 PyTypeObject PyRange_Type = {
@@ -225,12 +218,19 @@ PyTypeObject PyRange_Type = {
 	sizeof(rangeobject),	/* Basic object size */
 	0,			/* Item size for varobject */
 	(destructor)range_dealloc, /*tp_dealloc*/
-	(printfunc)range_print, /*tp_print*/
+	0,			/*tp_print*/
 	(getattrfunc)range_getattr, /*tp_getattr*/
 	0,			/*tp_setattr*/
 	(cmpfunc)range_compare, /*tp_compare*/
-	(reprfunc)range_repr, /*tp_repr*/
+	(reprfunc)range_repr,	/*tp_repr*/
 	0,			/*tp_as_number*/
 	&range_as_sequence,	/*tp_as_sequence*/
 	0,			/*tp_as_mapping*/
+	0,			/*tp_hash*/
+	0,			/*tp_call*/
+	0,			/*tp_str*/
+	0,			/*tp_getattro*/
+	0,			/*tp_setattro*/
+	0,			/*tp_as_buffer*/
+	Py_TPFLAGS_DEFAULT,	/*tp_flags*/
 };

@@ -1,26 +1,26 @@
 ;------------------------------------------------------------------------
 ;
-; Python Installation script for Python version 1.6
+; Python Installation script for Python version 2.0
 ;
 ; Copyright © Irmen de Jong.
-; V2.7 (3-oct-2000)
+; V2.7 (28-oct-2000)
 ;
 
 (set OSVersion          (/ (getversion) 65536))
 
 (set cpu (database "cpu"))
 
-(set @app-name "Python 1.6")
+(set @app-name "Python 2.0")
 
 (set #source-dir (pathonly @icon) )
 
 ;
 ; ENGLISH STRINGS
 ;
-(set #welcomemsg "Installation of Python 1.6\n\nA new directory (with icon) will be created, in which the program is installed.\n\n(note: it is advised to leave a previous Python: assign active with this installation)")
+(set #welcomemsg "Installation of Python 2.0\n\nA new directory (with icon) will be created, in which the program is installed.\n\n(note: it is advised to leave a previous Python: assign active with this installation)")
 (set #osmsg "ARGH! You have an obsolete Kickstart version!\n\nPython only works on Kickstart 2.04 or higher. Upgrade to 3.1!")
 (set #nopretendmsg "Can only install for real.")
-(set #updatemsg "This will install a fresh copy of Python 1.6.\nIf you already have installed the previous version, you might consider running the Update_Previous script instead.\nIf so, abort this installation now.")
+(set #updatemsg "This will install a fresh copy of Python 2.0.\nIf you already have installed the previous version, you might consider running the Update_Previous script instead.\nIf so, abort this installation now.")
 (set #oldversionmsg "\nDo you have a previous installed version, and if so, do you want to delete that (fully)?\nWARNING: If you select 'yes', the full contents of the directory of the old version will be deleted!\n\n\n(If you have a previous version installed, and you don't delete it, you must install this new version to a new directory)")
 (set #oldversionhelp "Yes: delete all files from old version. You can then install this new version in the place of the old one, otherwise, you'll have to install this version in a new directory.\n\nIf you have any files in the directory of the old version that you want to keep, SELECT 'NO'!")
 (set #whereisold "Where is your previous release installed?")
@@ -43,21 +43,21 @@
 (set #readmemsg (cat "Please read shown information...\n\n\n(It is also wise to read the README file)"))
 (set #abort "Abort")
 (set #proceed "Proceed")
-(set #endmsg "\nPython 1.6 is now installed!\n\nIf you're using NewIcons, take a look in the Icons directory. NewIcon versions of the icons are available there.")
-(set #nexttoprev "You seem to have a previous version of Python already installed. If that is version 1.5.2 or earlier, you can install this new version 1.6 NEXT TO the old one. Do you want to do that?")
+(set #endmsg "\nPython 2.0 is now installed!\n\nIf you're using NewIcons, take a look in the Icons directory. NewIcon versions of the icons are available there.")
+(set #nexttoprev "You seem to have a previous version of Python already installed. If that is version 1.6 or earlier, you can install this new version 2.0 NEXT TO the old one. Do you want to do that?")
 (set #nexttoprev_help "If you install this version NEXT TO your previous version, you can use both at the same time.")
 (set #nexttoprev_yes "Yes, next to previous")
 (set #nexttoprev_no "No, standalone")
-(set #installnextto_done "The new version ('Python16') has been installed next to the previous one, which remains available as 'Python'. Additional new files can be found in the 'Python:Python-1.6' subdirectory.")
+(set #installnextto_done "The new version ('Python20') has been installed next to the previous one, which remains available as 'Python'. Additional new files can be found in the 'Python:Python-2.0' subdirectory.")
 ;
 ; NEDERLANDSE STRINGS
 ;
 (if (= @language "nederlands")
 (
-(set #welcomemsg "Installatie van Python 1.6\n\nEr wordt een nieuwe lade (met ikoon) aangemaakt, waarin het programma wordt geïnstalleerd.\n\n(opmerking: het is aan te raden een vorige Python: assign te laten bestaan voor deze installatie)")
+(set #welcomemsg "Installatie van Python 2.0\n\nEr wordt een nieuwe lade (met ikoon) aangemaakt, waarin het programma wordt geïnstalleerd.\n\n(opmerking: het is aan te raden een vorige Python: assign te laten bestaan voor deze installatie)")
 (set #osmsg "ARGH! U heeft een verouderde Kickstart versie!\n\nPython werkt alleen op Kickstart 2.04 of nieuwer. Upgrade naar 3.1!")
 (set #nopretendmsg "Kan alleen echte installatie uitvoeren.")
-(set #updatemsg "Er zal een nieuwe installatie van Python 1.6 plaatsvinden.\nAls u al een vorige versie heeft geïnstalleerd, is het aan te raden om het Update_Previous script te gebruiken inplaats van dit installatieprogramma.\nAls u dat wilt, moet u nu deze installatie afbreken.")
+(set #updatemsg "Er zal een nieuwe installatie van Python 2.0 plaatsvinden.\nAls u al een vorige versie heeft geïnstalleerd, is het aan te raden om het Update_Previous script te gebruiken inplaats van dit installatieprogramma.\nAls u dat wilt, moet u nu deze installatie afbreken.")
 (set #oldversionmsg "\nHeeft u een vorige versie geïnstalleerd, en zo ja, wilt u deze dan (in zijn geheel) verwijderen?\nWAARSCHUWING: als u 'ja' kiest, wordt de complete inhoud van de lade van de oude versie gewist!\n\n\n(Als u een vorige versie geïnstalleerd heeft, en deze niet verwijdert, moet u de nieuwe versie in een nieuwe lade installeren)")
 (set #oldversionhelp "Ja: verwijder alle files van de oude versie. U kunt dan deze nieuwe versie op de plaats van de oude installeren, anders moet u dat in een nieuwe lade doen.\n\nAls u files heeft in de lade van de oude versie die u wilt bewaren, KIES DAN 'NEE'!")
 (set #whereisold "Waar is uw vorige versie geïnstalleerd?")
@@ -80,12 +80,12 @@
 (set #readmemsg (cat "Leest u AUB de getoonde informatie...\n\n\n(Het is ook verstandig om de README file te lezen)"))
 (set #abort "Stop")
 (set #proceed "Ga verder")
-(set #endmsg "\nPython 1.6 is nu geïnstalleerd!\n\nAls u NewIcons gebruikt, kijk dan eens in de Icons directory. Hier zijn NewIcon versies van de icons beschikbaar.")
-(set #nexttoprev "U heeft waarschijnlijk al een vorige versie van Python geïstalleerd. Als dat versie 1.5.2 of eerder is, kunt u deze versie 1.6 ERBIJ zetten. Wilt u dat?")
+(set #endmsg "\nPython 2.0 is nu geïnstalleerd!\n\nAls u NewIcons gebruikt, kijk dan eens in de Icons directory. Hier zijn NewIcon versies van de icons beschikbaar.")
+(set #nexttoprev "U heeft waarschijnlijk al een vorige versie van Python geïstalleerd. Als dat versie 1.6 of eerder is, kunt u deze versie 2.0 ERBIJ zetten. Wilt u dat?")
 (set #nexttoprev_help "Als u deze nieuwe versie BIJ de oude installeert, kunt u de nieuwe en de oude tegelijkertijd blijven gebruiken.")
 (set #nexttoprev_yes "Ja, ERBIJ zetten")
 (set #nexttoprev_no "Nee, los installeren")
-(set #installnextto_done "De nieuwe versie ('Python16') is geïnstalleerd naast de vorige versie, die nog steeds ongewijzigd aan te roepen is d.m.v. 'Python'. Overige nieuwe bestanden zijn te vinden in de 'Python:Python-1.6' subdirectory.")
+(set #installnextto_done "De nieuwe versie ('Python20') is geïnstalleerd naast de vorige versie, die nog steeds ongewijzigd aan te roepen is d.m.v. 'Python'. Overige nieuwe bestanden zijn te vinden in de 'Python:Python-2.0' subdirectory.")
 )
 )
 
@@ -186,7 +186,7 @@
     (
         (set #otherdir TRUE)
         (set tempdest destination)
-        (set destination (tackon destination "Python-1.6"))
+        (set destination (tackon destination "Python-2.0"))
 
         (if (exists destination) (abort #existingerr))
 
@@ -195,7 +195,7 @@
         (copyfiles
         (source (tackon #source-dir "Icons/Drawer.info"))
         (dest tempdest)
-        (newname "Python-1.6.info")
+        (newname "Python-2.0.info")
         )
     )
 )
@@ -310,7 +310,7 @@
 (
 	(set #otherdir TRUE)
 	(set tempdest "Python:" )
-	(set destination (tackon tempdest "Python-1.6"))
+	(set destination (tackon tempdest "Python-2.0"))
 	(set @default-dest tempdest)
 
 	;; create destination subdirectory
@@ -318,18 +318,18 @@
         (copyfiles
         (source (tackon #source-dir "Icons/Drawer.info"))
         (dest tempdest)
-        (newname "Python-1.6.info")
+        (newname "Python-2.0.info")
         )
 
 	;; install files
 	(installFiles)
 
-	;; rename new Python binary to Python16 in parent dir (next to previous one)
-	(rename (tackon destination "Python") (tackon tempdest "Python16") )
-	(rename (tackon destination "Python.info") (tackon tempdest "Python16.info") )
+	;; rename new Python binary to Python20 in parent dir (next to previous one)
+	(rename (tackon destination "Python") (tackon tempdest "Python20") )
+	(rename (tackon destination "Python.info") (tackon tempdest "Python20.info") )
 
 	;; move library files to Python:lib
-	(rename (tackon destination "Lib/Python1.6") (tackon tempdest "Lib/Python1.6") )
+	(rename (tackon destination "Lib/Python2.0") (tackon tempdest "Lib/Python2.0") )
 
 	;; copy site-python files
         (copyfiles
@@ -354,7 +354,7 @@
     (abort #nopretendmsg)
 )
 
-;;;; DISABLED FOR 1.6 installation:
+;;;; DISABLED FOR 2.0 installation:
 ;;;; (message #updatemsg)
 
 (message #welcomemsg)

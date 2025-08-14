@@ -1,3 +1,4 @@
+
 /* Readline interface for tokenizer.c and [raw_]input() in bltinmodule.c.
    By default, or when stdin is not a tty device, we have a super
    simple my_readline function using fgets.
@@ -9,18 +10,14 @@
 */
 
 #include "Python.h"
-#include "protos/myreadline.h"
 
-int (*PyOS_InputHook)() = NULL;
+int (*PyOS_InputHook)(void) = NULL;
 
 /* This function restarts a fgets() after an EINTR error occurred
    except if PyOS_InterruptOccurred() returns true. */
 
 static int
-my_fgets(buf, len, fp)
-	char *buf;
-	int len;
-	FILE *fp;
+my_fgets(char *buf, int len, FILE *fp)
 {
 	char *p;
 	for (;;) {
@@ -53,10 +50,9 @@ my_fgets(buf, len, fp)
 /* Readline implementation using fgets() */
 
 char *
-PyOS_StdioReadline(prompt)
-	char *prompt;
+PyOS_StdioReadline(char *prompt)
 {
-	int n;
+	size_t n;
 	char *p;
 	n = 100;
 	if ((p = PyMem_MALLOC(n)) == NULL)
@@ -65,7 +61,7 @@ PyOS_StdioReadline(prompt)
 	if (prompt)
 		fprintf(stderr, "%s", prompt);
 	fflush(stderr);
-	switch (my_fgets(p, n, stdin)) {
+	switch (my_fgets(p, (int)n, stdin)) {
 	case 0: /* Normal case */
 		break;
 	case 1: /* Interrupt */
@@ -86,11 +82,14 @@ PyOS_StdioReadline(prompt)
 #endif
 	n = strlen(p);
 	while (n > 0 && p[n-1] != '\n') {
-		int incr = n+2;
+		size_t incr = n+2;
 		p = PyMem_REALLOC(p, n + incr);
 		if (p == NULL)
 			return NULL;
-		if (my_fgets(p+n, incr, stdin) != 0)
+		if (incr > INT_MAX) {
+			PyErr_SetString(PyExc_OverflowError, "input line too long");
+		}
+		if (my_fgets(p+n, (int)incr, stdin) != 0)
 			break;
 		n += strlen(p+n);
 	}
@@ -103,14 +102,13 @@ PyOS_StdioReadline(prompt)
 
    Note: Python expects in return a buffer allocated with PyMem_Malloc. */
 
-char *(*PyOS_ReadlineFunctionPointer) Py_PROTO((char *));
+char *(*PyOS_ReadlineFunctionPointer)(char *);
 
 
 /* Interface used by tokenizer.c and bltinmodule.c */
 
 char *
-PyOS_Readline(prompt)
-	char *prompt;
+PyOS_Readline(char *prompt)
 {
 	char *rv;
 	if (PyOS_ReadlineFunctionPointer == NULL) {

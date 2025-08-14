@@ -1,11 +1,12 @@
+
 /* Python interpreter main program for frozen scripts */
 
 #include "Python.h"
 
 #ifdef MS_WIN32
-extern void PyWinFreeze_ExeInit();
-extern void PyWinFreeze_ExeTerm();
-extern int PyInitFrozenExtensions();
+extern void PyWinFreeze_ExeInit(void);
+extern void PyWinFreeze_ExeTerm(void);
+extern int PyInitFrozenExtensions(void);
 #endif
 
 #ifdef HAVE_UNISTD_H
@@ -20,9 +21,7 @@ extern int PyInitFrozenExtensions();
 /* Main program */
 
 int
-Py_FrozenMain(argc, argv)
-	int argc;
-	char **argv;
+Py_FrozenMain(int argc, char **argv)
 {
 	char *p;
 	int n, sts;

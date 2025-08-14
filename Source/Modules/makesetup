@@ -23,7 +23,7 @@
 # Copying config.c.in to config.c:
 # - insert an identifying comment at the start
 # - for each <module> mentioned in Setup before *noconfig*:
-#   + insert 'extern void init<module>();' before MARKER 1
+#   + insert 'extern void init<module>(void);' before MARKER 1
 #   + insert '{"<module>", initmodule},' before MARKER 2
 #
 # Copying Makefile.pre to Makefile:
@@ -140,9 +140,10 @@ sed -e 's/[ 	]*#.*//' -e '/^[ 	]*$/d' |
 			srcs)	srcs="$srcs $arg"; skip=; continue;;
 			esac
 			case $arg in
-			-[IDUC]*)	cpps="$cpps $arg";;
+			-[IDUCf]*)	cpps="$cpps $arg";;
 			-Xlinker)	libs="$libs $arg"; skip=libs;;
 			-rpath)		libs="$libs $arg"; skip=libs;;
+			--rpath)	libs="$libs $arg"; skip=libs;;
 			-[A-Zl]*)	libs="$libs $arg";;
 			*.a)		libs="$libs $arg";;
 			*.so)		libs="$libs $arg";;
@@ -189,6 +190,7 @@ sed -e 's/[ 	]*#.*//' -e '/^[ 	]*$/d' |
 			case $src in
 			glmodule.c) ;;
 			/*) ;;
+			\$*) ;;
 			*) src='$(srcdir)/'$src;;
 			esac
 			case $doconfig in
@@ -233,7 +235,7 @@ sed -e 's/[ 	]*#.*//' -e '/^[ 	]*$/d' |
 	INITBITS=
 	for mod in $MODS
 	do
-		EXTDECLS="${EXTDECLS}extern void init$mod();$NL"
+		EXTDECLS="${EXTDECLS}extern void init$mod(void);$NL"
 		INITBITS="${INITBITS}	{\"$mod\", init$mod},$NL"
 	done
 

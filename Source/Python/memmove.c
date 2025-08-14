@@ -1,12 +1,10 @@
+
 /* A perhaps slow but I hope correct implementation of memmove */
 
-extern char *memcpy();
+extern char *memcpy(char *, char *, int);
 
 char *
-memmove(dst, src, n)
-	char *dst;
-	char *src;
-	int n;
+memmove(char *dst, char *src, int n)
 {
 	char *realdst = dst;
 	if (n <= 0)

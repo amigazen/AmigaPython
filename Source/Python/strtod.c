@@ -52,24 +52,22 @@ static	int	MDMAXEXPT	= { 309};
 static	char	MDMAXFRAC[]	= "17976931348623157";
 static	double	HUGE		= 1.7976931348623157e308;
 
-extern	double	atof();		/* Only called when result known to be ok */
+extern	double	atof(const char *);		/* Only called when result known to be ok */
 
 #ifndef DONT_HAVE_ERRNO_H
 #include <errno.h>
 #endif
 extern	int	errno;
 
-double strtod(str, ptr)
-    char *str;
-    char **ptr;
-    {
+double strtod(char *str, char **ptr)
+{
 	int sign, scale, dotseen;
 	int esign, expt;
 	char *save;
 	register char *sp, *dp;
 	register int c;
 	char *buforg, *buflim;
-	char buffer[64];		/* 45-digit significand + */
+	char buffer[64];		/* 45-digit significant + */
 					/* 13-digit exponent */
 	sp = str;
 	while (*sp == ' ') sp++;
@@ -155,4 +153,4 @@ double strtod(str, ptr)
 	(void) sprintf(dp, "E%d", expt);
 	errno = 0;
 	return atof(buffer)*sign;
-    }
+}

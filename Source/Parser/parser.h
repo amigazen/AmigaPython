@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 
+
 /* Parser interface */
 
 #define MAXSTACK 500
@@ -26,11 +27,11 @@ typedef struct {
 	node		*p_tree;	/* Top of parse tree */
 } parser_state;
 
-parser_state *PyParser_New Py_PROTO((grammar *g, int start));
-void PyParser_Delete Py_PROTO((parser_state *ps));
-int PyParser_AddToken
-	Py_PROTO((parser_state *ps, int type, char *str, int lineno));
-void PyGrammar_AddAccelerators Py_PROTO((grammar *g));
+parser_state *PyParser_New(grammar *g, int start);
+void PyParser_Delete(parser_state *ps);
+int PyParser_AddToken(parser_state *ps, int type, char *str, int lineno,
+                      int *expected_ret);
+void PyGrammar_AddAccelerators(grammar *g);
 
 #ifdef __cplusplus
 }

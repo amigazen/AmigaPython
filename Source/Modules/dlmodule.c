@@ -1,3 +1,4 @@
+
 /* dl module */
 
 #include "Python.h"
@@ -8,7 +9,7 @@
 #define RTLD_LAZY 1
 #endif
 
-typedef ANY *PyUnivPtr;
+typedef void *PyUnivPtr;
 typedef struct {
 	PyObject_HEAD
 	PyUnivPtr *dl_handle;
@@ -19,8 +20,7 @@ staticforward PyTypeObject Dltype;
 static PyObject *Dlerror;
 
 static PyObject *
-newdlobject(handle)
-	PyUnivPtr *handle;
+newdlobject(PyUnivPtr *handle)
 {
 	dlobject *xp;
 	xp = PyObject_New(dlobject, &Dltype);
@@ -31,8 +31,7 @@ newdlobject(handle)
 }
 
 static void
-dl_dealloc(xp)
-	dlobject *xp;
+dl_dealloc(dlobject *xp)
 {
 	if (xp->dl_handle != NULL)
 		dlclose(xp->dl_handle);
@@ -40,9 +39,7 @@ dl_dealloc(xp)
 }
 
 static PyObject *
-dl_close(xp, args)
-	dlobject *xp;
-	PyObject *args;
+dl_close(dlobject *xp, PyObject *args)
 {
 	if (!PyArg_Parse(args, ""))
 		return NULL;
@@ -55,9 +52,7 @@ dl_close(xp, args)
 }
 
 static PyObject *
-dl_sym(xp, args)
-	dlobject *xp;
-	PyObject *args;
+dl_sym(dlobject *xp, PyObject *args)
 {
 	char *name;
 	PyUnivPtr *func;
@@ -72,12 +67,11 @@ dl_sym(xp, args)
 }
 
 static PyObject *
-dl_call(xp, args)
-	dlobject *xp;
-	PyObject *args; /* (varargs) */
+dl_call(dlobject *xp, PyObject *args)
 {
 	PyObject *name;
-	long (*func)();
+	long (*func)(long, long, long, long, long,
+                     long, long, long, long, long);
 	long alist[10];
 	long res;
 	int i;
@@ -131,9 +125,7 @@ static PyMethodDef dlobject_methods[] = {
 };
 
 static PyObject *
-dl_getattr(xp, name)
-	dlobject *xp;
-	char *name;
+dl_getattr(dlobject *xp, char *name)
 {
 	return Py_FindMethod(dlobject_methods, (PyObject *)xp, name);
 }
@@ -159,9 +151,7 @@ static PyTypeObject Dltype = {
 };
 
 static PyObject *
-dl_open(self, args)
-	PyObject *self;
-	PyObject *args;
+dl_open(PyObject *self, PyObject *args)
 {
 	char *name;
 	int mode;
@@ -192,8 +182,23 @@ static PyMethodDef dl_methods[] = {
 	{NULL,		NULL}		/* sentinel */
 };
 
+/* From socketmodule.c
+ * Convenience routine to export an integer value.
+ *
+ * Errors are silently ignored, for better or for worse...
+ */
+static void
+insint(PyObject *d, char *name, int value)
+{
+	PyObject *v = PyInt_FromLong((long) value);
+	if (!v || PyDict_SetItemString(d, name, v))
+		PyErr_Clear();
+
+	Py_XDECREF(v);
+}
+
 void
-initdl()
+initdl(void)
 {
 	PyObject *m, *d, *x;
 
@@ -213,8 +218,29 @@ initdl()
 	PyDict_SetItemString(d, "error", x);
 	x = PyInt_FromLong((long)RTLD_LAZY);
 	PyDict_SetItemString(d, "RTLD_LAZY", x);
+#define INSINT(X)    insint(d,#X,X)
 #ifdef RTLD_NOW
-	x = PyInt_FromLong((long)RTLD_NOW);
-	PyDict_SetItemString(d, "RTLD_NOW", x);
+        INSINT(RTLD_NOW);
+#endif
+#ifdef RTLD_NOLOAD
+        INSINT(RTLD_NOLOAD);
+#endif
+#ifdef RTLD_GLOBAL
+        INSINT(RTLD_GLOBAL);
+#endif
+#ifdef RTLD_LOCAL
+        INSINT(RTLD_LOCAL);
+#endif
+#ifdef RTLD_PARENT
+        INSINT(RTLD_PARENT);
+#endif
+#ifdef RTLD_GROUP
+        INSINT(RTLD_GROUP);
+#endif
+#ifdef RTLD_WORLD
+        INSINT(RTLD_WORLD);
+#endif
+#ifdef RTLD_NODELETE
+        INSINT(RTLD_NODELETE);
 #endif
 }

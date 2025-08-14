@@ -10,7 +10,7 @@ CLIBS = PythonSrc:Amiga/amigapythonamitcp.lib LIB:scm881nb.lib LIB:scnb.lib
 
 LINKOPTS = SC BATCH NOICONS STRIPDEBUG
 
-LIBS = $(PSRC)Modules/Modules.lib $(PSRC)Parser/Parser.lib $(PSRC)Python/Python.lib $(PSRC)Objects/Objects.lib $(CLIBS)
+LIBS = $(PSRC)Modules/Modules.lib $(PSRC)Parser/Parser.lib $(PSRC)Python/Python.lib $(PSRC)Objects/Objects.lib $(PSRC)Expat/lib/expat.lib $(CLIBS)
 
 
 OBJECTS=test.o

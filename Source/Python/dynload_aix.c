@@ -1,3 +1,4 @@
+
 /* Support for dynamic loading of extension modules */
 
 #include <ctype.h>	/*  for isdigit()	  */
@@ -18,7 +19,7 @@
 #endif
 
 
-extern char *Py_GetProgramName();
+extern char *Py_GetProgramName(void);
 
 typedef struct Module {
 	struct Module *next;
@@ -32,8 +33,7 @@ const struct filedescr _PyImport_DynLoadFiletab[] = {
 };
 
 static int
-aix_getoldmodules(modlistptr)
-	void **modlistptr;
+aix_getoldmodules(void **modlistptr)
 {
 	register ModulePtr       modptr, prevmodptr;
 	register struct ld_info  *ldiptr;
@@ -105,9 +105,7 @@ aix_getoldmodules(modlistptr)
 }
 
 static int
-aix_bindnewmodule(newmoduleptr, modlistptr)
-	void *newmoduleptr;
-	void *modlistptr;        
+aix_bindnewmodule(void *newmoduleptr, void *modlistptr)
 {
 	register ModulePtr modptr;
 
@@ -121,8 +119,7 @@ aix_bindnewmodule(newmoduleptr, modlistptr)
 }
 
 static void
-aix_loaderror(pathname)
-	char *pathname;
+aix_loaderror(const char *pathname)
 {
 
 	char *message[1024], errbuf[1024];
@@ -179,7 +176,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 	/*
 	-- Invoke load() with L_NOAUTODEFER leaving the imported symbols
 	-- of the shared module unresolved. Thus we have to resolve them
-	-- explicitely with loadbind. The new module is loaded, then we
+	-- explicitly with loadbind. The new module is loaded, then we
 	-- resolve its symbols using the list of already loaded modules
 	-- (only those that belong to the python executable). Get these
 	-- with loadquery(L_GETINFO).

@@ -1,3 +1,4 @@
+
 /* Parser generator */
 /* XXX This file is not yet fully PROTOized */
 
@@ -35,18 +36,17 @@ typedef struct _nfa {
 } nfa;
 
 /* Forward */
-static void compile_rhs Py_PROTO((labellist *ll,
-			       nfa *nf, node *n, int *pa, int *pb));
-static void compile_alt Py_PROTO((labellist *ll,
-			       nfa *nf, node *n, int *pa, int *pb));
-static void compile_item Py_PROTO((labellist *ll,
-				nfa *nf, node *n, int *pa, int *pb));
-static void compile_atom Py_PROTO((labellist *ll,
-				nfa *nf, node *n, int *pa, int *pb));
+static void compile_rhs(labellist *ll,
+			nfa *nf, node *n, int *pa, int *pb);
+static void compile_alt(labellist *ll,
+			nfa *nf, node *n, int *pa, int *pb);
+static void compile_item(labellist *ll,
+			 nfa *nf, node *n, int *pa, int *pb);
+static void compile_atom(labellist *ll,
+			 nfa *nf, node *n, int *pa, int *pb);
 
 static int
-addnfastate(nf)
-	nfa *nf;
+addnfastate(nfa *nf)
 {
 	nfastate *st;
 	
@@ -60,9 +60,7 @@ addnfastate(nf)
 }
 
 static void
-addnfaarc(nf, from, to, lbl)
-	nfa *nf;
-	int from, to, lbl;
+addnfaarc(nfa *nf, int from, int to, int lbl)
 {
 	nfastate *st;
 	nfaarc *ar;
@@ -77,8 +75,7 @@ addnfaarc(nf, from, to, lbl)
 }
 
 static nfa *
-newnfa(name)
-	char *name;
+newnfa(char *name)
 {
 	nfa *nf;
 	static int type = NT_OFFSET; /* All types will be disjunct */
@@ -101,10 +98,10 @@ typedef struct _nfagrammar {
 } nfagrammar;
 
 /* Forward */
-static void compile_rule Py_PROTO((nfagrammar *gr, node *n));
+static void compile_rule(nfagrammar *gr, node *n);
 
 static nfagrammar *
-newnfagrammar()
+newnfagrammar(void)
 {
 	nfagrammar *gr;
 	
@@ -120,9 +117,7 @@ newnfagrammar()
 }
 
 static nfa *
-addnfa(gr, name)
-	nfagrammar *gr;
-	char *name;
+addnfa(nfagrammar *gr, char *name)
 {
 	nfa *nf;
 	
@@ -150,8 +145,7 @@ static char REQNFMT[] = "metacompile: less than %d children\n";
 #endif
 
 static nfagrammar *
-metacompile(n)
-	node *n;
+metacompile(node *n)
 {
 	nfagrammar *gr;
 	int i;
@@ -169,9 +163,7 @@ metacompile(n)
 }
 
 static void
-compile_rule(gr, n)
-	nfagrammar *gr;
-	node *n;
+compile_rule(nfagrammar *gr, node *n)
 {
 	nfa *nf;
 	
@@ -190,11 +182,7 @@ compile_rule(gr, n)
 }
 
 static void
-compile_rhs(ll, nf, n, pa, pb)
-	labellist *ll;
-	nfa *nf;
-	node *n;
-	int *pa, *pb;
+compile_rhs(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
 {
 	int i;
 	int a, b;
@@ -227,11 +215,7 @@ compile_rhs(ll, nf, n, pa, pb)
 }
 
 static void
-compile_alt(ll, nf, n, pa, pb)
-	labellist *ll;
-	nfa *nf;
-	node *n;
-	int *pa, *pb;
+compile_alt(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
 {
 	int i;
 	int a, b;
@@ -258,11 +242,7 @@ compile_alt(ll, nf, n, pa, pb)
 }
 
 static void
-compile_item(ll, nf, n, pa, pb)
-	labellist *ll;
-	nfa *nf;
-	node *n;
-	int *pa, *pb;
+compile_item(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
 {
 	int i;
 	int a, b;
@@ -299,11 +279,7 @@ compile_item(ll, nf, n, pa, pb)
 }
 
 static void
-compile_atom(ll, nf, n, pa, pb)
-	labellist *ll;
-	nfa *nf;
-	node *n;
-	int *pa, *pb;
+compile_atom(labellist *ll, nfa *nf, node *n, int *pa, int *pb)
 {
 	int i;
 	
@@ -329,10 +305,7 @@ compile_atom(ll, nf, n, pa, pb)
 }
 
 static void
-dumpstate(ll, nf, istate)
-	labellist *ll;
-	nfa *nf;
-	int istate;
+dumpstate(labellist *ll, nfa *nf, int istate)
 {
 	nfastate *st;
 	int i;
@@ -355,9 +328,7 @@ dumpstate(ll, nf, istate)
 }
 
 static void
-dumpnfa(ll, nf)
-	labellist *ll;
-	nfa *nf;
+dumpnfa(labellist *ll, nfa *nf)
 {
 	int i;
 	
@@ -371,10 +342,7 @@ dumpnfa(ll, nf)
 /* PART TWO -- CONSTRUCT DFA -- Algorithm 3.1 from [Aho&Ullman 77] */
 
 static void
-addclosure(ss, nf, istate)
-	bitset ss;
-	nfa *nf;
-	int istate;
+addclosure(bitset ss, nfa *nf, int istate)
 {
 	if (addbit(ss, istate)) {
 		nfastate *st = &nf->nf_state[istate];
@@ -410,16 +378,13 @@ typedef struct _ss_dfa {
 } ss_dfa;
 
 /* Forward */
-static void printssdfa Py_PROTO((int xx_nstates, ss_state *xx_state, int nbits,
-			      labellist *ll, char *msg));
-static void simplify Py_PROTO((int xx_nstates, ss_state *xx_state));
-static void convert Py_PROTO((dfa *d, int xx_nstates, ss_state *xx_state));
+static void printssdfa(int xx_nstates, ss_state *xx_state, int nbits,
+		       labellist *ll, char *msg);
+static void simplify(int xx_nstates, ss_state *xx_state);
+static void convert(dfa *d, int xx_nstates, ss_state *xx_state);
 
 static void
-makedfa(gr, nf, d)
-	nfagrammar *gr;
-	nfa *nf;
-	dfa *d;
+makedfa(nfagrammar *gr, nfa *nf, dfa *d)
 {
 	int nbits = nf->nf_nstates;
 	bitset ss;
@@ -523,12 +488,8 @@ makedfa(gr, nf, d)
 }
 
 static void
-printssdfa(xx_nstates, xx_state, nbits, ll, msg)
-	int xx_nstates;
-	ss_state *xx_state;
-	int nbits;
-	labellist *ll;
-	char *msg;
+printssdfa(int xx_nstates, ss_state *xx_state, int nbits,
+	   labellist *ll, char *msg)
 {
 	int i, ibit, iarc;
 	ss_state *yy;
@@ -565,12 +526,11 @@ printssdfa(xx_nstates, xx_state, nbits, ll, msg)
    equivalent to another oner.  This is NOT Algorithm 3.3 from
    [Aho&Ullman 77].  It does not always finds the minimal DFA,
    but it does usually make a much smaller one...  (For an example
-   of sub-optimal behaviour, try S: x a b+ | y a b+.)
+   of sub-optimal behavior, try S: x a b+ | y a b+.)
 */
 
 static int
-samestate(s1, s2)
-	ss_state *s1, *s2;
+samestate(ss_state *s1, ss_state *s2)
 {
 	int i;
 	
@@ -585,10 +545,7 @@ samestate(s1, s2)
 }
 
 static void
-renamestates(xx_nstates, xx_state, from, to)
-	int xx_nstates;
-	ss_state *xx_state;
-	int from, to;
+renamestates(int xx_nstates, ss_state *xx_state, int from, int to)
 {
 	int i, j;
 	
@@ -605,9 +562,7 @@ renamestates(xx_nstates, xx_state, from, to)
 }
 
 static void
-simplify(xx_nstates, xx_state)
-	int xx_nstates;
-	ss_state *xx_state;
+simplify(int xx_nstates, ss_state *xx_state)
 {
 	int changes;
 	int i, j;
@@ -638,10 +593,7 @@ simplify(xx_nstates, xx_state)
 /* Convert the DFA into a grammar that can be used by our parser */
 
 static void
-convert(d, xx_nstates, xx_state)
-	dfa *d;
-	int xx_nstates;
-	ss_state *xx_state;
+convert(dfa *d, int xx_nstates, ss_state *xx_state)
 {
 	int i, j;
 	ss_state *yy;
@@ -675,8 +627,7 @@ convert(d, xx_nstates, xx_state)
 /* PART FIVE -- GLUE IT ALL TOGETHER */
 
 static grammar *
-maketables(gr)
-	nfagrammar *gr;
+maketables(nfagrammar *gr)
 {
 	int i;
 	nfa *nf;
@@ -704,8 +655,7 @@ maketables(gr)
 }
 
 grammar *
-pgen(n)
-	node *n;
+pgen(node *n)
 {
 	nfagrammar *gr;
 	grammar *g;

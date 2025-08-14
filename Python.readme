@@ -1,9 +1,9 @@
 
 
-                                PYTHON 1.6
+                                PYTHON 2.0
                           NOTES ON THE AMIGA PORT
 
-                             October 12, 2000.
+                             October 28, 2000.
 
 	
            Conversion and Amiga specific code by Irmen de Jong.
@@ -32,12 +32,14 @@
 |                      |
 +----------------------+
 
-Well, this is Python version 1.6 (build 1)!
-See the notes in Docs/NEWS for more information on what's new since 1.5.2.
-Be aware that there are a few language incompatibilities. Just check
-out the regular Python 1.6 news on www.python.org to find out what they are.
+Well, this is Python version 2.0 (build 1)!
+See the notes in Docs/NEWS for more information on what's new since the 1.x
+versions. Be aware that there are a few language incompatibilities. Just check
+out the regular Python 2.0 news on www.python.org to find out what they are.
 
-BTW Perhaps AmigaPython 2.0 will even see the light in the near future... :-)
+This may very well be the last Python version I'm releasing for the Amiga.
+My A4000 is getting old and rusty... And I figured Python 2.0 had to be
+my last effort.
 
 
 +----------------------+
@@ -49,9 +51,6 @@ BTW Perhaps AmigaPython 2.0 will even see the light in the near future... :-)
 * The MAIN PYTHON SITE is <http://www.python.org>. All general documentation
   can be obtained from here (Python tutorial, language reference, library
   reference and much more).
-
-* The above mentioned documentation is also available on Aminet, as
-  dev/lang/Python16_Doc.lha.
 
 * The AmigaPython homepage is at http://www.bigfoot.com/~irmen/python.html
   (note the new address!). Check it out for news, future plans, bugs etc.
@@ -117,7 +116,7 @@ BTW Perhaps AmigaPython 2.0 will even see the light in the near future... :-)
 
   This should not happen; you should get a MemoryError exception.  If it does
   crash, increase your stack size and try again.  Python's default stack size
-  is 20K, which should be enough for most programs.
+  is 40K, which should be enough for most programs.
 
 * Functions which use the PIPE: device (like os.popen) seem to work
   incorrectly!

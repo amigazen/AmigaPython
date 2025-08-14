@@ -1,3 +1,4 @@
+
 #include "pgenheaders.h"
 #include "metagrammar.h"
 #include "grammar.h"
@@ -146,7 +147,7 @@ static grammar _PyParser_Grammar = {
 };
 
 grammar *
-meta_grammar()
+meta_grammar(void)
 {
 	return &_PyParser_Grammar;
 }

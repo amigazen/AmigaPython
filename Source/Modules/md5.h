@@ -27,57 +27,29 @@ documentation and/or software.
 /* GLOBAL.H - RSAREF types and constants
  */
 
-/* PROTOTYPES should be set to one if and only if the compiler supports
-  function argument prototyping.
-The following makes PROTOTYPES default to 0 if it has not already
-  been defined with C compiler flags.
- */
-#ifdef HAVE_PROTOTYPES
-#define PROTOTYPES 1
-#endif
-#ifndef PROTOTYPES
-#define PROTOTYPES 0
-#endif
-
 /* POINTER defines a generic pointer type */
 typedef unsigned char *POINTER;
 
 /* UINT2 defines a two byte word */
 typedef unsigned short int UINT2;
 
-#ifdef HAVE_LIMITS_H
-#include <limits.h>
-#else
-/* Wild guess */
-#define LONG_MAX 2147483647L
-#endif
-
 /* UINT4 defines a four byte word */
-#if defined(INT_MAX) && INT_MAX == 2147483647
-typedef unsigned int UINT4;
-#else
-#if defined(LONG_MAX) && LONG_MAX == 2147483647L
+#if SIZEOF_LONG == 4
 typedef unsigned long int UINT4;
+#else
+#if INT_MAX == 2147483647
+typedef unsigned int UINT4;
 #endif
-/* Too bad if neither is */
+/* Too bad if neither is; pyport.h would need to be fixed. */
 #endif
 
-/* PROTO_LIST is defined depending on how PROTOTYPES is defined above.
-If using PROTOTYPES, then PROTO_LIST returns the list, otherwise it
-  returns an empty list.
- */
-#if PROTOTYPES
-#define PROTO_LIST(list) list
-#else
-#define PROTO_LIST(list) ()
-#endif
 /* ========== End global.h; continue md5.h ========== */
 
 /* MD5 context. */
 typedef struct {
-  UINT4 state[4];                                   /* state (ABCD) */
-  UINT4 count[2];        /* number of bits, modulo 2^64 (lsb first) */
-  unsigned char buffer[64];                         /* input buffer */
+    UINT4 state[4];                                   /* state (ABCD) */
+    UINT4 count[2];        /* number of bits, modulo 2^64 (lsb first) */
+    unsigned char buffer[64];                         /* input buffer */
 } MD5_CTX;
 
 /* Rename all exported symbols to avoid conflicts with similarly named
@@ -87,7 +59,6 @@ typedef struct {
 #define MD5Update _Py_MD5Update
 #define MD5Final _Py_MD5Final
 
-void MD5Init PROTO_LIST ((MD5_CTX *));
-void MD5Update PROTO_LIST
-  ((MD5_CTX *, unsigned char *, unsigned int));
-void MD5Final PROTO_LIST ((unsigned char [16], MD5_CTX *));
+void MD5Init(MD5_CTX *);
+void MD5Update(MD5_CTX *, unsigned char *, unsigned int);
+void MD5Final(unsigned char [16], MD5_CTX *);

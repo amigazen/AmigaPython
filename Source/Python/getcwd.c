@@ -1,3 +1,4 @@
+
 /* Two PD getcwd() implementations.
    Author: Guido van Rossum, CWI Amsterdam, Jan 1991, <guido@cwi.nl>. */
 
@@ -16,12 +17,10 @@
 #define MAXPATHLEN 1024
 #endif
 
-extern char *getwd();
+extern char *getwd(char *);
 
 char *
-getcwd(buf, size)
-	char *buf;
-	int size;
+getcwd(char *buf, int size)
 {
 	char localbuf[MAXPATHLEN+1];
 	char *ret;
@@ -31,7 +30,7 @@ getcwd(buf, size)
 		return NULL;
 	}
 	ret = getwd(localbuf);
-	if (ret != NULL && strlen(localbuf) >= size) {
+	if (ret != NULL && strlen(localbuf) >= (size_t)size) {
 		errno = ERANGE;
 		return NULL;
 	}
@@ -52,9 +51,7 @@ getcwd(buf, size)
 #endif
 
 char *
-getcwd(buf, size)
-	char *buf;
-	int size;
+getcwd(char *buf, int size)
 {
 	FILE *fp;
 	char *p;

@@ -18,6 +18,7 @@
 
 
 #include "Python.h"
+#include "protos.h"
 
 #if defined(AMITCP) || defined(INET225)
 
@@ -50,7 +51,7 @@ static void initsyslog_check(void)
 static void initsocket_check(void)
 {
 	if(!checksocketlib()) return;
-	initsocket();
+	init_socket();
 }
 
 static void initselect_check(void)
@@ -69,7 +70,7 @@ struct _inittab _PyImport_Inittab[] = {
 	{"amiga",initamiga},
 	{"ARexxll",initARexx},
 	{"Doslib", initDoslib },
-//	{"amiga_exec", initamiga_exec },
+//	{"Execlib", initExeclib },		// XXX experimental
 //	{"simplegfx", initsimplegfx },  // XXX experimental
 
 	{"array",initarray},
@@ -96,6 +97,7 @@ struct _inittab _PyImport_Inittab[] = {
 	{"_codecs", init_codecs},
 	{"_sre", init_sre},
 	{"unicodedata", initunicodedata},
+	{"pyexpat", initpyexpat},
 
 #if defined(AMITCP) || defined(INET225)
 	/* Use the lib-checking init functions defined above */
@@ -103,7 +105,7 @@ struct _inittab _PyImport_Inittab[] = {
 	{"grp",initgrp_check},
 	{"crypt",initcrypt_check},
 	{"select",initselect_check},
-	{"socket",initsocket_check},
+	{"_socket",initsocket_check},
 	{"syslog",initsyslog_check},
 #endif
 

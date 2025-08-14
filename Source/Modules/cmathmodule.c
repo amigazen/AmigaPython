@@ -4,9 +4,6 @@
 
 #include "Python.h"
 
-#include "mymath.h"
-#include "protos/cmathmodule.h"
-
 #ifdef i860
 /* Cray APP has bogus definition of HUGE_VAL in <math.h> */
 #undef HUGE_VAL
@@ -37,13 +34,12 @@ static Py_complex c_pi2 = {M_PI/2., 0.};
 #endif
 
 /* forward declarations */
-staticforward Py_complex c_log();
-staticforward Py_complex c_prodi();
-staticforward Py_complex c_sqrt();
+staticforward Py_complex c_log(Py_complex);
+staticforward Py_complex c_prodi(Py_complex);
+staticforward Py_complex c_sqrt(Py_complex);
 
 
-static Py_complex c_acos(x)
-	Py_complex x;
+static Py_complex c_acos(Py_complex x)
 {
 	return c_neg(c_prodi(c_log(c_sum(x,c_prod(c_i,
 		    c_sqrt(c_diff(c_1,c_prod(x,x))))))));
@@ -55,11 +51,13 @@ static char c_acos_doc [] =
 Return the arc cosine of x.";
 
 
-static Py_complex c_acosh(x)
-	Py_complex x;
+static Py_complex c_acosh(Py_complex x)
 {
-	return c_log(c_sum(x,c_prod(c_i,
-		    c_sqrt(c_diff(c_1,c_prod(x,x))))));
+	Py_complex z;
+	z = c_sqrt(c_half);
+	z = c_log(c_prod(z, c_sum(c_sqrt(c_sum(x,c_1)),
+				  c_sqrt(c_diff(x,c_1)))));
+	return c_sum(z, z);
 }
 
 static char c_acosh_doc [] =
@@ -68,11 +66,13 @@ static char c_acosh_doc [] =
 Return the hyperbolic arccosine of x.";
 
 
-static Py_complex c_asin(x)
-	Py_complex x;
+static Py_complex c_asin(Py_complex x)
 {
-	return c_neg(c_prodi(c_log(c_sum(c_prod(c_i,x),
-		    c_sqrt(c_diff(c_1,c_prod(x,x)))))));
+	Py_complex z;
+	z = c_sqrt(c_half);
+	z = c_log(c_prod(z, c_sum(c_sqrt(c_sum(x,c_i)),
+				  c_sqrt(c_diff(x,c_i)))));
+	return c_sum(z, z);
 }
 
 static char c_asin_doc [] =
@@ -81,14 +81,12 @@ static char c_asin_doc [] =
 Return the arc sine of x.";
 
 
-static Py_complex c_asinh(x)
-	Py_complex x;
+static Py_complex c_asinh(Py_complex x)
 {
 	/* Break up long expression for WATCOM */
 	Py_complex z;
-	z = c_sum(c_1,c_prod(x,x));
-	z = c_diff(c_sqrt(z),x);
-	return c_neg(c_log(z));
+	z = c_sum(c_1,c_prod(x, x));
+	return c_log(c_sum(c_sqrt(z), x));
 }
 
 static char c_asinh_doc [] =
@@ -97,8 +95,7 @@ static char c_asinh_doc [] =
 Return the hyperbolic arc sine of x.";
 
 
-static Py_complex c_atan(x)
-	Py_complex x;
+static Py_complex c_atan(Py_complex x)
 {
 	return c_prod(c_i2,c_log(c_quot(c_sum(c_i,x),c_diff(c_i,x))));
 }
@@ -109,8 +106,7 @@ static char c_atan_doc [] =
 Return the arc tangent of x.";
 
 
-static Py_complex c_atanh(x)
-	Py_complex x;
+static Py_complex c_atanh(Py_complex x)
 {
 	return c_prod(c_half,c_log(c_quot(c_sum(c_1,x),c_diff(c_1,x))));
 }
@@ -121,8 +117,7 @@ static char c_atanh_doc [] =
 Return the hyperbolic arc tangent of x.";
 
 
-static Py_complex c_cos(x)
-	Py_complex x;
+static Py_complex c_cos(Py_complex x)
 {
 	Py_complex r;
 	r.real = cos(x.real)*cosh(x.imag);
@@ -136,8 +131,7 @@ static char c_cos_doc [] =
 Return the cosine of x.";
 
 
-static Py_complex c_cosh(x)
-	Py_complex x;
+static Py_complex c_cosh(Py_complex x)
 {
 	Py_complex r;
 	r.real = cos(x.imag)*cosh(x.real);
@@ -151,8 +145,7 @@ static char c_cosh_doc [] =
 Return the hyperbolic cosine of x.";
 
 
-static Py_complex c_exp(x)
-	Py_complex x;
+static Py_complex c_exp(Py_complex x)
 {
 	Py_complex r;
 	double l = exp(x.real);
@@ -167,8 +160,7 @@ static char c_exp_doc [] =
 Return the exponential value e**x.";
 
 
-static Py_complex c_log(x)
-	Py_complex x;
+static Py_complex c_log(Py_complex x)
 {
 	Py_complex r;
 	double l = hypot(x.real,x.imag);
@@ -183,8 +175,7 @@ static char c_log_doc [] =
 Return the natural logarithm of x.";
 
 
-static Py_complex c_log10(x)
-	Py_complex x;
+static Py_complex c_log10(Py_complex x)
 {
 	Py_complex r;
 	double l = hypot(x.real,x.imag);
@@ -200,8 +191,7 @@ Return the base-10 logarithm of x.";
 
 
 /* internal function not available from Python */
-static Py_complex c_prodi(x)
-     Py_complex x;
+static Py_complex c_prodi(Py_complex x)
 {
 	Py_complex r;
 	r.real = -x.imag;
@@ -210,8 +200,7 @@ static Py_complex c_prodi(x)
 }
 
 
-static Py_complex c_sin(x)
-	Py_complex x;
+static Py_complex c_sin(Py_complex x)
 {
 	Py_complex r;
 	r.real = sin(x.real)*cosh(x.imag);
@@ -225,8 +214,7 @@ static char c_sin_doc [] =
 Return the sine of x.";
 
 
-static Py_complex c_sinh(x)
-	Py_complex x;
+static Py_complex c_sinh(Py_complex x)
 {
 	Py_complex r;
 	r.real = cos(x.imag)*sinh(x.real);
@@ -240,8 +228,7 @@ static char c_sinh_doc [] =
 Return the hyperbolic sine of x.";
 
 
-static Py_complex c_sqrt(x)
-	Py_complex x;
+static Py_complex c_sqrt(Py_complex x)
 {
 	Py_complex r;
 	double s,d;
@@ -272,8 +259,7 @@ static char c_sqrt_doc [] =
 Return the square root of x.";
 
 
-static Py_complex c_tan(x)
-	Py_complex x;
+static Py_complex c_tan(Py_complex x)
 {
 	Py_complex r;
 	double sr,cr,shi,chi;
@@ -299,8 +285,7 @@ static char c_tan_doc [] =
 Return the tangent of x.";
 
 
-static Py_complex c_tanh(x)
-	Py_complex x;
+static Py_complex c_tanh(Py_complex x)
 {
 	Py_complex r;
 	double si,ci,shr,chr;
@@ -329,7 +314,7 @@ Return the hyperbolic tangent of x.";
 /* And now the glue to make them available from Python: */
 
 static PyObject *
-math_error()
+math_error(void)
 {
 	if (errno == EDOM)
 		PyErr_SetString(PyExc_ValueError, "math domain error");
@@ -341,9 +326,7 @@ math_error()
 }
 
 static PyObject *
-math_1(args, func)
-	PyObject *args;
-	Py_complex (*func) Py_FPROTO((Py_complex));
+math_1(PyObject *args, Py_complex (*func)(Py_complex))
 {
 	Py_complex x;
 	if (!PyArg_ParseTuple(args, "D", &x))
@@ -360,17 +343,10 @@ math_1(args, func)
 		return PyComplex_FromCComplex(x);
 }
 
-#ifdef HAVE_PROTOTYPES
 #define FUNC1(stubname, func) \
 	static PyObject * stubname(PyObject *self, PyObject *args) { \
 		return math_1(args, func); \
 	}
-#else /* !HAVE_PROTOTYPES */
-#define FUNC1(stubname, func) \
-	static PyObject * stubname(self, args) PyObject *self, *args; { \
-		return math_1(args, func); \
-	}
-#endif
 
 FUNC1(cmath_acos, c_acos)
 FUNC1(cmath_acosh, c_acosh)
@@ -396,27 +372,43 @@ functions for complex numbers.";
 
 
 static PyMethodDef cmath_methods[] = {
-	{"acos", cmath_acos, 1, c_acos_doc},
-	{"acosh", cmath_acosh, 1, c_acosh_doc},
-	{"asin", cmath_asin, 1, c_asin_doc},
-	{"asinh", cmath_asinh, 1, c_asinh_doc},
-	{"atan", cmath_atan, 1, c_atan_doc},
-	{"atanh", cmath_atanh, 1, c_atanh_doc},
-	{"cos", cmath_cos, 1, c_cos_doc},
-	{"cosh", cmath_cosh, 1, c_cosh_doc},
-	{"exp", cmath_exp, 1, c_exp_doc},
-	{"log", cmath_log, 1, c_log_doc},
-	{"log10", cmath_log10, 1, c_log10_doc},
-	{"sin", cmath_sin, 1, c_sin_doc},
-	{"sinh", cmath_sinh, 1, c_sinh_doc},
-	{"sqrt", cmath_sqrt, 1, c_sqrt_doc},
-	{"tan", cmath_tan, 1, c_tan_doc},
-	{"tanh", cmath_tanh, 1, c_tanh_doc},
+	{"acos", cmath_acos, 
+	 METH_VARARGS, c_acos_doc},
+	{"acosh", cmath_acosh, 
+	 METH_VARARGS, c_acosh_doc},
+	{"asin", cmath_asin, 
+	 METH_VARARGS, c_asin_doc},
+	{"asinh", cmath_asinh, 
+	 METH_VARARGS, c_asinh_doc},
+	{"atan", cmath_atan, 
+	 METH_VARARGS, c_atan_doc},
+	{"atanh", cmath_atanh, 
+	 METH_VARARGS, c_atanh_doc},
+	{"cos", cmath_cos, 
+	 METH_VARARGS, c_cos_doc},
+	{"cosh", cmath_cosh, 
+	 METH_VARARGS, c_cosh_doc},
+	{"exp", cmath_exp, 
+	 METH_VARARGS, c_exp_doc},
+	{"log", cmath_log, 
+	 METH_VARARGS, c_log_doc},
+	{"log10", cmath_log10, 
+	 METH_VARARGS, c_log10_doc},
+	{"sin", cmath_sin, 
+	 METH_VARARGS, c_sin_doc},
+	{"sinh", cmath_sinh, 
+	 METH_VARARGS, c_sinh_doc},
+	{"sqrt", cmath_sqrt, 
+	 METH_VARARGS, c_sqrt_doc},
+	{"tan", cmath_tan, 
+	 METH_VARARGS, c_tan_doc},
+	{"tanh", cmath_tanh, 
+	 METH_VARARGS, c_tanh_doc},
 	{NULL,		NULL}		/* sentinel */
 };
 
 DL_EXPORT(void)
-initcmath()
+initcmath(void)
 {
 	PyObject *m, *d, *v;
 	

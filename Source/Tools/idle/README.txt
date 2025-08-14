@@ -1,9 +1,8 @@
-IDLE 0.6
---------
+IDLE 0.5 - February 2000
+------------------------
 
-Copyright (c) 1998-2000 Corporation for National Research Initiatives.
-
-This is IDLE, my own attempt at a Tkinter-based IDE for Python.
+This is an early release of IDLE, my own attempt at a Tkinter-based
+IDE for Python.
 
 For news about this release, see the file NEWS.txt.  (For a more
 detailed change log, see the file ChangeLog.)
@@ -36,11 +35,18 @@ Command line arguments: files passed on the command line are executed,
 not opened for editing, unless you give the -e command line option.
 Try "./idle.py -h" to see other command line options.
 
-RESOURCES
+IDLE requires Python 1.5.2, so it is currently only usable with a
+Python 1.5.2 distribution.  (An older version of IDLE is distributed
+with Python 1.5.2; you can drop this version on top of it.)
 
-IDLE home page: http://www.python.org/idle/
-CP4E home page: http://www.python.org/cp4e/
-EDU-SIG: http://www.python.org/sigs/edu-sig/
-IDLE-DEV mailing list: http://www.python.org/mailman/listinfo/idle-dev
+COPYRIGHT
 
---Guido van Rossum (home page: http://www.pythonlabs.com/~guido/)
+IDLE is covered by the standard Python copyright notice
+(http://www.python.org/doc/Copyright.html).
+
+FEEDBACK
+
+For feedback, please use the Python Bugs List
+(http://www.python.org/search/search_bugs.html).
+
+--Guido van Rossum (home page: http://www.python.org/~guido/)

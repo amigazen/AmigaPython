@@ -21,11 +21,15 @@ if sys.platform=="win32":
 
 IMPORT_NAME = dis.opname.index('IMPORT_NAME')
 IMPORT_FROM = dis.opname.index('IMPORT_FROM')
+STORE_NAME = dis.opname.index('STORE_NAME')
+STORE_FAST = dis.opname.index('STORE_FAST')
+STORE_GLOBAL = dis.opname.index('STORE_GLOBAL')
+STORE_OPS = [STORE_NAME, STORE_FAST, STORE_GLOBAL]
 
 # Modulefinder does a good job at simulating Python's, but it can not
 # handle __path__ modifications packages make at runtime.  Therefore there
 # is a mechanism whereby you can register extra paths in this map for a
-# package, and it will be honoured.
+# package, and it will be honored.
 
 # Note this is a mapping is lists of paths.
 packagePathMap = {}
@@ -296,6 +300,9 @@ class ModuleFinder:
                         if not self.badmodules.has_key(fullname):
                             self.badmodules[fullname] = {}
                         self.badmodules[fullname][m.__name__] = None
+            elif op in STORE_OPS:
+                # Skip; each IMPORT_FROM is followed by a STORE_* opcode
+                pass
             else:
                 lastname = None
         for c in co.co_consts:
@@ -365,7 +372,7 @@ class ModuleFinder:
         keys = self.badmodules.keys()
         keys.sort()
         for key in keys:
-            # ... but not if they were explicitely excluded.
+            # ... but not if they were explicitly excluded.
             if key not in self.excludes:
                 mods = self.badmodules[key].keys()
                 mods.sort()

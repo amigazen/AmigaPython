@@ -13,8 +13,8 @@ NETOBJECTS = config.o getpath.o environment.o amigamodule.o \
 	cryptmodule.o syslogmodule.o selectmodule.o socketmodule.o \
 	cStringIO.o cPickle.o pypcre.o pwdmodule.o grpmodule.o \
 	stropmodule.o _sre.o _codecsmodule.o  \
-	unicodedata.o amigaunicodedatabase.o
-###	AmigaExecmodule.o 
+	unicodedata.o unicodedatabase.o pyexpat.o 
+###	Execlibmodule.o SimpleGFXmodule.o
 ###	soundex.o
 
 
@@ -28,8 +28,8 @@ OBJECTS = config.o getpath.o environment.o amigamodule.o \
 	shamodule.o ARexxmodule.o Doslibmodule.o \
 	cStringIO.o cPickle.o pypcre.o \
 	stropmodule.o _sre.o _codecsmodule.o \
-	unicodedata.o amigaunicodedatabase.o
-### AmigaExecmodule.o 
+	unicodedata.o  unicodedatabase.o pyexpat.o
+###	Execlibmodule.o SimpleGFXmodule.o
 ###	soundex.o 
 
 
@@ -52,11 +52,11 @@ arraymodule.o : arraymodule.c /Include/Python.h
 
 binascii.o : binascii.c /Include/Python.h
 
-cPickle.o : cPickle.c /Include/mymath.h /Include/cStringIO.h /Include/Python.h
+cPickle.o : cPickle.c  /Include/cStringIO.h /Include/Python.h
 
 cStringIO.o : cStringIO.c /Include/cStringIO.h /Include/import.h /Include/Python.h
 
-cmathmodule.o : cmathmodule.c /Include/mymath.h /Include/Python.h
+cmathmodule.o : cmathmodule.c  /Include/Python.h
 
 config.o : config.c
 
@@ -72,7 +72,7 @@ fpectlmodule.o : fpectlmodule.c /Include/Python.h
 
 fpetestmodule.o : fpetestmodule.c /Include/Python.h
 
-getbuildinfo.o : getbuildinfo.c macbuildno.h /Include/config.h /Include/myproto.h
+getbuildinfo.o : getbuildinfo.c macbuildno.h /Include/config.h 
 
 getpath.o : getpath.c /Include/protos.h /Include/osdefs.h /Include/Python.h
 
@@ -80,7 +80,7 @@ grpmodule.o : grpmodule.c /Include/Python.h
 
 main.o : main.c /Include/osdefs.h /Include/Python.h
 
-mathmodule.o : mathmodule.c /Include/mymath.h /Include/Python.h
+mathmodule.o : mathmodule.c  /Include/Python.h
 
 md5c.o : md5c.c md5.h /Include/config.h
 
@@ -94,9 +94,9 @@ pcremodule.o : pcremodule.c pcre-int.h pcre.h /Include/graminit.h /Include/Pytho
 
 pwdmodule.o : pwdmodule.c /Include/Python.h
 
-pypcre.o : pypcre.c /Include/graminit.h /Include/mymalloc.h /Include/Python.h pcre-int.h pcre.h
+pypcre.o : pypcre.c /Include/graminit.h /Include/Python.h pcre-int.h pcre.h
 
-python.o : python.c /Include/myproto.h
+python.o : python.c 
 
 readline.o : readline.c /Include/Python.h
 
@@ -106,23 +106,23 @@ regexpr.o : regexpr.c regexpr.h /Include/Python.h
 
 resource.o : resource.c
 
-rotormodule.o : rotormodule.c /Include/mymath.h /Include/Python.h
+rotormodule.o : rotormodule.c  /Include/Python.h
 
-selectmodule.o : selectmodule.c /Include/myselect.h /Include/Python.h
+selectmodule.o : selectmodule.c /Include/Python.h
 
 shamodule.o: shamodule.c /Include/Python.h
 
-socketmodule.o : socketmodule.c /Include/mytime.h /Include/Python.h
+socketmodule.o : socketmodule.c /Include/Python.h
 
 soundex.o : soundex.c /Include/Python.h
 
 stropmodule.o : stropmodule.c /Include/Python.h
 
-structmodule.o : structmodule.c /Include/mymath.h /Include/Python.h
+structmodule.o : structmodule.c  /Include/Python.h
 
 syslogmodule.o : syslogmodule.c /Include/Python.h
 
-timemodule.o : timemodule.c /Include/mytime.h /Include//Include/myselect.h /Include/mymath.h /Include/Python.h
+timemodule.o : timemodule.c /Include/Python.h
 
 timingmodule.o : timingmodule.c timing.h /Include/Python.h
 
@@ -133,5 +133,9 @@ zlibmodule.o : zlibmodule.c /Include/Python.h
 _codecsmodule.o: _codecsmodule.c /Include/Python.h
 
 _sre.o: _sre.c /Include/Python.h
+
+pyexpat.o: pyexpat.c
+	sc pyexpat.c incdir=/expat/xmlparse/ IDENTIFIERLENGTH=60
+
 
 # --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS PRECEDE ---

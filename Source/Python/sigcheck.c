@@ -1,3 +1,4 @@
+
 /* Sigcheck is similar to intrcheck() but sets an exception when an
    interrupt occurs.  It can't be in the intrcheck.c file since that
    file (and the whole directory it is in) doesn't know about objects
@@ -17,7 +18,7 @@ void __stdargs _CXOVF(void)
 
 /* ARGSUSED */
 int
-PyErr_CheckSignals()
+PyErr_CheckSignals(void)
 {
 #ifdef __SASC
 /* Amiga SAS/C: Explicit check of available stack */

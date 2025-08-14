@@ -1,14 +1,12 @@
+
 /* Function object implementation */
 
 #include "Python.h"
 #include "compile.h"
 #include "structmember.h"
-#include "protos/funcobject.h"
 
 PyObject *
-PyFunction_New(code, globals)
-	PyObject *code;
-	PyObject *globals;
+PyFunction_New(PyObject *code, PyObject *globals)
 {
 	PyFunctionObject *op = PyObject_NEW(PyFunctionObject,
 					    &PyFunction_Type);
@@ -33,12 +31,12 @@ PyFunction_New(code, globals)
 		Py_INCREF(doc);
 		op->func_doc = doc;
 	}
+	PyObject_GC_Init(op);
 	return (PyObject *)op;
 }
 
 PyObject *
-PyFunction_GetCode(op)
-	PyObject *op;
+PyFunction_GetCode(PyObject *op)
 {
 	if (!PyFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -48,8 +46,7 @@ PyFunction_GetCode(op)
 }
 
 PyObject *
-PyFunction_GetGlobals(op)
-	PyObject *op;
+PyFunction_GetGlobals(PyObject *op)
 {
 	if (!PyFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -59,8 +56,7 @@ PyFunction_GetGlobals(op)
 }
 
 PyObject *
-PyFunction_GetDefaults(op)
-	PyObject *op;
+PyFunction_GetDefaults(PyObject *op)
 {
 	if (!PyFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -70,9 +66,7 @@ PyFunction_GetDefaults(op)
 }
 
 int
-PyFunction_SetDefaults(op, defaults)
-	PyObject *op;
-	PyObject *defaults;
+PyFunction_SetDefaults(PyObject *op, PyObject *defaults)
 {
 	if (!PyFunction_Check(op)) {
 		PyErr_BadInternalCall();
@@ -108,9 +102,7 @@ static struct memberlist func_memberlist[] = {
 };
 
 static PyObject *
-func_getattr(op, name)
-	PyFunctionObject *op;
-	char *name;
+func_getattr(PyFunctionObject *op, char *name)
 {
 	if (name[0] != '_' && PyEval_GetRestricted()) {
 		PyErr_SetString(PyExc_RuntimeError,
@@ -121,10 +113,7 @@ func_getattr(op, name)
 }
 
 static int
-func_setattr(op, name, value)
-	PyFunctionObject *op;
-	char *name;
-	PyObject *value;
+func_setattr(PyFunctionObject *op, char *name, PyObject *value)
 {
 	if (PyEval_GetRestricted()) {
 		PyErr_SetString(PyExc_RuntimeError,
@@ -153,34 +142,33 @@ func_setattr(op, name, value)
 }
 
 static void
-func_dealloc(op)
-	PyFunctionObject *op;
+func_dealloc(PyFunctionObject *op)
 {
+	PyObject_GC_Fini(op);
 	Py_DECREF(op->func_code);
 	Py_DECREF(op->func_globals);
 	Py_DECREF(op->func_name);
 	Py_XDECREF(op->func_defaults);
 	Py_XDECREF(op->func_doc);
+	op = (PyFunctionObject *) PyObject_AS_GC(op);
 	PyObject_DEL(op);
 }
 
 static PyObject*
-func_repr(op)
-	PyFunctionObject *op;
+func_repr(PyFunctionObject *op)
 {
 	char buf[140];
 	if (op->func_name == Py_None)
-		sprintf(buf, "<anonymous function at %lx>", (long)op);
+		sprintf(buf, "<anonymous function at %p>", op);
 	else
-		sprintf(buf, "<function %.100s at %lx>",
+		sprintf(buf, "<function %.100s at %p>",
 			PyString_AsString(op->func_name),
-			(long)op);
+			op);
 	return PyString_FromString(buf);
 }
 
 static int
-func_compare(f, g)
-	PyFunctionObject *f, *g;
+func_compare(PyFunctionObject *f, PyFunctionObject *g)
 {
 	int c;
 	if (f->func_globals != g->func_globals)
@@ -198,22 +186,55 @@ func_compare(f, g)
 }
 
 static long
-func_hash(f)
-	PyFunctionObject *f;
+func_hash(PyFunctionObject *f)
 {
-	long h;
+	long h,x;
 	h = PyObject_Hash(f->func_code);
 	if (h == -1) return h;
-	h = h ^ (long)f->func_globals;
+	x = _Py_HashPointer(f->func_globals);
+	if (x == -1) return x;
+	h ^= x;
 	if (h == -1) h = -2;
 	return h;
+}
+
+static int
+func_traverse(PyFunctionObject *f, visitproc visit, void *arg)
+{
+	int err;
+	if (f->func_code) {
+		err = visit(f->func_code, arg);
+		if (err)
+			return err;
+	}
+	if (f->func_globals) {
+		err = visit(f->func_globals, arg);
+		if (err)
+			return err;
+	}
+	if (f->func_defaults) {
+		err = visit(f->func_defaults, arg);
+		if (err)
+			return err;
+	}
+	if (f->func_doc) {
+		err = visit(f->func_doc, arg);
+		if (err)
+			return err;
+	}
+	if (f->func_name) {
+		err = visit(f->func_name, arg);
+		if (err)
+			return err;
+	}
+	return 0;
 }
 
 PyTypeObject PyFunction_Type = {
 	PyObject_HEAD_INIT(&PyType_Type)
 	0,
 	"function",
-	sizeof(PyFunctionObject),
+	sizeof(PyFunctionObject) + PyGC_HEAD_SIZE,
 	0,
 	(destructor)func_dealloc, /*tp_dealloc*/
 	0,		/*tp_print*/
@@ -225,4 +246,12 @@ PyTypeObject PyFunction_Type = {
 	0,		/*tp_as_sequence*/
 	0,		/*tp_as_mapping*/
 	(hashfunc)func_hash, /*tp_hash*/
+	0,		/*tp_call*/
+	0,		/*tp_str*/
+	0,		/*tp_getattro*/
+	0,		/*tp_setattro*/
+	0,		/* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT | Py_TPFLAGS_GC, /*tp_flags*/
+	0,		/* tp_doc */
+	(traverseproc)func_traverse,	/* tp_traverse */
 };

@@ -1,3 +1,4 @@
+
 /* SGI module -- random SGI-specific things */
 
 #include "Python.h"
@@ -8,9 +9,7 @@
 #include <fcntl.h>
 
 static PyObject *
-sgi_nap(self, args)
-	PyObject *self;
-	PyObject *args;
+sgi_nap(PyObject *self, PyObject *args)
 {
 	long ticks;
 	if (!PyArg_Parse(args, "l", &ticks))
@@ -25,9 +24,7 @@ sgi_nap(self, args)
 extern char *_getpty(int *, int, mode_t, int);
 
 static PyObject *
-sgi__getpty(self, args)
-	PyObject *self;
-	PyObject *args;
+sgi__getpty(PyObject *self, PyObject *args)
 {
 	int oflag;
 	int mode;
@@ -53,7 +50,7 @@ static PyMethodDef sgi_methods[] = {
 
 
 void
-initsgi()
+initsgi(void)
 {
 	Py_InitModule("sgi", sgi_methods);
 }

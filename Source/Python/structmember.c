@@ -1,13 +1,12 @@
+
 /* Map C struct members to Python object attributes */
 
 #include "Python.h"
 
 #include "structmember.h"
-#include "protos/structmember.h"
 
 static PyObject *
-listmembers(mlist)
-	struct memberlist *mlist;
+listmembers(struct memberlist *mlist)
 {
 	int i, n;
 	PyObject *v;
@@ -30,10 +29,7 @@ listmembers(mlist)
 }
 
 PyObject *
-PyMember_Get(addr, mlist, name)
-	char *addr;
-	struct memberlist *mlist;
-	char *name;
+PyMember_Get(char *addr, struct memberlist *mlist, char *name)
 {
 	struct memberlist *l;
 	
@@ -130,11 +126,7 @@ PyMember_Get(addr, mlist, name)
 }
 
 int
-PyMember_Set(addr, mlist, name, v)
-	char *addr;
-	struct memberlist *mlist;
-	char *name;
-	PyObject *v;
+PyMember_Set(char *addr, struct memberlist *mlist, char *name, PyObject *v)
 {
 	struct memberlist *l;
 	PyObject *oldv;

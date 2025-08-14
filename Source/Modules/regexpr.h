@@ -24,7 +24,7 @@ extern "C" {
  * Last modified: Mon Nov  4 15:49:46 1991 ylo
  */
 
-/* $Id: regexpr.h,v 1.12 1997/09/03 00:47:36 guido Exp $ */
+/* $Id: regexpr.h,v 1.13 2000/07/16 12:04:31 twouters Exp $ */
 
 #ifndef REGEXPR_H
 #define REGEXPR_H
@@ -119,7 +119,7 @@ int re_match(regexp_t compiled, unsigned char *string, int size, int pos,
 
 int re_search(regexp_t compiled, unsigned char *string, int size, int startpos,
 	      int range, regexp_registers_t regs);
-/* This rearches for a substring matching the regexp.  This returns the
+/* This searches for a substring matching the regexp.  This returns the
  * first index at which a match is found.  range specifies at how many
  * positions to try matching; positive values indicate searching
  * forwards, and negative values indicate searching backwards.  mstop

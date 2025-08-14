@@ -25,8 +25,6 @@ typedef struct {
         int num_groups;
 } PcreObject;
 
-#include "protos/pcremodule.h"
-
 staticforward PyTypeObject Pcre_Type;
 
 #define PcreObject_Check(v)	((v)->ob_type == &Pcre_Type)
@@ -46,8 +44,7 @@ staticforward PyTypeObject Pcre_Type;
 #define STRING                  9
 
 static PcreObject *
-newPcreObject(arg)
-	PyObject *arg;
+newPcreObject(PyObject *args)
 {
 	PcreObject *self;
 	self = PyObject_New(PcreObject, &Pcre_Type);
@@ -61,8 +58,7 @@ newPcreObject(arg)
 /* Pcre methods */
 
 static void
-PyPcre_dealloc(self)
-	PcreObject *self;
+PyPcre_dealloc(PcreObject *self)
 {
 	if (self->regex) (pcre_free)(self->regex);
 	if (self->regex_extra) (pcre_free)(self->regex_extra);
@@ -71,9 +67,7 @@ PyPcre_dealloc(self)
 
 
 static PyObject *
-PyPcre_exec(self, args)
-	PcreObject *self;
-	PyObject *args;
+PyPcre_exec(PcreObject *self, PyObject *args)
 {
         char *string;
 	int stringlen, pos = 0, options=0, endpos = -1, i, count;
@@ -125,9 +119,7 @@ static PyMethodDef Pcre_methods[] = {
 };
 
 static PyObject *
-PyPcre_getattr(self, name)
-	PcreObject *self;
-	char *name;
+PyPcre_getattr(PcreObject *self, char *name)
 {
 	return Py_FindMethod(Pcre_methods, (PyObject *)self, name);
 }
@@ -154,9 +146,7 @@ staticforward PyTypeObject Pcre_Type = {
 /* --------------------------------------------------------------------- */
 
 static PyObject *
-PyPcre_compile(self, args)
-	PyObject *self; /* Not used */
-	PyObject *args;
+PyPcre_compile(PyObject *self, PyObject *args)
 {
 	PcreObject *rv;
 	PyObject *dictionary;
@@ -206,9 +196,8 @@ PyPcre_compile(self, args)
 }
 
 static PyObject *
-PyPcre_expand_escape(pattern, pattern_len, indexptr, typeptr)
-	unsigned char *pattern;
-	int pattern_len, *indexptr, *typeptr;
+PyPcre_expand_escape(unsigned char *pattern, int pattern_len,
+                     int *indexptr, int *typeptr)
 {
 	unsigned char c;
 	int index = *indexptr;
@@ -433,9 +422,7 @@ PyPcre_expand_escape(pattern, pattern_len, indexptr, typeptr)
 }
 
 static PyObject *
-PyPcre_expand(self, args)
-	PyObject *self;
-	PyObject *args;
+PyPcre_expand(PyObject *self, PyObject *args)
 {
 	PyObject *results, *match_obj;
 	PyObject *repl_obj, *newstring;
@@ -609,10 +596,7 @@ static PyMethodDef pcre_methods[] = {
  */
 
 static void
-insint(d, name, value)
-	PyObject * d;
-	char * name;
-	int value;
+insint(PyObject *d, char *name, int value)
 {
 	PyObject *v = PyInt_FromLong((long) value);
 	if (v == NULL) {
@@ -629,7 +613,7 @@ insint(d, name, value)
 /* Initialization function for the module (*must* be called initpcre) */
 
 DL_EXPORT(void)
-initpcre()
+initpcre(void)
 {
 	PyObject *m, *d;
 
@@ -640,7 +624,7 @@ initpcre()
 
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
-	ErrorObject = PyString_FromString("pcre.error");
+	ErrorObject = PyErr_NewException("pcre.error", NULL, NULL);
 	PyDict_SetItemString(d, "error", ErrorObject);
 
 	/* Insert the flags */
@@ -650,9 +634,5 @@ initpcre()
 	insint(d, "DOTALL", PCRE_DOTALL);
 	insint(d, "VERBOSE", PCRE_EXTENDED);
 	insint(d, "LOCALE", PCRE_LOCALE);
-	
-	/* Check for errors */
-	if (PyErr_Occurred())
-		Py_FatalError("can't initialize module pcre");
 }
 

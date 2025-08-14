@@ -2,16 +2,30 @@
 #define Py_PYTHON_H
 /* Since this is a "meta-include" file, no #ifdef __cplusplus / extern "C" { */
 
+
 /* Enable compiler features; switching on C lib defines doesn't work
    here, because the symbols haven't necessarily been defined yet. */
 #ifndef _GNU_SOURCE
 # define _GNU_SOURCE	1
 #endif
 
+/* Forcing SUSv2 compatibility still produces problems on some
+   platforms, True64 and SGI IRIX begin two of them, so for now the
+   define is switched off. */
+#if 0
+#ifndef _XOPEN_SOURCE
+# define _XOPEN_SOURCE	500
+#endif
+#endif
+
 /* Include nearly all Python header files */
 
 #include "patchlevel.h"
 #include "config.h"
+
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
 
 /* config.h may or may not define DL_IMPORT */
 #ifndef DL_IMPORT	/* declarations for DLL import/export */
@@ -21,20 +35,21 @@
 #define DL_EXPORT(RTYPE) RTYPE
 #endif
 
-#ifdef SYMANTEC__CFM68K__
-#define UsingSharedLibs
-#endif
-
 #if defined(__sgi) && defined(WITH_THREAD) && !defined(_SGI_MP_SOURCE)
 #define _SGI_MP_SOURCE
 #endif
 
 #include <stdio.h>
+#ifndef NULL
+#   error "Python.h requires that stdio.h define NULL."
+#endif
+
 #include <string.h>
 #include <errno.h>
 #ifdef HAVE_STDLIB_H
 #include <stdlib.h>
 #endif
+#include <assert.h>
 #ifdef _AMIGA
 # ifdef HAVE_FCNTL_H
 #  include <fcntl.h>
@@ -44,12 +59,22 @@
 typedef unsigned long pid_t;
 # endif
 #endif
-
-#include "myproto.h"
-
-#ifdef SYMANTEC__CFM68K__
-#pragma lib_export on
+/* Include proper Amiga SAS/C math include files */
+#ifdef __SASC
+#if defined(_IEEE) && !defined(_M68881)
+#include <mieeedoub.h>
 #endif
+#ifdef _FFP
+#include <mffp.h>
+#endif
+#ifdef _M68881
+#include <m68881.h>
+#endif
+#endif
+
+#include "pyport.h"
+
+#include "pymem.h"
 
 #include "object.h"
 #include "objimpl.h"
@@ -80,7 +105,6 @@ typedef unsigned long pid_t;
 
 #include "codecs.h"
 #include "pyerrors.h"
-#include "mymalloc.h"
 
 #include "pystate.h"
 
@@ -106,20 +130,14 @@ typedef unsigned long pid_t;
 
 #include "pyfpe.h"
 
-/* These definitions much match corresponding definitions in graminit.h.
+/* These definitions must match corresponding definitions in graminit.h.
    There's code in compile.c that checks that they are the same. */
 #define Py_single_input 256
 #define Py_file_input 257
 #define Py_eval_input 258
 
-#ifdef _GNU_PTH
+#ifdef HAVE_PTH
 /* GNU pth user-space thread support */
 #include <pth.h>
 #endif
-
-/* Include the 'missing' function prototypes  (IJ 13-Jan-1998) */
-#ifdef _AMIGA
-#include "protos.h"
-#endif
-
 #endif /* !Py_PYTHON_H */

@@ -4,26 +4,15 @@
 
    Data was extracted from the Unicode 3.0 UnicodeData.txt file.
 
-Written by Marc-Andre Lemburg (mal@lemburg.com).
+   Written by Marc-Andre Lemburg (mal@lemburg.com).
+   Modified for Python 2.0 by Fredrik Lundh (fredrik@pythonware.com)
 
-Copyright (c) Corporation for National Research Initiatives.
+   Copyright (c) Corporation for National Research Initiatives.
 
    ------------------------------------------------------------------------ */
 
 #include "Python.h"
 #include "unicodedatabase.h"
-
-/* --- Helpers ------------------------------------------------------------ */
-
-static 
-const _PyUnicode_DatabaseRecord *unicode_db(register int i)
-{
-    register int page = i >> 12;
-    
-    if (page < sizeof(_PyUnicode_Database))
-	return &_PyUnicode_Database[page][i & 0x0fff];
-    return &_PyUnicode_Database[0][0];
-}
 
 /* --- Module API --------------------------------------------------------- */
 
@@ -144,15 +133,9 @@ unicodedata_category(PyObject *self,
 			"need a single Unicode character as parameter");
 	goto onError;
     }
-    index = (int)unicode_db((int)*PyUnicode_AS_UNICODE(v))->category;
-    if (index < 0 || 
-	index > sizeof(_PyUnicode_CategoryNames) / 
-	        sizeof(_PyUnicode_CategoryNames[0])) {
-	PyErr_Format(PyExc_SystemError,
-		     "category index out of range: %i",
-		     index);
-	goto onError;
-    }
+    index = (int) _PyUnicode_Database_GetRecord(
+        (int) *PyUnicode_AS_UNICODE(v)
+        )->category;
     return PyString_FromString(_PyUnicode_CategoryNames[index]);
     
  onError:
@@ -174,15 +157,9 @@ unicodedata_bidirectional(PyObject *self,
 			"need a single Unicode character as parameter");
 	goto onError;
     }
-    index = (int)unicode_db((int)*PyUnicode_AS_UNICODE(v))->bidirectional;
-    if (index < 0 || 
-	index > sizeof(_PyUnicode_CategoryNames) / 
-	        sizeof(_PyUnicode_CategoryNames[0])) {
-	PyErr_Format(PyExc_SystemError,
-		     "bidirectional index out of range: %i",
-		     index);
-	goto onError;
-    }
+    index = (int) _PyUnicode_Database_GetRecord(
+        (int) *PyUnicode_AS_UNICODE(v)
+        )->bidirectional;
     return PyString_FromString(_PyUnicode_BidirectionalNames[index]);
     
  onError:
@@ -204,7 +181,9 @@ unicodedata_combining(PyObject *self,
 			"need a single Unicode character as parameter");
 	goto onError;
     }
-    value = (int)unicode_db((int)*PyUnicode_AS_UNICODE(v))->combining;
+    value = (int) _PyUnicode_Database_GetRecord(
+        (int) *PyUnicode_AS_UNICODE(v)
+        )->combining;
     return PyInt_FromLong(value);
     
  onError:
@@ -226,7 +205,9 @@ unicodedata_mirrored(PyObject *self,
 			"need a single Unicode character as parameter");
 	goto onError;
     }
-    value = (int)unicode_db((int)*PyUnicode_AS_UNICODE(v))->mirrored;
+    value = (int) _PyUnicode_Database_GetRecord(
+        (int) *PyUnicode_AS_UNICODE(v)
+        )->mirrored;
     return PyInt_FromLong(value);
     
  onError:
@@ -248,10 +229,9 @@ unicodedata_decomposition(PyObject *self,
 			"need a single Unicode character as parameter");
 	goto onError;
     }
-    value = unicode_db((int)*PyUnicode_AS_UNICODE(v))->decomposition;
-    if (value == NULL)
-	return PyString_FromString("");
-    else
+    value = _PyUnicode_Database_GetDecomposition(
+        (int) *PyUnicode_AS_UNICODE(v)
+        );
 	return PyString_FromString(value);
     
  onError:
@@ -275,29 +255,5 @@ static PyMethodDef unicodedata_functions[] = {
 DL_EXPORT(void)
 initunicodedata(void)
 {
-#ifdef _AMIGA
-	extern int init_Amiga_unicodedatabase(const char *path);
-
-	char pathbuf[1000];
-	char * path = Py_GetPath();
-	char * token;
-
-	strncpy(pathbuf, path, sizeof(pathbuf));
-
-	/* try different path components that may contain our data files */
-	token = strtok(pathbuf, ";");
-	while(token)
-	{
-		if(init_Amiga_unicodedatabase(token))
-			break;
-		token = strtok(NULL, ";");
-	}
-	if(!token)
-	{
-		PyErr_SetString(PyExc_ImportError, "can't initialize unicode database");
-		return;
-	}
-
-#endif
     Py_InitModule("unicodedata", unicodedata_functions);
 }

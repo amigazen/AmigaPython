@@ -1,3 +1,4 @@
+
 #define OLD_INTERFACE		/* define for pre-Irix 6 interface */
 
 #include "Python.h"
@@ -166,13 +167,13 @@ python2param(int resource, ALpv *param, PyObject *value, ALparamInfo *pinfo)
 		case AL_INT32_ELEM:
 		case AL_RESOURCE_ELEM:
 		case AL_ENUM_ELEM:
-			param->sizeIn = PySequence_Length(value);
+			param->sizeIn = PySequence_Size(value);
 			param->value.ptr = PyMem_NEW(int, param->sizeIn);
 			stepsize = sizeof(int);
 			break;
 		case AL_INT64_ELEM:
 		case AL_FIXED_ELEM:
-			param->sizeIn = PySequence_Length(value);
+			param->sizeIn = PySequence_Size(value);
 			param->value.ptr = PyMem_NEW(long long, param->sizeIn);
 			stepsize = sizeof(long long);
 			break;
@@ -243,10 +244,7 @@ python2params(int resource1, int resource2, PyObject *list, ALpv **pvsp, ALparam
 
 
 static PyObject *
-SetConfig(self, args, func)
-	alcobject *self;
-	PyObject *args;
-	int (*func)(ALconfig, int);
+SetConfig(alcobject *self, PyObject *args, int (*func)(ALconfig, int))
 {
 	int par;
 
@@ -261,10 +259,7 @@ SetConfig(self, args, func)
 }
 
 static PyObject *
-GetConfig(self, args, func)
-	alcobject *self;
-	PyObject *args;
-	int (*func)(ALconfig);
+GetConfig(alcobject *self, PyObject *args, int (*func)(ALconfig))
 {	
 	int par;
 
@@ -282,9 +277,7 @@ static char alc_SetWidth__doc__[] =
 ;
 
 static PyObject *
-alc_SetWidth(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_SetWidth(alcobject *self, PyObject *args)
 {
 	return SetConfig(self, args, alSetWidth);
 }
@@ -295,9 +288,7 @@ static char alc_GetWidth__doc__[] =
 ;
 
 static PyObject *
-alc_GetWidth(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_GetWidth(alcobject *self, PyObject *args)
 {
 	return GetConfig(self, args, alGetWidth);
 }
@@ -308,9 +299,7 @@ static char alc_SetSampFmt__doc__[] =
 ;
 
 static PyObject *
-alc_SetSampFmt(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_SetSampFmt(alcobject *self, PyObject *args)
 {
 	return SetConfig(self, args, alSetSampFmt);
 }
@@ -321,9 +310,7 @@ static char alc_GetSampFmt__doc__[] =
 ;
 
 static PyObject *
-alc_GetSampFmt(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_GetSampFmt(alcobject *self, PyObject *args)
 {
 	return GetConfig(self, args, alGetSampFmt);
 }
@@ -334,9 +321,7 @@ static char alc_SetChannels__doc__[] =
 ;
 
 static PyObject *
-alc_SetChannels(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_SetChannels(alcobject *self, PyObject *args)
 {
 	return SetConfig(self, args, alSetChannels);
 }
@@ -347,9 +332,7 @@ static char alc_GetChannels__doc__[] =
 ;
 
 static PyObject *
-alc_GetChannels(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_GetChannels(alcobject *self, PyObject *args)
 {
 	return GetConfig(self, args, alGetChannels);
 }
@@ -360,9 +343,7 @@ static char alc_SetFloatMax__doc__[] =
 ;
 
 static PyObject *
-alc_SetFloatMax(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_SetFloatMax(alcobject *self, PyObject *args)
 {
 	double maximum_value;
 
@@ -380,9 +361,7 @@ static char alc_GetFloatMax__doc__[] =
 ;
 
 static PyObject *
-alc_GetFloatMax(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_GetFloatMax(alcobject *self, PyObject *args)
 {
 	double maximum_value;
 
@@ -399,9 +378,7 @@ static char alc_SetDevice__doc__[] =
 ;
 
 static PyObject *
-alc_SetDevice(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_SetDevice(alcobject *self, PyObject *args)
 {
 	return SetConfig(self, args, alSetDevice);
 }
@@ -412,9 +389,7 @@ static char alc_GetDevice__doc__[] =
 ;
 
 static PyObject *
-alc_GetDevice(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_GetDevice(alcobject *self, PyObject *args)
 {
 	return GetConfig(self, args, alGetDevice);
 }
@@ -425,9 +400,7 @@ static char alc_SetQueueSize__doc__[] =
 ;
 
 static PyObject *
-alc_SetQueueSize(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_SetQueueSize(alcobject *self, PyObject *args)
 {
 	return SetConfig(self, args, alSetQueueSize);
 }
@@ -438,9 +411,7 @@ static char alc_GetQueueSize__doc__[] =
 ;
 
 static PyObject *
-alc_GetQueueSize(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_GetQueueSize(alcobject *self, PyObject *args)
 {
 	return GetConfig(self, args, alGetQueueSize);
 }
@@ -448,10 +419,7 @@ alc_GetQueueSize(self, args)
 #endif /* AL_NO_ELEM */
 
 static PyObject *
-setconfig(self, args, func)
-	alcobject *self;
-	PyObject *args;
-	int (*func)(ALconfig, long);
+setconfig(alcobject *self, PyObject *args, int (*func)(ALconfig, long))
 {
 	long par;
 
@@ -466,10 +434,7 @@ setconfig(self, args, func)
 }
 
 static PyObject *
-getconfig(self, args, func)
-	alcobject *self;
-	PyObject *args;
-	long (*func)(ALconfig);
+getconfig(alcobject *self, PyObject *args, long (*func)(ALconfig))
 {	
 	long par;
 
@@ -483,49 +448,37 @@ getconfig(self, args, func)
 }
 
 static PyObject *
-alc_setqueuesize (self, args)
-	alcobject *self;
-	PyObject *args;
+alc_setqueuesize (alcobject *self, PyObject *args)
 {
 	return setconfig(self, args, ALsetqueuesize);
 }
 
 static PyObject *
-alc_getqueuesize (self, args)
-	alcobject *self;
-	PyObject *args;
+alc_getqueuesize (alcobject *self, PyObject *args)
 {
 	return getconfig(self, args, ALgetqueuesize);
 }
 
 static PyObject *
-alc_setwidth (self, args)
-	alcobject *self;
-	PyObject *args;
+alc_setwidth (alcobject *self, PyObject *args)
 {
 	return setconfig(self, args, ALsetwidth);
 }
 
 static PyObject *
-alc_getwidth (self, args)
-	alcobject *self;
-	PyObject *args;
+alc_getwidth (alcobject *self, PyObject *args)
 {
 	return getconfig(self, args, ALgetwidth);	
 }
 
 static PyObject *
-alc_getchannels (self, args)
-	alcobject *self;
-	PyObject *args;
+alc_getchannels (alcobject *self, PyObject *args)
 {
 	return getconfig(self, args, ALgetchannels);	
 }
 
 static PyObject *
-alc_setchannels (self, args)
-	alcobject *self;
-	PyObject *args;
+alc_setchannels (alcobject *self, PyObject *args)
 {
 	return setconfig(self, args, ALsetchannels);
 }
@@ -533,25 +486,19 @@ alc_setchannels (self, args)
 #ifdef AL_405
 
 static PyObject *
-alc_getsampfmt (self, args)
-	alcobject *self;
-	PyObject *args;
+alc_getsampfmt (alcobject *self, PyObject *args)
 {
 	return getconfig(self, args, ALgetsampfmt);	
 }
 
 static PyObject *
-alc_setsampfmt (self, args)
-	alcobject *self;
-	PyObject *args;
+alc_setsampfmt (alcobject *self, PyObject *args)
 {
 	return setconfig(self, args, ALsetsampfmt);
 }
 
 static PyObject *
-alc_getfloatmax(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_getfloatmax(alcobject *self, PyObject *args)
 {
 	double arg;
 
@@ -563,9 +510,7 @@ alc_getfloatmax(self, args)
 }
 
 static PyObject *
-alc_setfloatmax(self, args)
-	alcobject *self;
-	PyObject *args;
+alc_setfloatmax(alcobject *self, PyObject *args)
 {
 	double arg;
 
@@ -627,8 +572,7 @@ newalcobject(ALconfig config)
 
 
 static void
-alc_dealloc(self)
-	alcobject *self;
+alc_dealloc(alcobject *self)
 {
 	/* XXXX Add your own cleanup code here */
 #ifdef AL_NO_ELEM		/* IRIX 6 */
@@ -640,9 +584,7 @@ alc_dealloc(self)
 }
 
 static PyObject *
-alc_getattr(self, name)
-	alcobject *self;
-	char *name;
+alc_getattr(alcobject *self, char *name)
 {
 	/* XXXX Add your own getattr code here */
 	return Py_FindMethod(alc_methods, (PyObject *)self, name);
@@ -687,9 +629,7 @@ static char alp_SetConfig__doc__[] =
 ;
 
 static PyObject *
-alp_SetConfig(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_SetConfig(alpobject *self, PyObject *args)
 {
 	alcobject *config;
 	if (!PyArg_ParseTuple(args, "O!:SetConfig", &Alctype, &config))
@@ -706,9 +646,7 @@ static char alp_GetConfig__doc__[] =
 ;
 
 static PyObject *
-alp_GetConfig(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_GetConfig(alpobject *self, PyObject *args)
 {
 	ALconfig config;
 	if (!PyArg_ParseTuple(args, ":GetConfig"))
@@ -724,9 +662,7 @@ static char alp_GetResource__doc__[] =
 ;
 
 static PyObject *
-alp_GetResource(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_GetResource(alpobject *self, PyObject *args)
 {
 	int resource;
 
@@ -743,9 +679,7 @@ static char alp_GetFD__doc__[] =
 ;
 
 static PyObject *
-alp_GetFD(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_GetFD(alpobject *self, PyObject *args)
 {
 	int fd;
 
@@ -764,9 +698,7 @@ static char alp_GetFilled__doc__[] =
 ;
 
 static PyObject *
-alp_GetFilled(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_GetFilled(alpobject *self, PyObject *args)
 {
 	int filled;
 
@@ -783,9 +715,7 @@ static char alp_GetFillable__doc__[] =
 ;
 
 static PyObject *
-alp_GetFillable(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_GetFillable(alpobject *self, PyObject *args)
 {
 	int fillable;
 
@@ -802,9 +732,7 @@ static char alp_ReadFrames__doc__[] =
 ;
 
 static PyObject *
-alp_ReadFrames(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_ReadFrames(alpobject *self, PyObject *args)
 {
 	void *samples;
 	int framecount;
@@ -873,9 +801,7 @@ static char alp_DiscardFrames__doc__[] =
 ;
 
 static PyObject *
-alp_DiscardFrames(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_DiscardFrames(alpobject *self, PyObject *args)
 {
 	int framecount;
 
@@ -898,9 +824,7 @@ static char alp_ZeroFrames__doc__[] =
 ;
 
 static PyObject *
-alp_ZeroFrames(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_ZeroFrames(alpobject *self, PyObject *args)
 {
 	int framecount;
 
@@ -926,9 +850,7 @@ static char alp_SetFillPoint__doc__[] =
 ;
 
 static PyObject *
-alp_SetFillPoint(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_SetFillPoint(alpobject *self, PyObject *args)
 {
 	int fillpoint;
 
@@ -948,9 +870,7 @@ static char alp_GetFillPoint__doc__[] =
 ;
 
 static PyObject *
-alp_GetFillPoint(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_GetFillPoint(alpobject *self, PyObject *args)
 {
 	int fillpoint;
 
@@ -969,9 +889,7 @@ static char alp_GetFrameNumber__doc__[] =
 ;
 
 static PyObject *
-alp_GetFrameNumber(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_GetFrameNumber(alpobject *self, PyObject *args)
 {
 	stamp_t fnum;
 
@@ -990,9 +908,7 @@ static char alp_GetFrameTime__doc__[] =
 ;
 
 static PyObject *
-alp_GetFrameTime(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_GetFrameTime(alpobject *self, PyObject *args)
 {
 	stamp_t fnum, time;
 	PyObject *ret, *v0, *v1;
@@ -1020,9 +936,7 @@ static char alp_WriteFrames__doc__[] =
 ;
 
 static PyObject *
-alp_WriteFrames(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_WriteFrames(alpobject *self, PyObject *args)
 {
 	char *samples;
 	int length;
@@ -1088,9 +1002,7 @@ static char alp_ClosePort__doc__[] =
 ;
 
 static PyObject *
-alp_ClosePort(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_ClosePort(alpobject *self, PyObject *args)
 {
 	if (!PyArg_ParseTuple(args, ":ClosePort"))
 		return NULL;
@@ -1105,9 +1017,7 @@ alp_ClosePort(self, args)
 
 #ifdef OLD_INTERFACE
 static PyObject *
-alp_closeport(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_closeport(alpobject *self, PyObject *args)
 {
 	if (!PyArg_ParseTuple(args, ":ClosePort"))
 		return NULL;
@@ -1119,9 +1029,7 @@ alp_closeport(self, args)
 }
 
 static PyObject *
-alp_getfd(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_getfd(alpobject *self, PyObject *args)
 {
 	int fd;
 
@@ -1133,9 +1041,7 @@ alp_getfd(self, args)
 }
 
 static PyObject *
-alp_getfilled(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_getfilled(alpobject *self, PyObject *args)
 {
 	long count;
 
@@ -1147,9 +1053,7 @@ alp_getfilled(self, args)
 }
 
 static PyObject *
-alp_getfillable(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_getfillable(alpobject *self, PyObject *args)
 {
 	long count;
 
@@ -1161,9 +1065,7 @@ alp_getfillable(self, args)
 }
 
 static PyObject *
-alp_readsamps(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_readsamps(alpobject *self, PyObject *args)
 {
 	long count;
 	PyObject *v;
@@ -1208,9 +1110,7 @@ alp_readsamps(self, args)
 }
 
 static PyObject *
-alp_writesamps(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_writesamps(alpobject *self, PyObject *args)
 {
 	char *buf;
 	int size, width;
@@ -1244,9 +1144,7 @@ alp_writesamps(self, args)
 }
 
 static PyObject *
-alp_getfillpoint(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_getfillpoint(alpobject *self, PyObject *args)
 {
 	long count;
 
@@ -1258,9 +1156,7 @@ alp_getfillpoint(self, args)
 }
 
 static PyObject *
-alp_setfillpoint(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_setfillpoint(alpobject *self, PyObject *args)
 {
 	long count;
 
@@ -1273,9 +1169,7 @@ alp_setfillpoint(self, args)
 }
 
 static PyObject *
-alp_setconfig(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_setconfig(alpobject *self, PyObject *args)
 {
 	alcobject *config;
 
@@ -1288,9 +1182,7 @@ alp_setconfig(self, args)
 }
 
 static PyObject *
-alp_getconfig(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_getconfig(alpobject *self, PyObject *args)
 {
 	ALconfig config;
 
@@ -1304,9 +1196,7 @@ alp_getconfig(self, args)
 
 #ifdef AL_405
 static PyObject *
-alp_getstatus(self, args)
-	alpobject *self;
-	PyObject *args;
+alp_getstatus(alpobject *self, PyObject *args)
 {
 	PyObject *list, *v;
 	long *PVbuffer;
@@ -1400,8 +1290,7 @@ newalpobject(ALport port)
 
 
 static void
-alp_dealloc(self)
-	alpobject *self;
+alp_dealloc(alpobject *self)
 {
 	/* XXXX Add your own cleanup code here */
 	if (self->port) {
@@ -1415,9 +1304,7 @@ alp_dealloc(self)
 }
 
 static PyObject *
-alp_getattr(self, name)
-	alpobject *self;
-	char *name;
+alp_getattr(alpobject *self, char *name)
 {
 	/* XXXX Add your own getattr code here */
 	if (self->port == NULL) {
@@ -1467,9 +1354,7 @@ static char al_NewConfig__doc__[] =
 ;
 
 static PyObject *
-al_NewConfig(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_NewConfig(PyObject *self, PyObject *args)
 {
 	ALconfig config;
 
@@ -1485,9 +1370,7 @@ static char al_OpenPort__doc__[] =
 ;
 
 static PyObject *
-al_OpenPort(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_OpenPort(PyObject *self, PyObject *args)
 {
 	ALport port;
 	char *name, *dir;
@@ -1505,9 +1388,7 @@ static char al_Connect__doc__[] =
 ;
 
 static PyObject *
-al_Connect(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_Connect(PyObject *self, PyObject *args)
 {
 	int source, dest, nprops = 0, id, i;
 	ALpv *props = NULL;
@@ -1547,9 +1428,7 @@ static char al_Disconnect__doc__[] =
 ;
 
 static PyObject *
-al_Disconnect(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_Disconnect(PyObject *self, PyObject *args)
 {
 	int res;
 
@@ -1566,9 +1445,7 @@ static char al_GetParams__doc__[] =
 ;
 
 static PyObject *
-al_GetParams(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_GetParams(PyObject *self, PyObject *args)
 {
 	int resource;
 	PyObject *pvslist, *item = NULL, *v = NULL;
@@ -1712,9 +1589,7 @@ static char al_SetParams__doc__[] =
 ;
 
 static PyObject *
-al_SetParams(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_SetParams(PyObject *self, PyObject *args)
 {
 	int resource;
 	PyObject *pvslist, *item;
@@ -1760,9 +1635,7 @@ static char al_QueryValues__doc__[] =
 ;
 
 static PyObject *
-al_QueryValues(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_QueryValues(PyObject *self, PyObject *args)
 {
 	int resource, param;
 	ALvalue *return_set = NULL;
@@ -1842,9 +1715,7 @@ static char al_GetParamInfo__doc__[] =
 ;
 
 static PyObject *
-al_GetParamInfo(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_GetParamInfo(PyObject *self, PyObject *args)
 {
 	int res, param;
 	ALparamInfo pinfo;
@@ -1927,9 +1798,7 @@ static char al_GetResourceByName__doc__[] =
 ;
 
 static PyObject *
-al_GetResourceByName(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_GetResourceByName(PyObject *self, PyObject *args)
 {
 	int res, start_res, type;
 	char *name;
@@ -1946,9 +1815,7 @@ static char al_IsSubtype__doc__[] =
 ;
 
 static PyObject *
-al_IsSubtype(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_IsSubtype(PyObject *self, PyObject *args)
 {
 	int type, subtype;
 
@@ -1962,9 +1829,7 @@ static char al_SetErrorHandler__doc__[] =
 ;
 
 static PyObject *
-al_SetErrorHandler(self, args)
-	PyObject *self;	/* Not used */
-	PyObject *args;
+al_SetErrorHandler(PyObject *self, PyObject *args)
 {
 
 	if (!PyArg_ParseTuple(args, ":SetErrorHandler"))
@@ -1978,8 +1843,7 @@ al_SetErrorHandler(self, args)
 #ifdef OLD_INTERFACE
 
 static PyObject *
-al_openport(self, args)
-	PyObject *self, *args;
+al_openport(PyObject *self, PyObject *args)
 {
 	char *name, *dir;
 	ALport port;
@@ -1993,8 +1857,7 @@ al_openport(self, args)
 }
 
 static PyObject *
-al_newconfig(self, args)
-	PyObject *self, *args;
+al_newconfig(PyObject *self, PyObject *args)
 {
 	ALconfig config;
 
@@ -2006,8 +1869,7 @@ al_newconfig(self, args)
 }
 
 static PyObject *
-al_queryparams(self, args)
-	PyObject *self, *args;
+al_queryparams(PyObject *self, PyObject *args)
 {
 	long device;
 	long length;
@@ -2032,10 +1894,7 @@ al_queryparams(self, args)
 }
 
 static PyObject *
-doParams(args, func, modified)
-	PyObject *args;
-	int (*func)(long, long *, long);
-	int modified;
+doParams(PyObject *args, int (*func)(long, long *, long), int modified)
 {
 	long device;
 	PyObject *list, *v;
@@ -2076,22 +1935,19 @@ doParams(args, func, modified)
 }
 
 static PyObject *
-al_getparams(self, args)
-	PyObject *self, *args;
+al_getparams(PyObject *self, PyObject *args)
 {
 	return doParams(args, ALgetparams, 1);
 }
 
 static PyObject *
-al_setparams(self, args)
-	PyObject *self, *args;
+al_setparams(PyObject *self, PyObject *args)
 {
 	return doParams(args, ALsetparams, 0);
 }
 
 static PyObject *
-al_getname(self, args)
-	PyObject *self, *args;
+al_getname(PyObject *self, PyObject *args)
 {
 	long device, descriptor;
 	char *name;
@@ -2104,8 +1960,7 @@ al_getname(self, args)
 }
 
 static PyObject *
-al_getdefault(self, args)
-	PyObject *self, *args;
+al_getdefault(PyObject *self, PyObject *args)
 {
 	long device, descriptor, value;
 
@@ -2117,8 +1972,7 @@ al_getdefault(self, args)
 }
 
 static PyObject *
-al_getminmax(self, args)
-	PyObject *self, *args;
+al_getminmax(PyObject *self, PyObject *args)
 {
 	long device, descriptor, min, max;
 
@@ -2174,7 +2028,7 @@ static char al_module_documentation[] =
 ;
 
 void
-inital()
+inital(void)
 {
 	PyObject *m, *d, *x;
 
@@ -2185,7 +2039,7 @@ inital()
 
 	/* Add some symbolic constants to the module */
 	d = PyModule_GetDict(m);
-	ErrorObject = PyString_FromString("al.error");
+	ErrorObject = PyErr_NewException("al.error", NULL, NULL);
 	PyDict_SetItemString(d, "error", ErrorObject);
 
 	/* XXXX Add constants here */
@@ -3379,9 +3233,6 @@ inital()
 	(void) ALseterrorhandler(ErrorHandler);
 #endif /* OLD_INTERFACE */
 	
-	/* Check for errors */
-	if (PyErr_Occurred()) {
-	  error:
-		Py_FatalError("can't initialize module al");
-	}
+  error:
+	return;
 }

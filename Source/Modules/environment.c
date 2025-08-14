@@ -14,6 +14,7 @@
 */
 
 #include "Python.h"
+#include "protos.h"
 #include <stdlib.h>
 #include <string.h>
 

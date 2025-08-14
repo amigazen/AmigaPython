@@ -6,7 +6,12 @@ import imp
 from Tkinter import *
 import tkSimpleDialog
 import tkMessageBox
-import BrowserControl
+try:
+    import webbrowser
+except ImportError:
+    import BrowserControl
+    webbrowser = BrowserControl
+    del BrowserControl
 import idlever
 import WindowList
 from IdleConf import idleconf
@@ -27,6 +32,7 @@ TK_TABWIDTH_DEFAULT = 8
 #$ event <<open-path-browser>>
 
 #$ event <<close-window>>
+
 #$ unix <Control-x><Control-0>
 #$ unix <Control-x><Key-0>
 #$ win <Alt-F4>
@@ -291,14 +297,15 @@ class EditorWindow:
 
     help_url = "http://www.python.org/doc/current/"
     if sys.platform[:3] == "win":
-        fn = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        fn = os.path.join(fn, "Doc", "index.html")
+        fn = os.path.dirname(__file__)
+        fn = os.path.join(fn, "../../Doc/index.html")
+        fn = os.path.normpath(fn)
         if os.path.isfile(fn):
             help_url = fn
         del fn
 
     def python_docs(self, event=None):
-        BrowserControl.open(self.help_url)
+        webbrowser.open(self.help_url)
 
     def select_all(self, event=None):
         self.text.tag_add("sel", "1.0", "end-1c")
@@ -668,7 +675,7 @@ class EditorWindow:
         if self.get_tabwidth() != newtabwidth:
             pixels = text.tk.call("font", "measure", text["font"],
                                   "-displayof", text.master,
-                                  "n" * newtabwith)
+                                  "n" * newtabwidth)
             text.configure(tabs=pixels)
 
 def prepstr(s):

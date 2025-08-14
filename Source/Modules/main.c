@@ -14,8 +14,11 @@
 #if defined(PYOS_OS2) || defined(MS_WINDOWS)
 #define PYTHONHOMEHELP "<prefix>\\lib"
 #else
-#define PYTHONHOMEHELP "<prefix>/python1.6"
+#define PYTHONHOMEHELP "<prefix>/python2.0"
 #endif
+
+#define COPYRIGHT \
+    "Type \"copyright\", \"credits\" or \"license\" for more information."
 
 /* Interface to getopt(): */
 extern int optind;
@@ -47,6 +50,8 @@ static char *usage_mid = "\
 -U     : Unicode literals: treats '...' literals like u'...'\n\
 -v     : verbose (trace import statements) (also PYTHONVERBOSE=x)\n\
 -x     : skip first line of source, allowing use of non-Unix forms of #!cmd\n\
+-h     : print this help message and exit\n\
+-V     : print the Python version number and exit\n\
 -c cmd : program passed in as string (terminates option list)\n\
 file   : program read from script file\n\
 -      : program read from stdin (default; interactive mode if a tty)\n\
@@ -60,6 +65,21 @@ PYTHONPATH   : '%c'-separated list of directories prefixed to the\n\
 PYTHONHOME   : alternate <prefix> directory (or <prefix>%c<exec_prefix>).\n\
                The default module search path uses %s.\n\
 ";
+
+
+static void
+usage(int exitcode, char* program)
+{
+	fprintf(stderr, usage_line, program);
+	fprintf(stderr, usage_top);
+	fprintf(stderr, usage_mid);
+	fprintf(stderr, usage_bot, DELIM, DELIM, PYTHONHOMEHELP);
+#ifdef _AMIGA
+			fprintf(stderr,"Python and Python programs can also be started from the Workbench,\ntooltypes will be converted to command-line arguments.\n");
+#endif
+	exit(exitcode);
+	/*NOTREACHED*/
+}
 
 
 #ifdef __SASC
@@ -188,9 +208,7 @@ static void AmigaCleanup(void)
 /* Main program */
 
 DL_EXPORT(int)
-Py_Main(argc, argv)
-	int argc;
-	char **argv;
+Py_Main(int argc, char **argv)
 {
 	int c;
 	int sts;
@@ -202,6 +220,8 @@ Py_Main(argc, argv)
 	int unbuffered = 0;
 	int skipfirstline = 0;
 	int stdin_is_interactive = 0;
+	int help = 0;
+	int version = 0;
 
 #ifdef _AMIGA
 	if(argc == 0)
@@ -227,7 +247,7 @@ Py_Main(argc, argv)
 	if ((p = getenv("PYTHONUNBUFFERED")) && *p != '\0')
 		unbuffered = 1;
 
-	while ((c = getopt(argc, argv, "c:diOStuUvxX")) != EOF) {
+	while ((c = getopt(argc, argv, "c:diOStuUvxXhV")) != EOF) {
 		if (c == 'c') {
 			/* -c is the last option; following arguments
 			   that look like options are left for the
@@ -279,22 +299,28 @@ Py_Main(argc, argv)
 		case 'U':
 			Py_UnicodeFlag++;
 			break;
+		case 'h':
+			help++;
+			break;
+		case 'V':
+			version++;
+			break;
 
 		/* This space reserved for other options */
 
 		default:
-			fprintf(stderr, usage_line, argv[0]);
-			fprintf(stderr, usage_top);
-			fprintf(stderr, usage_mid);
-			fprintf(stderr, usage_bot,
-				DELIM, DELIM, PYTHONHOMEHELP);
-#ifdef _AMIGA
-			fprintf(stderr,"Python and Python programs can also be started from the Workbench,\ntooltypes will be converted to command-line arguments.\n");
-#endif
-			exit(2);
+			usage(2, argv[0]);
 			/*NOTREACHED*/
 
 		}
+	}
+
+	if (help)
+		usage(0, argv[0]);
+
+	if (version) {
+		fprintf(stderr, "Python %s\n", PY_VERSION);
+		exit(0);
 	}
 
 	if (command == NULL && optind < argc &&
@@ -372,7 +398,7 @@ Py_Main(argc, argv)
 	if (Py_VerboseFlag ||
 	    (command == NULL && filename == NULL && stdin_is_interactive))
 		fprintf(stderr, "Python %s on %s\n%s\n",
-			Py_GetVersion(), Py_GetPlatform(), Py_GetCopyright());
+			Py_GetVersion(), Py_GetPlatform(), COPYRIGHT);
 	
 	
 	if (command != NULL) {
@@ -409,11 +435,10 @@ Py_Main(argc, argv)
 				}
 			}
 		}
-		sts = PyRun_AnyFile(
+		sts = PyRun_AnyFileEx(
 			fp,
-			filename == NULL ? "<stdin>" : filename) != 0;
-		if (filename != NULL)
-			fclose(fp);
+			filename == NULL ? "<stdin>" : filename,
+			filename != NULL) != 0;
 	}
 
 	if (inspect && stdin_is_interactive &&
@@ -429,9 +454,7 @@ Py_Main(argc, argv)
    This is rare, but it is needed by the secureware extension. */
 
 void
-Py_GetArgcArgv(argc, argv)
-	int *argc;
-	char ***argv;
+Py_GetArgcArgv(int *argc, char ***argv)
 {
 	*argc = orig_argc;
 	*argv = orig_argv;

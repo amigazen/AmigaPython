@@ -1,10 +1,12 @@
+
 #ifndef Py_OBJIMPL_H
 #define Py_OBJIMPL_H
+
+#include "pymem.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include "mymalloc.h"
 
 /*
 Functions and macros for modules that implement new object types.
@@ -59,7 +61,7 @@ recommended to use PyObject_{New, NewVar, Del}. */
  * ============================
  */
 
-/* The purpose of the object allocator is to make make the distinction
+/* The purpose of the object allocator is to make the distinction
    between "object memory" and the rest within the Python heap.
    
    Object memory is the one allocated by PyObject_{New, NewVar}, i.e.
@@ -91,8 +93,8 @@ recommended to use PyObject_{New, NewVar, Del}. */
 #endif
 
 #ifdef NEED_TO_DECLARE_OBJECT_MALLOC_AND_FRIEND
-extern ANY *PyCore_OBJECT_MALLOC_FUNC PyCore_OBJECT_MALLOC_PROTO;
-extern ANY *PyCore_OBJECT_REALLOC_FUNC PyCore_OBJECT_REALLOC_PROTO;
+extern void *PyCore_OBJECT_MALLOC_FUNC PyCore_OBJECT_MALLOC_PROTO;
+extern void *PyCore_OBJECT_REALLOC_FUNC PyCore_OBJECT_REALLOC_PROTO;
 extern void PyCore_OBJECT_FREE_FUNC PyCore_OBJECT_FREE_PROTO;
 #endif
 
@@ -127,14 +129,14 @@ extern void PyCore_OBJECT_FREE_FUNC PyCore_OBJECT_FREE_PROTO;
    as Python. These wrappers *do not* make sure that allocating 0
    bytes returns a non-NULL pointer. Returned pointers must be checked
    for NULL explicitly; no action is performed on failure. */
-extern DL_IMPORT(ANY *) PyObject_Malloc Py_PROTO((size_t));
-extern DL_IMPORT(ANY *) PyObject_Realloc Py_PROTO((ANY *, size_t));
-extern DL_IMPORT(void) PyObject_Free Py_PROTO((ANY *));
+extern DL_IMPORT(void *) PyObject_Malloc(size_t);
+extern DL_IMPORT(void *) PyObject_Realloc(void *, size_t);
+extern DL_IMPORT(void) PyObject_Free(void *);
 
 /* Macros */
 #define PyObject_MALLOC(n)           PyCore_OBJECT_MALLOC(n)
-#define PyObject_REALLOC(op, n)      PyCore_OBJECT_REALLOC((ANY *)(op), (n))
-#define PyObject_FREE(op)            PyCore_OBJECT_FREE((ANY *)(op))
+#define PyObject_REALLOC(op, n)      PyCore_OBJECT_REALLOC((void *)(op), (n))
+#define PyObject_FREE(op)            PyCore_OBJECT_FREE((void *)(op))
 
 /*
  * Generic object allocator interface
@@ -142,11 +144,12 @@ extern DL_IMPORT(void) PyObject_Free Py_PROTO((ANY *));
  */
 
 /* Functions */
-extern DL_IMPORT(PyObject *) PyObject_Init Py_PROTO((PyObject *, PyTypeObject *));
-extern DL_IMPORT(PyVarObject *) PyObject_InitVar Py_PROTO((PyVarObject *, PyTypeObject *, int));
-extern DL_IMPORT(PyObject *) _PyObject_New Py_PROTO((PyTypeObject *));
-extern DL_IMPORT(PyVarObject *) _PyObject_NewVar Py_PROTO((PyTypeObject *, int));
-extern DL_IMPORT(void) _PyObject_Del Py_PROTO((PyObject *));
+extern DL_IMPORT(PyObject *) PyObject_Init(PyObject *, PyTypeObject *);
+extern DL_IMPORT(PyVarObject *) PyObject_InitVar(PyVarObject *,
+                                                 PyTypeObject *, int);
+extern DL_IMPORT(PyObject *) _PyObject_New(PyTypeObject *);
+extern DL_IMPORT(PyVarObject *) _PyObject_NewVar(PyTypeObject *, int);
+extern DL_IMPORT(void) _PyObject_Del(PyObject *);
 
 #define PyObject_New(type, typeobj) \
 		( (type *) _PyObject_New(typeobj) )
@@ -154,7 +157,7 @@ extern DL_IMPORT(void) _PyObject_Del Py_PROTO((PyObject *));
 		( (type *) _PyObject_NewVar((typeobj), (n)) )
 #define PyObject_Del(op) _PyObject_Del((PyObject *)(op))
 
-/* Macros trading binary compatibility for speed. See also mymalloc.h.
+/* Macros trading binary compatibility for speed. See also pymem.h.
    Note that these macros expect non-NULL object pointers.*/
 #define PyObject_INIT(op, typeobj) \
 	( (op)->ob_type = (typeobj), _Py_NewReference((PyObject *)(op)), (op) )
@@ -172,6 +175,7 @@ extern DL_IMPORT(void) _PyObject_Del Py_PROTO((PyObject *));
 ( (type *) PyObject_InitVar( \
 	(PyVarObject *) PyObject_MALLOC( _PyObject_VAR_SIZE((typeobj),(n)) ),\
 	(typeobj), (n)) )
+
 #define PyObject_DEL(op) PyObject_FREE(op)
 
 /* This example code implements an object constructor with a custom
@@ -202,6 +206,63 @@ extern DL_IMPORT(void) _PyObject_Del Py_PROTO((PyObject *));
    Note that in C++, the use of the new operator usually implies that
    the 1st step is performed automatically for you, so in a C++ class
    constructor you would start directly with PyObject_Init/InitVar. */
+
+/*
+ * Garbage Collection Support
+ * ==========================
+ */
+
+/* To make a new object participate in garbage collection use
+   PyObject_{New, VarNew, Del} to manage the memory.  Set the type flag
+   Py_TPFLAGS_GC and define the type method tp_recurse.  You should also
+   add the method tp_clear if your object is mutable.  Include
+   PyGC_HEAD_SIZE in the calculation of tp_basicsize.  Call
+   PyObject_GC_Init after the pointers followed by tp_recurse become
+   valid (usually just before returning the object from the allocation
+   method.  Call PyObject_GC_Fini before those pointers become invalid
+   (usually at the top of the deallocation method).  */
+
+#ifndef WITH_CYCLE_GC
+
+#define PyGC_HEAD_SIZE 0
+#define PyObject_GC_Init(op)
+#define PyObject_GC_Fini(op)
+#define PyObject_AS_GC(op) (op)
+#define PyObject_FROM_GC(op) (op)
+ 
+#else
+
+/* Add the object into the container set */
+extern DL_IMPORT(void) _PyGC_Insert(PyObject *);
+
+/* Remove the object from the container set */
+extern DL_IMPORT(void) _PyGC_Remove(PyObject *);
+
+#define PyObject_GC_Init(op) _PyGC_Insert((PyObject *)op)
+#define PyObject_GC_Fini(op) _PyGC_Remove((PyObject *)op)
+
+/* Structure *prefixed* to container objects participating in GC */ 
+typedef struct _gc_head {
+	struct _gc_head *gc_next;
+	struct _gc_head *gc_prev;
+	int gc_refs;
+} PyGC_Head;
+
+#define PyGC_HEAD_SIZE sizeof(PyGC_Head)
+
+/* Test if a type has a GC head */
+#define PyType_IS_GC(t) PyType_HasFeature((t), Py_TPFLAGS_GC)
+
+/* Test if an object has a GC head */
+#define PyObject_IS_GC(o) PyType_IS_GC((o)->ob_type)
+
+/* Get an object's GC head */
+#define PyObject_AS_GC(o) ((PyGC_Head *)(o)-1)
+
+/* Get the object given the PyGC_Head */
+#define PyObject_FROM_GC(g) ((PyObject *)(((PyGC_Head *)g)+1))
+
+#endif /* WITH_CYCLE_GC */
 
 #ifdef __cplusplus
 }

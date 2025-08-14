@@ -1,3 +1,4 @@
+
 /* Support for dynamic loading of extension modules */
 
 #include <kernel/image.h>

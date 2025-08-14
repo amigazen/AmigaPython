@@ -1,3 +1,4 @@
+
 #include "Python.h"
 
 #ifndef PLATFORM
@@ -5,7 +6,7 @@
 #endif
 
 const char *
-Py_GetPlatform()
+Py_GetPlatform(void)
 {
 	return PLATFORM;
 }

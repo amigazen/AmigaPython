@@ -1,3 +1,4 @@
+
 /* Frame object implementation */
 
 #include "Python.h"
@@ -6,7 +7,6 @@
 #include "frameobject.h"
 #include "opcode.h"
 #include "structmember.h"
-#include "protos/frameobject.h"
 
 #define OFF(x) offsetof(PyFrameObject, x)
 
@@ -27,9 +27,7 @@ static struct memberlist frame_memberlist[] = {
 };
 
 static PyObject *
-frame_getattr(f, name)
-	PyFrameObject *f;
-	char *name;
+frame_getattr(PyFrameObject *f, char *name)
 {
 	if (strcmp(name, "f_locals") == 0)
 		PyFrame_FastToLocals(f);
@@ -37,10 +35,7 @@ frame_getattr(f, name)
 }
 
 static int
-frame_setattr(f, name, value)
-	PyFrameObject *f;
-	char *name;
-	PyObject *value;
+frame_setattr(PyFrameObject *f, char *name, PyObject *value)
 {
 	return PyMember_Set((char *)f, frame_memberlist, name, value);
 }
@@ -67,8 +62,7 @@ frame_setattr(f, name, value)
 static PyFrameObject *free_list = NULL;
 
 static void
-frame_dealloc(f)
-	PyFrameObject *f;
+frame_dealloc(PyFrameObject *f)
 {
 	int i;
 	PyObject **fastlocals;
@@ -112,11 +106,8 @@ PyTypeObject PyFrame_Type = {
 };
 
 PyFrameObject *
-PyFrame_New(tstate, code, globals, locals)
-	PyThreadState *tstate;
-	PyCodeObject *code;
-	PyObject *globals;
-	PyObject *locals;
+PyFrame_New(PyThreadState *tstate, PyCodeObject *code,
+            PyObject *globals, PyObject *locals)
 {
 	PyFrameObject *back = tstate->frame;
 	static PyObject *builtin_object;
@@ -229,11 +220,7 @@ PyFrame_New(tstate, code, globals, locals)
 /* Block management */
 
 void
-PyFrame_BlockSetup(f, type, handler, level)
-	PyFrameObject *f;
-	int type;
-	int handler;
-	int level;
+PyFrame_BlockSetup(PyFrameObject *f, int type, int handler, int level)
 {
 	PyTryBlock *b;
 	if (f->f_iblock >= CO_MAXBLOCKS)
@@ -245,8 +232,7 @@ PyFrame_BlockSetup(f, type, handler, level)
 }
 
 PyTryBlock *
-PyFrame_BlockPop(f)
-	PyFrameObject *f;
+PyFrame_BlockPop(PyFrameObject *f)
 {
 	PyTryBlock *b;
 	if (f->f_iblock <= 0)
@@ -258,8 +244,7 @@ PyFrame_BlockPop(f)
 /* Convert between "fast" version of locals and dictionary version */
 
 void
-PyFrame_FastToLocals(f)
-	PyFrameObject *f;
+PyFrame_FastToLocals(PyFrameObject *f)
 {
 	/* Merge fast locals into f->f_locals */
 	PyObject *locals, *map;
@@ -303,9 +288,7 @@ PyFrame_FastToLocals(f)
 }
 
 void
-PyFrame_LocalsToFast(f, clear)
-	PyFrameObject *f;
-	int clear;
+PyFrame_LocalsToFast(PyFrameObject *f, int clear)
 {
 	/* Merge f->f_locals into fast locals */
 	PyObject *locals, *map;
@@ -340,7 +323,7 @@ PyFrame_LocalsToFast(f, clear)
 /* Clear out the free list */
 
 void
-PyFrame_Fini()
+PyFrame_Fini(void)
 {
 	while (free_list != NULL) {
 		PyFrameObject *f = free_list;

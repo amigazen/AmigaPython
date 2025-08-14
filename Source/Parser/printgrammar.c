@@ -1,18 +1,17 @@
+
 /* Print a bunch of C initializers that represent a grammar */
 
 #include "pgenheaders.h"
 #include "grammar.h"
 
 /* Forward */
-static void printarcs Py_PROTO((int, dfa *, FILE *));
-static void printstates Py_PROTO((grammar *, FILE *));
-static void printdfas Py_PROTO((grammar *, FILE *));
-static void printlabels Py_PROTO((grammar *, FILE *));
+static void printarcs(int, dfa *, FILE *);
+static void printstates(grammar *, FILE *);
+static void printdfas(grammar *, FILE *);
+static void printlabels(grammar *, FILE *);
 
 void
-printgrammar(g, fp)
-	grammar *g;
-	FILE *fp;
+printgrammar(grammar *g, FILE *fp)
 {
 	fprintf(fp, "#include \"pgenheaders.h\"\n");
 	fprintf(fp, "#include \"grammar.h\"\n");
@@ -27,9 +26,7 @@ printgrammar(g, fp)
 }
 
 void
-printnonterminals(g, fp)
-	grammar *g;
-	FILE *fp;
+printnonterminals(grammar *g, FILE *fp)
 {
 	dfa *d;
 	int i;
@@ -40,10 +37,7 @@ printnonterminals(g, fp)
 }
 
 static void
-printarcs(i, d, fp)
-	int i;
-	dfa *d;
-	FILE *fp;
+printarcs(int i, dfa *d, FILE *fp)
 {
 	arc *a;
 	state *s;
@@ -61,9 +55,7 @@ printarcs(i, d, fp)
 }
 
 static void
-printstates(g, fp)
-	grammar *g;
-	FILE *fp;
+printstates(grammar *g, FILE *fp)
 {
 	state *s;
 	dfa *d;
@@ -83,9 +75,7 @@ printstates(g, fp)
 }
 
 static void
-printdfas(g, fp)
-	grammar *g;
-	FILE *fp;
+printdfas(grammar *g, FILE *fp)
 {
 	dfa *d;
 	int i, j;
@@ -105,9 +95,7 @@ printdfas(g, fp)
 }
 
 static void
-printlabels(g, fp)
-	grammar *g;
-	FILE *fp;
+printlabels(grammar *g, FILE *fp)
 {
 	label *l;
 	int i;

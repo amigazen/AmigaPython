@@ -23,7 +23,7 @@ WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ******************************************************************/
 
 /* This creates an encryption and decryption engine I am calling
-   a rotor due to the original design was a harware rotor with
+   a rotor due to the original design was a hardware rotor with
    contacts used in Germany during WWII.
 
 Rotor Module:
@@ -43,7 +43,7 @@ Rotor Objects:
 NOTE: the {en,de}cryptmore() methods use the setup that was
       established via the {en,de}crypt calls. They will NOT
       re-initalize the rotors unless: 1) They have not been
-      initalized with {en,de}crypt since the last setkey() call;
+      initialized with {en,de}crypt since the last setkey() call;
       2) {en,de}crypt has not been called for this rotor yet.
 
 NOTE: you MUST use the SAME key in rotor.newrotor()
@@ -56,7 +56,6 @@ NOTE: you MUST use the SAME key in rotor.newrotor()
 /* Rotor objects */
 
 #include "Python.h"
-#include "mymath.h"
 
 #ifndef TRUE
 #define TRUE	1
@@ -79,8 +78,6 @@ typedef struct {
 	unsigned char *advances;	     /* [num_rotors] */
 } Rotorobj;
 
-#include "protos/rotormodule.h"
-
 staticforward PyTypeObject Rotor_Type;
 
 #define is_rotor(v)		((v)->ob_type == &Rotor_Type)
@@ -89,8 +86,7 @@ staticforward PyTypeObject Rotor_Type;
 /* This defines the necessary routines to manage rotor objects */
 
 static void
-set_seed(r) 
-	Rotorobj *r;
+set_seed(Rotorobj *r)
 {
 	r->seed[0] = r->key[0];
 	r->seed[1] = r->key[1];
@@ -100,8 +96,7 @@ set_seed(r)
 	
 /* Return the next random number in the range [0.0 .. 1.0) */
 static double
-r_random(r)
-	Rotorobj *r;
+r_random(Rotorobj *r)
 {
 	int x, y, z;
 	double val, term;
@@ -136,21 +131,17 @@ r_random(r)
 }
 
 static short
-r_rand(r, s)
-	Rotorobj *r;
-	short s;
+r_rand(Rotorobj *r, short s)
 {
 	return (short)((short)(r_random(r) * (double)s) % s);
 }
 
 static void
-set_key(r, key)
-	Rotorobj *r;
-	char *key;
+set_key(Rotorobj *r, char *key)
 {
 	unsigned long k1=995, k2=576, k3=767, k4=671, k5=463;
-	int i;
-	int len = strlen(key);
+	size_t i;
+	size_t len = strlen(key);
 
 	for (i = 0; i < len; i++) {
 		unsigned short ki = Py_CHARMASK(key[i]);
@@ -174,9 +165,7 @@ set_key(r, key)
 
 /* These define the interface to a rotor object */
 static Rotorobj *
-rotorobj_new(num_rotors, key)
-	int num_rotors;
-	char *key;
+rotorobj_new(int num_rotors, char *key)
 {
 	Rotorobj *xp;
 
@@ -219,7 +208,7 @@ rotorobj_new(num_rotors, key)
 }
 
 
-/* These routines impliment the rotor itself */
+/* These routines implement the rotor itself */
 
 /*  Here is a fairly sophisticated {en,de}cryption system.  It is based on
     the idea of a "rotor" machine.  A bunch of rotors, each with a
@@ -227,7 +216,7 @@ rotorobj_new(num_rotors, key)
     after encrypting one character.  The current state of the rotors is
     used to encrypt one character.
 
-    The code is smart enought to tell if your alphabet has a number of
+    The code is smart enough to tell if your alphabet has a number of
     characters equal to a power of two.  If it does, it uses logical
     operations, if not it uses div and mod (both require a division).
 
@@ -253,9 +242,7 @@ rotorobj_new(num_rotors, key)
 
 /* Set ROTOR to the identity permutation */
 static void
-RTR_make_id_rotor(r, rtr)
-	Rotorobj *r;
-	unsigned char *rtr;
+RTR_make_id_rotor(Rotorobj *r, unsigned char *rtr)
 {
 	register int j;
 	register int size = r->size;
@@ -267,8 +254,7 @@ RTR_make_id_rotor(r, rtr)
 
 /* The current set of encryption rotors */
 static void
-RTR_e_rotors(r)
-	Rotorobj *r;
+RTR_e_rotors(Rotorobj *r)
 {
 	int i;
 	for (i = 0; i < r->rotors; i++) {
@@ -278,8 +264,7 @@ RTR_e_rotors(r)
 
 /* The current set of decryption rotors */
 static void
-RTR_d_rotors(r)
-	Rotorobj *r;
+RTR_d_rotors(Rotorobj *r)
 {
 	register int i, j;
 	for (i = 0; i < r->rotors; i++) {
@@ -291,8 +276,7 @@ RTR_d_rotors(r)
 
 /* The positions of the rotors at this time */
 static void
-RTR_positions(r)
-	Rotorobj *r;
+RTR_positions(Rotorobj *r)
 {
 	int i;
 	for (i = 0; i < r->rotors; i++) {
@@ -302,8 +286,7 @@ RTR_positions(r)
 
 /* The number of positions to advance the rotors at a time */
 static void
-RTR_advances(r) 
-	Rotorobj *r;
+RTR_advances(Rotorobj *r)
 {
 	int i;
 	for (i = 0; i < r->rotors; i++) {
@@ -315,10 +298,7 @@ RTR_advances(r)
  * see Knuth for explanation of algorithm.
  */
 static void
-RTR_permute_rotor(r, e, d)
-	Rotorobj *r;
-	unsigned char *e;
-	unsigned char *d;
+RTR_permute_rotor(Rotorobj *r, unsigned char *e, unsigned char *d)
 {
 	short i = r->size;
 	short q;
@@ -340,8 +320,7 @@ RTR_permute_rotor(r, e, d)
  * Set the advancement, position, and permutation of the rotors
  */
 static void
-RTR_init(r)
-	Rotorobj *r;
+RTR_init(Rotorobj *r)
 {
 	int i;
 	set_seed(r);
@@ -350,8 +329,8 @@ RTR_init(r)
 	RTR_e_rotors(r);
 	RTR_d_rotors(r);
 	for (i = 0; i < r->rotors; i++) {
-		r->positions[i] = (unsigned char) r_rand(r,r->size);
-		r->advances[i] = (1+(2*(r_rand(r,r->size/2))));
+		r->positions[i] = (unsigned char) r_rand(r, (short)r->size);
+		r->advances[i] = (1+(2*(r_rand(r, (short)(r->size/2)))));
 		RTR_permute_rotor(r,
 				  &(r->e_rotor[(i*r->size)]),
 				  &(r->d_rotor[(i*r->size)]));
@@ -361,8 +340,7 @@ RTR_init(r)
 
 /* Change the RTR-positions vector, using the RTR-advances vector */
 static void
-RTR_advance(r)
-	Rotorobj *r;
+RTR_advance(Rotorobj *r)
 {
 	register int i=0, temp=0;
 	if (r->size_mask) {
@@ -388,9 +366,7 @@ RTR_advance(r)
 
 /* Encrypt the character P with the current rotor machine */
 static unsigned char
-RTR_e_char(r, p)
-	Rotorobj *r;
-	unsigned char p;
+RTR_e_char(Rotorobj *r, unsigned char p)
 {
 	register int i=0;
 	register unsigned char tp=p;
@@ -415,9 +391,7 @@ RTR_e_char(r, p)
 
 /* Decrypt the character C with the current rotor machine */
 static unsigned char
-RTR_d_char(r, c)
-	Rotorobj *r;
-	unsigned char c;
+RTR_d_char(Rotorobj *r, unsigned char c)
 {
 	register int i = r->rotors - 1;
 	register unsigned char tc = c;
@@ -442,11 +416,7 @@ RTR_d_char(r, c)
 
 /* Perform a rotor encryption of the region from BEG to END by KEY */
 static void
-RTR_e_region(r, beg, len, doinit)
-	Rotorobj *r;
-	unsigned char *beg;
-	int len;
-	int doinit;
+RTR_e_region(Rotorobj *r, unsigned char *beg, int len, int doinit)
 {
 	register int i;
 	if (doinit || r->isinited == FALSE)
@@ -458,11 +428,7 @@ RTR_e_region(r, beg, len, doinit)
 
 /* Perform a rotor decryption of the region from BEG to END by KEY */
 static void
-RTR_d_region(r, beg, len, doinit)
-	Rotorobj *r;
-	unsigned char *beg;
-	int len;
-	int doinit;
+RTR_d_region(Rotorobj *r, unsigned char *beg, int len, int doinit)
 {
 	register int i;
 	if (doinit || r->isinited == FALSE)
@@ -476,8 +442,7 @@ RTR_d_region(r, beg, len, doinit)
 
 /* Rotor methods */
 static void
-rotor_dealloc(xp)
-	Rotorobj *xp;
+rotor_dealloc(Rotorobj *xp)
 {
 	if (xp->e_rotor)
 		PyMem_DEL(xp->e_rotor);
@@ -491,9 +456,7 @@ rotor_dealloc(xp)
 }
 
 static PyObject * 
-rotorobj_encrypt(self, args)
-	Rotorobj *self;
-	PyObject * args;
+rotorobj_encrypt(Rotorobj *self, PyObject *args)
 {
 	char *string = NULL;
 	int len = 0;
@@ -515,9 +478,7 @@ rotorobj_encrypt(self, args)
 }
 
 static PyObject * 
-rotorobj_encrypt_more(self, args)
-	Rotorobj *self;
-	PyObject * args;
+rotorobj_encrypt_more(Rotorobj *self, PyObject *args)
 {
 	char *string = NULL;
 	int len = 0;
@@ -539,9 +500,7 @@ rotorobj_encrypt_more(self, args)
 }
 
 static PyObject * 
-rotorobj_decrypt(self, args)
-	Rotorobj *self;
-	PyObject * args;
+rotorobj_decrypt(Rotorobj *self, PyObject *args)
 {
 	char *string = NULL;
 	int len = 0;
@@ -563,9 +522,7 @@ rotorobj_decrypt(self, args)
 }
 
 static PyObject * 
-rotorobj_decrypt_more(self, args)
-	Rotorobj *self;
-	PyObject * args;
+rotorobj_decrypt_more(Rotorobj *self, PyObject *args)
 {
 	char *string = NULL;
 	int len = 0;
@@ -587,9 +544,7 @@ rotorobj_decrypt_more(self, args)
 }
 
 static PyObject * 
-rotorobj_setkey(self, args)
-	Rotorobj *self;
-	PyObject * args;
+rotorobj_setkey(Rotorobj *self, PyObject *args)
 {
 	char *key;
 
@@ -614,9 +569,7 @@ rotorobj_methods[] = {
 
 /* Return a rotor object's named attribute. */
 static PyObject * 
-rotorobj_getattr(s, name)
-	Rotorobj *s;
-	char *name;
+rotorobj_getattr(Rotorobj *s, char *name)
 {
 	return Py_FindMethod(rotorobj_methods, (PyObject*)s, name);
 }
@@ -640,9 +593,7 @@ statichere PyTypeObject Rotor_Type = {
 
 
 static PyObject * 
-rotor_rotor(self, args)
-	PyObject * self;
-	PyObject * args;
+rotor_rotor(PyObject *self, PyObject *args)
 {
 	Rotorobj *r;
 	char *string;
@@ -666,7 +617,7 @@ rotor_methods[] = {
 
 
 DL_EXPORT(void)
-initrotor()
+initrotor(void)
 {
 	(void)Py_InitModule("rotor", rotor_methods);
 }

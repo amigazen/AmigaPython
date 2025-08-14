@@ -9,71 +9,71 @@ from compiler import misc
 
 class FlowGraph:
     def __init__(self):
-	self.current = self.entry = Block()
-	self.exit = Block("exit")
-	self.blocks = misc.Set()
-	self.blocks.add(self.entry)
-	self.blocks.add(self.exit)
+        self.current = self.entry = Block()
+        self.exit = Block("exit")
+        self.blocks = misc.Set()
+        self.blocks.add(self.entry)
+        self.blocks.add(self.exit)
 
     def startBlock(self, block):
-	self.current = block
+        self.current = block
 
     def nextBlock(self, block=None):
-	if block is None:
-	    block = self.newBlock()
-	# XXX think we need to specify when there is implicit transfer
-	# from one block to the next
-	#
-	# I think this strategy works: each block has a child
-	# designated as "next" which is returned as the last of the
-	# children.  because the nodes in a graph are emitted in
-	# reverse post order, the "next" block will always be emitted
-	# immediately after its parent.
-	# Worry: maintaining this invariant could be tricky
-	self.current.addNext(block)
-	self.startBlock(block)
+        if block is None:
+            block = self.newBlock()
+        # XXX think we need to specify when there is implicit transfer
+        # from one block to the next
+        #
+        # I think this strategy works: each block has a child
+        # designated as "next" which is returned as the last of the
+        # children.  because the nodes in a graph are emitted in
+        # reverse post order, the "next" block will always be emitted
+        # immediately after its parent.
+        # Worry: maintaining this invariant could be tricky
+        self.current.addNext(block)
+        self.startBlock(block)
 
     def newBlock(self):
-	b = Block()
-	self.blocks.add(b)
-	return b
+        b = Block()
+        self.blocks.add(b)
+        return b
 
     def startExitBlock(self):
-	self.startBlock(self.exit)
+        self.startBlock(self.exit)
 
     def emit(self, *inst):
-	# XXX should jump instructions implicitly call nextBlock?
-	if inst[0] == 'RETURN_VALUE':
-	    self.current.addOutEdge(self.exit)
-	self.current.emit(inst)
+        # XXX should jump instructions implicitly call nextBlock?
+        if inst[0] == 'RETURN_VALUE':
+            self.current.addOutEdge(self.exit)
+        self.current.emit(inst)
 
     def getBlocks(self):
-	"""Return the blocks in reverse postorder
+        """Return the blocks in reverse postorder
 
-	i.e. each node appears before all of its successors
-	"""
-	# XXX make sure every node that doesn't have an explicit next
-	# is set so that next points to exit
-	for b in self.blocks.elements():
-	    if b is self.exit:
-		continue
-	    if not b.next:
-		b.addNext(self.exit)
-	order = dfs_postorder(self.entry, {})
-	order.reverse()
-	# hack alert
-	if not self.exit in order:
-	    order.append(self.exit)
-	return order
+        i.e. each node appears before all of its successors
+        """
+        # XXX make sure every node that doesn't have an explicit next
+        # is set so that next points to exit
+        for b in self.blocks.elements():
+            if b is self.exit:
+                continue
+            if not b.next:
+                b.addNext(self.exit)
+        order = dfs_postorder(self.entry, {})
+        order.reverse()
+        # hack alert
+        if not self.exit in order:
+            order.append(self.exit)
+        return order
 
 def dfs_postorder(b, seen):
     """Depth-first search of tree rooted at b, return in postorder"""
     order = []
     seen[b] = b
     for c in b.children():
-	if seen.has_key(c):
-	    continue
-	order = order + dfs_postorder(c, seen)
+        if seen.has_key(c):
+            continue
+        order = order + dfs_postorder(c, seen)
     order.append(b)
     return order
 
@@ -81,47 +81,47 @@ class Block:
     _count = 0
 
     def __init__(self, label=''):
-	self.insts = []
-	self.inEdges = misc.Set()
-	self.outEdges = misc.Set()
-	self.label = label
-	self.bid = Block._count
-	self.next = []
-	Block._count = Block._count + 1
+        self.insts = []
+        self.inEdges = misc.Set()
+        self.outEdges = misc.Set()
+        self.label = label
+        self.bid = Block._count
+        self.next = []
+        Block._count = Block._count + 1
 
     def __repr__(self):
-	if self.label:
-	    return "<block %s id=%d len=%d>" % (self.label, self.bid,
-						len(self.insts)) 
-	else:
-	    return "<block id=%d len=%d>" % (self.bid, len(self.insts))
+        if self.label:
+            return "<block %s id=%d len=%d>" % (self.label, self.bid,
+                                                len(self.insts)) 
+        else:
+            return "<block id=%d len=%d>" % (self.bid, len(self.insts))
 
     def __str__(self):
-	insts = map(str, self.insts)
-	return "<block %s %d:\n%s>" % (self.label, self.bid,
-				       string.join(insts, '\n')) 
+        insts = map(str, self.insts)
+        return "<block %s %d:\n%s>" % (self.label, self.bid,
+                                       string.join(insts, '\n')) 
 
     def emit(self, inst):
-	op = inst[0]
-	if op[:4] == 'JUMP':
-	    self.outEdges.add(inst[1])
-	self.insts.append(inst)
+        op = inst[0]
+        if op[:4] == 'JUMP':
+            self.outEdges.add(inst[1])
+        self.insts.append(inst)
 
     def getInstructions(self):
-	return self.insts
+        return self.insts
 
     def addInEdge(self, block):
-	self.inEdges.add(block)
+        self.inEdges.add(block)
 
     def addOutEdge(self, block):
-	self.outEdges.add(block)
+        self.outEdges.add(block)
 
     def addNext(self, block):
-	self.next.append(block)
-	assert len(self.next) == 1, map(str, self.next)
+        self.next.append(block)
+        assert len(self.next) == 1, map(str, self.next)
 
     def children(self):
-	return self.outEdges.elements() + self.next
+        return self.outEdges.elements() + self.next
 
 # flags for code objects
 CO_OPTIMIZED = 0x0001
@@ -139,18 +139,18 @@ class PyFlowGraph(FlowGraph):
     super_init = FlowGraph.__init__
 
     def __init__(self, name, filename, args=(), optimized=0):
-	self.super_init()
-	self.name = name
-	self.filename = filename
-	self.docstring = None
-	self.args = args # XXX
-	self.argcount = getArgCount(args)
-	if optimized:
-	    self.flags = CO_OPTIMIZED | CO_NEWLOCALS 
-	else:
-	    self.flags = 0
-	self.consts = []
-	self.names = []
+        self.super_init()
+        self.name = name
+        self.filename = filename
+        self.docstring = None
+        self.args = args # XXX
+        self.argcount = getArgCount(args)
+        if optimized:
+            self.flags = CO_OPTIMIZED | CO_NEWLOCALS 
+        else:
+            self.flags = 0
+        self.consts = []
+        self.names = []
         self.varnames = list(args) or []
         for i in range(len(self.varnames)):
             var = self.varnames[i]
@@ -163,13 +163,13 @@ class PyFlowGraph(FlowGraph):
         self.consts.insert(0, doc)
 
     def setFlag(self, flag):
-	self.flags = self.flags | flag
-	if flag == CO_VARARGS:
-	    self.argcount = self.argcount - 1
+        self.flags = self.flags | flag
+        if flag == CO_VARARGS:
+            self.argcount = self.argcount - 1
 
     def getCode(self):
-	"""Get a Python code object"""
-	if self.stage == RAW:
+        """Get a Python code object"""
+        if self.stage == RAW:
             self.flattenGraph()
         if self.stage == FLAT:
             self.convertArgs()
@@ -198,38 +198,38 @@ class PyFlowGraph(FlowGraph):
             sys.stdout = save
 
     def flattenGraph(self):
-	"""Arrange the blocks in order and resolve jumps"""
-	assert self.stage == RAW
-	self.insts = insts = []
-	pc = 0
-	begin = {}
-	end = {}
-	for b in self.getBlocks():
-	    begin[b] = pc
-	    for inst in b.getInstructions():
-		insts.append(inst)
-		if len(inst) == 1:
-		    pc = pc + 1
-		else:
-		    # arg takes 2 bytes
-		    pc = pc + 3
-	    end[b] = pc
-	pc = 0
-	for i in range(len(insts)):
-	    inst = insts[i]
-	    if len(inst) == 1:
+        """Arrange the blocks in order and resolve jumps"""
+        assert self.stage == RAW
+        self.insts = insts = []
+        pc = 0
+        begin = {}
+        end = {}
+        for b in self.getBlocks():
+            begin[b] = pc
+            for inst in b.getInstructions():
+                insts.append(inst)
+                if len(inst) == 1:
+                    pc = pc + 1
+                else:
+                    # arg takes 2 bytes
+                    pc = pc + 3
+            end[b] = pc
+        pc = 0
+        for i in range(len(insts)):
+            inst = insts[i]
+            if len(inst) == 1:
                 pc = pc + 1
             else:
                 pc = pc + 3
-	    opname = inst[0]
-	    if self.hasjrel.has_elt(opname):
+            opname = inst[0]
+            if self.hasjrel.has_elt(opname):
                 oparg = inst[1]
                 offset = begin[oparg] - pc
                 insts[i] = opname, offset
             elif self.hasjabs.has_elt(opname):
                 insts[i] = opname, begin[inst[1]]
-	self.stacksize = findDepth(self.insts)
-	self.stage = FLAT
+        self.stacksize = findDepth(self.insts)
+        self.stage = FLAT
 
     hasjrel = misc.Set()
     for i in dis.hasjrel:
@@ -253,8 +253,14 @@ class PyFlowGraph(FlowGraph):
 
     def _lookupName(self, name, list):
         """Return index of name in list, appending if necessary"""
-        if name in list:
-            i = list.index(name)
+        found = None
+        t = type(name)
+        for i in range(len(list)):
+            # must do a comparison on type first to prevent UnicodeErrors 
+            if t == type(list[i]) and list[i] == name:
+                found = 1
+                break
+        if found:
             # this is cheap, but incorrect in some cases, e.g 2 vs. 2L
             if type(name) == type(list[i]):
                 return i
@@ -292,7 +298,7 @@ class PyFlowGraph(FlowGraph):
 
     _cmp = list(dis.cmp_op)
     def _convert_COMPARE_OP(self, arg):
-	return self._cmp.index(arg)
+        return self._cmp.index(arg)
 
     # similarly for other opcodes...
 
@@ -314,12 +320,12 @@ class PyFlowGraph(FlowGraph):
                 if opname == "SET_LINENO":
                     lnotab.nextLine(oparg)
                 hi, lo = twobyte(oparg)
-		try:
-		    lnotab.addCode(self.opnum[opname], lo, hi)
-		except ValueError:
-		    print opname, oparg
-		    print self.opnum[opname], lo, hi
-		    raise
+                try:
+                    lnotab.addCode(self.opnum[opname], lo, hi)
+                except ValueError:
+                    print opname, oparg
+                    print self.opnum[opname], lo, hi
+                    raise
         self.stage = DONE
 
     opnum = {}
@@ -354,10 +360,10 @@ class PyFlowGraph(FlowGraph):
                 elt = elt.getCode()
             l.append(elt)
         return tuple(l)
-	    
+            
 def isJump(opname):
     if opname[:4] == 'JUMP':
-	return 1
+        return 1
 
 class TupleArg:
     """Helper for marking func defs with nested tuples in arglist"""
@@ -372,10 +378,10 @@ class TupleArg:
 def getArgCount(args):
     argcount = len(args)
     if args:
-	for arg in args:
-	    if isinstance(arg, TupleArg):
-		numNames = len(misc.flatten(arg.names))
-		argcount = argcount - numNames
+        for arg in args:
+            if isinstance(arg, TupleArg):
+                numNames = len(misc.flatten(arg.names))
+                argcount = argcount - numNames
     return argcount
 
 def twobyte(val):
@@ -419,21 +425,32 @@ class LineAddrTable:
             # compute deltas
             addr = self.codeOffset - self.lastoff
             line = lineno - self.lastline
-            while addr > 0 or line > 0:
-                # write the values in 1-byte chunks that sum
-                # to desired value
-                trunc_addr = addr
-                trunc_line = line
-                if trunc_addr > 255:
-                    trunc_addr = 255
-                if trunc_line > 255:
-                    trunc_line = 255
-                self.lnotab.append(trunc_addr)
-                self.lnotab.append(trunc_line)
-                addr = addr - trunc_addr
-                line = line - trunc_line
-            self.lastline = lineno
-            self.lastoff = self.codeOffset
+            # Python assumes that lineno always increases with
+            # increasing bytecode address (lnotab is unsigned char).
+            # Depending on when SET_LINENO instructions are emitted
+            # this is not always true.  Consider the code:
+            #     a = (1,
+            #          b)
+            # In the bytecode stream, the assignment to "a" occurs
+            # after the loading of "b".  This works with the C Python
+            # compiler because it only generates a SET_LINENO instruction
+            # for the assignment.
+            if line > 0:
+                while addr > 0 or line > 0:
+                    # write the values in 1-byte chunks that sum
+                    # to desired value
+                    trunc_addr = addr
+                    trunc_line = line
+                    if trunc_addr > 255:
+                        trunc_addr = 255
+                    if trunc_line > 255:
+                        trunc_line = 255
+                    self.lnotab.append(trunc_addr)
+                    self.lnotab.append(trunc_line)
+                    addr = addr - trunc_addr
+                    line = line - trunc_line
+                self.lastline = lineno
+                self.lastoff = self.codeOffset
 
     def getCode(self):
         return string.join(self.code, '')
@@ -504,20 +521,20 @@ class StackDepthTracker:
         'BUILD_MAP': 1,
         'COMPARE_OP': -1,
         'STORE_FAST': -1,
+        'IMPORT_STAR': -1,
+        'IMPORT_NAME': 0,
+        'IMPORT_FROM': 1,
         }
     # use pattern match
     patterns = [
         ('BINARY_', -1),
         ('LOAD_', 1),
-        ('IMPORT_', 1),
         ]
     
     # special cases:
-    # UNPACK_TUPLE, UNPACK_LIST, BUILD_TUPLE,
+    # UNPACK_SEQUENCE, BUILD_TUPLE,
     # BUILD_LIST, CALL_FUNCTION, MAKE_FUNCTION, BUILD_SLICE
-    def UNPACK_TUPLE(self, count):
-        return count
-    def UNPACK_LIST(self, count):
+    def UNPACK_SEQUENCE(self, count):
         return count
     def BUILD_TUPLE(self, count):
         return -count

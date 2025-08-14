@@ -1,3 +1,4 @@
+
 /* Support for dynamic loading of extension modules */
 
 #include "Python.h"
@@ -152,7 +153,7 @@ dl_funcptr _PyImport_GetDynLoadFunc(const char *fqname, const char *shortname,
 			return NULL;
 		}
 		if (!NSIsSymbolNameDefined(funcname)) {
-			/* UnlinkModule() isn't implimented in current versions, but calling it does no harm */
+			/* UnlinkModule() isn't implemented in current versions, but calling it does no harm */
 			NSUnLinkModule(newModule, FALSE);
 			PyErr_Format(PyExc_ImportError,
 				     "Loaded module does not contain symbol %.200s",

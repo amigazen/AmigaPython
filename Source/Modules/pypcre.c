@@ -47,7 +47,6 @@ restrictions:
 #define FOR_PYTHON
 #include "pcre-int.h"
 #include "Python.h"
-#include "mymalloc.h"
 #include <ctype.h>
 #include "graminit.h"
 
@@ -493,7 +492,7 @@ if ((options & ~PUBLIC_STUDY_OPTIONS) != 0)
 
 caseless = ((re->options | options) & PCRE_CASELESS) != 0;
 
-/* For an anchored pattern, or an unchored pattern that has a first char, or a
+/* For an anchored pattern, or an unanchored pattern that has a first char, or a
 multiline pattern that matches only at "line starts", no further processing at
 present. */
 
@@ -1033,7 +1032,7 @@ else
       for(c=0, i=0; ptr[i]!=0 && i<3; i++) 
 	{
 	  if (( pcre_ctypes[ ptr[i] ] & ctype_odigit) != 0)
-	    c = c * 8 + ptr[i]-'0';
+	    c = (c * 8 + ptr[i]-'0') & 255;
 	  else
 	    break; /* Non-octal character--break out of the loop */
 	}
@@ -1064,7 +1063,7 @@ else
     c -= '0';
     while(i++ < 2 && (pcre_ctypes[ptr[1]] & ctype_digit) != 0 &&
       ptr[1] != '8' && ptr[1] != '9')
-        c = c * 8 + *(++ptr) - '0';
+        c = (c * 8 + *(++ptr) - '0') & 255;
     break;
 
     /* Special escapes not starting with a digit are straightforward */
@@ -1636,8 +1635,8 @@ for (;; ptr++)
           *code++ = (repeat_min & 255);
           }
 
-        /* If the mininum is 1 and the previous item was a character string,
-        we either have to put back the item that got cancelled if the string
+        /* If the minimum is 1 and the previous item was a character string,
+        we either have to put back the item that got canceled if the string
         length was 1, or add the character back onto the end of a longer
         string. For a character type nothing need be done; it will just get
         put back naturally. Note that the final character is always going to
@@ -1649,7 +1648,7 @@ for (;; ptr++)
           }
 
         /*  For a single negated character we also have to put back the
-        item that got cancelled. */
+        item that got canceled. */
 
         else if (*previous == OP_NOT) code++;
 
@@ -4520,9 +4519,9 @@ pcre_exec(const pcre *external_re, const pcre_extra *external_extra,
      they won't cost too much performance. */ 
 volatile int resetcount, ocount;
 volatile int first_char = -1;
+const uschar * volatile start_bits = NULL;
+const uschar * volatile start_match = (const uschar *)subject + start_pos;
 match_data match_block;
-const uschar *start_bits = NULL;
-const uschar *start_match = (const uschar *)subject + start_pos;
 const uschar *end_subject;
 const real_pcre *re = (const real_pcre *)external_re;
 const real_pcre_extra *extra = (const real_pcre_extra *)external_extra;

@@ -1,5 +1,12 @@
 # Grammar for Python
 
+# Note:  Changing the grammar specified in this file will most likely
+#        require corresponding changes in the parser module
+#        (../Modules/parsermodule.c).  If you can't make the changes to
+#        that module yourself, please co-ordinate the required changes
+#        with someone who can; ask around on python-dev for help.  Fred
+#        Drake <fdrake@acm.org> will probably be listening there.
+
 # Commands for Kees Blom's railroad program
 #diagram:token NAME
 #diagram:token NUMBER
@@ -31,9 +38,10 @@ stmt: simple_stmt | compound_stmt
 simple_stmt: small_stmt (';' small_stmt)* [';'] NEWLINE
 #small_stmt: expr_stmt | print_stmt  | del_stmt | pass_stmt | flow_stmt | import_stmt | global_stmt | access_stmt | exec_stmt
 small_stmt: expr_stmt | print_stmt  | del_stmt | pass_stmt | flow_stmt | import_stmt | global_stmt | exec_stmt | assert_stmt
-expr_stmt: testlist ('=' testlist)*
-# For assignments, additional restrictions enforced by the interpreter
-print_stmt: 'print' (test ',')* [test]
+expr_stmt: testlist (augassign testlist | ('=' testlist)*)
+augassign: '+=' | '-=' | '*=' | '/=' | '%=' | '&=' | '|=' | '^=' | '<<=' | '>>=' | '**='
+# For normal assignments, additional restrictions enforced by the interpreter
+print_stmt: 'print' ( [ test (',' test)* [','] ] | '>>' test [ (',' test)+ [','] ] )
 del_stmt: 'del' exprlist
 pass_stmt: 'pass'
 flow_stmt: break_stmt | continue_stmt | return_stmt | raise_stmt
@@ -41,7 +49,9 @@ break_stmt: 'break'
 continue_stmt: 'continue'
 return_stmt: 'return' [testlist]
 raise_stmt: 'raise' [test [',' test [',' test]]]
-import_stmt: 'import' dotted_name (',' dotted_name)* | 'from' dotted_name 'import' ('*' | NAME (',' NAME)*)
+import_stmt: 'import' dotted_as_name (',' dotted_as_name)* | 'from' dotted_name 'import' ('*' | import_as_name (',' import_as_name)*)
+import_as_name: NAME [NAME NAME]
+dotted_as_name: dotted_name [NAME NAME]
 dotted_name: NAME ('.' NAME)*
 global_stmt: 'global' NAME (',' NAME)*
 #access_stmt: 'access' ('*' | NAME (',' NAME)*) ':' accesstype  (',' accesstype)*
@@ -74,7 +84,8 @@ arith_expr: term (('+'|'-') term)*
 term: factor (('*'|'/'|'%') factor)*
 factor: ('+'|'-'|'~') factor | power
 power: atom trailer* ('**' factor)*
-atom: '(' [testlist] ')' | '[' [testlist] ']' | '{' [dictmaker] '}' | '`' testlist '`' | NAME | NUMBER | STRING+
+atom: '(' [testlist] ')' | '[' [listmaker] ']' | '{' [dictmaker] '}' | '`' testlist '`' | NAME | NUMBER | STRING+
+listmaker: test ( list_for | (',' test)* [','] )
 lambdef: 'lambda' [varargslist] ':' test
 trailer: '(' [arglist] ')' | '[' subscriptlist ']' | '.' NAME
 subscriptlist: subscript (',' subscript)* [',']
@@ -88,3 +99,7 @@ classdef: 'class' NAME ['(' testlist ')'] ':' suite
 
 arglist: (argument ',')* (argument [',']| '*' test [',' '**' test] | '**' test)
 argument: [test '='] test	# Really [keyword '='] test
+
+list_iter: list_for | list_if
+list_for: 'for' exprlist 'in' testlist [list_iter]
+list_if: 'if' test [list_iter]

@@ -11,6 +11,7 @@
 #			  (partitioned into 5 parts)
 #		updated: 25 dec 1998, added support for I-Net 225
 #		updated: 10 sep 2000, Python 1.6
+#		updated: 23 okt 2000, Python 2.0
 #
 #	
 #
@@ -20,7 +21,7 @@
 
 
 # ye old progname:
-PROGRAM = Python16
+PROGRAM = Python20
 
 
 all: $(PROGRAM)
@@ -64,6 +65,10 @@ NEWMODULES =
 TCPSTACKLIB=
 ## TCPSTACKLIB=INET:lib/unixS.lib
 
+#
+# Expat XML parser lib
+#
+EXPATLIB = expat/lib/expat.lib
 
 #
 # Link library configuration. Change to reflect correct math options etc.
@@ -74,14 +79,14 @@ CLIBS = $(AMIGAPYTHONLIB) $(MEMPOOLSLIB) $(TCPSTACKLIB) LIB:scm881nb.lib LIB:scn
 # (compiler options can be changed using scopts)
 LINKOPTS = SC BATCH NOICONS
 
-LIBS = Modules/Modules.lib Parser/Parser.lib Python/Python.lib Objects/Objects.lib $(CLIBS)
+LIBS = Modules/Modules.lib Parser/Parser.lib Python/Python.lib Objects/Objects.lib Expat/lib/expat.lib $(CLIBS)
 
 OBJECTS=Modules/python.o Modules/main.o $(NEWMODULES)
 
 Python.GST: amiga/make_gst.c Include/Python.h Include/config.h Include/protos.h SCOPTIONS
 	-delete >NIL: Python.GST
 	-GST >NIL: Python.GST unload
-	-SC amiga/make_gst.c MKGST Python.GST NOOBJNAME
+	-SC amiga/make_gst.c MKGST Python.GST NOOBJNAME DEFINE=PROTO_TIMER_H
 
 newbuild:
 	@eval `type buildno` + 1 >buildno1
@@ -131,6 +136,7 @@ clean:
 	-delete Python/\#?.(o|lib) quiet
 	-delete $(PROGRAM) \#?.tmp QUIET
 	-delete $(AMIGAPYTHONLIB)
+	-delete $(EXPATLIB) Expat/\#?/\#?.o 
 	-delete Amiga/\#?.(o|lib)
 	-delete Python.GST >NIL:
 
@@ -172,4 +178,12 @@ cd Amiga
 smake $(AMIGAPYTHONLIBNAM)
 <<
 	@echo "******************** LEAVING Amiga/  *********************N"
+
+$(EXPATLIB): Expat
+	@echo "******************** ENTERING Expat/ *********************N"
+	execute <<
+cd Expat
+smake
+<<
+	@echo "******************** LEAVING Expat/  *********************N"
 

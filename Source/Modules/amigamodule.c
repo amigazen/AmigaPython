@@ -52,8 +52,6 @@
 #include <dos/dostags.h>
 #include <exec/execbase.h>
 
-#include "mytime.h"     /* For clock_t on some systems */
-
 #ifdef HAVE_UTIME_H
 #include <utime.h>
 #endif

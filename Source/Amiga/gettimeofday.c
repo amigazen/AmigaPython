@@ -11,6 +11,7 @@ RCS_ID_C="$Id: gettimeofday.c,v 4.1 1994/09/29 23:09:02 jraja Exp $"
 #include <time.h>
 #include <sys/time.h>
 
+#undef PROTO_TIMER_H
 #include <proto/timer.h>
 
 /****** net.lib/gettimeofday *********************************************

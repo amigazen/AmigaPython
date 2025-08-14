@@ -1,1 +1,0 @@
-gcc -ansi -m68040 -funsigned-char dump.c unicodedatabase.o -o dump

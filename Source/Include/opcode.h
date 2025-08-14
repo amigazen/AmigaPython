@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 
+
 /* Instruction opcodes for compiled code */
 
 #define STOP_CODE	0
@@ -11,6 +12,7 @@ extern "C" {
 #define ROT_TWO		2
 #define ROT_THREE	3
 #define DUP_TOP		4
+#define ROT_FOUR	5
 
 #define UNARY_POSITIVE	10
 #define UNARY_NEGATIVE	11
@@ -37,6 +39,11 @@ extern "C" {
 #define DELETE_SLICE	50
 /* Also uses 51-53 */
 
+#define INPLACE_ADD	55
+#define INPLACE_SUBTRACT	56
+#define INPLACE_MULTIPLY	57
+#define INPLACE_DIVIDE	58
+#define INPLACE_MODULO	59
 #define STORE_SUBSCR	60
 #define DELETE_SUBSCR	61
 
@@ -45,17 +52,23 @@ extern "C" {
 #define BINARY_AND	64
 #define BINARY_XOR	65
 #define BINARY_OR	66
-
+#define INPLACE_POWER	67
 
 #define PRINT_EXPR	70
 #define PRINT_ITEM	71
 #define PRINT_NEWLINE	72
-
+#define PRINT_ITEM_TO   73
+#define PRINT_NEWLINE_TO 74
+#define INPLACE_LSHIFT	75
+#define INPLACE_RSHIFT	76
+#define INPLACE_AND	77
+#define INPLACE_XOR	78
+#define INPLACE_OR	79
 #define BREAK_LOOP	80
 
 #define LOAD_LOCALS	82
 #define RETURN_VALUE	83
-
+#define IMPORT_STAR	84
 #define EXEC_STMT	85
 
 #define POP_BLOCK	87
@@ -66,13 +79,13 @@ extern "C" {
 
 #define STORE_NAME	90	/* Index in name list */
 #define DELETE_NAME	91	/* "" */
-#define UNPACK_TUPLE	92	/* Number of tuple items */
-#define UNPACK_LIST	93	/* Number of list items */
+#define UNPACK_SEQUENCE	92	/* Number of sequence items */
+
 #define STORE_ATTR	95	/* Index in name list */
 #define DELETE_ATTR	96	/* "" */
 #define STORE_GLOBAL	97	/* "" */
 #define DELETE_GLOBAL	98	/* "" */
-
+#define DUP_TOPX	99	/* number of items to duplicate */
 #define LOAD_CONST	100	/* Index in const list */
 #define LOAD_NAME	101	/* Index in name list */
 #define BUILD_TUPLE	102	/* Number of tuple items */
@@ -117,6 +130,9 @@ extern "C" {
 #define CALL_FUNCTION_VAR          140	/* #args + (#kwargs<<8) */
 #define CALL_FUNCTION_KW           141	/* #args + (#kwargs<<8) */
 #define CALL_FUNCTION_VAR_KW       142	/* #args + (#kwargs<<8) */
+
+/* Support for opargs more than 16 bits long */
+#define EXTENDED_ARG  143
 
 /* Comparison operator codes (argument to COMPARE_OP) */
 enum cmp_op {LT, LE, EQ, NE, GT, GE, IN, NOT_IN, IS, IS_NOT, EXC_MATCH, BAD};

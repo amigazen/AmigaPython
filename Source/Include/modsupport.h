@@ -1,3 +1,4 @@
+
 #ifndef Py_MODSUPPORT_H
 #define Py_MODSUPPORT_H
 #ifdef __cplusplus
@@ -6,35 +7,26 @@ extern "C" {
 
 /* Module support interface */
 
-#ifdef HAVE_STDARG_PROTOTYPES
-
 #include <stdarg.h>
 
-extern DL_IMPORT(int) PyArg_Parse Py_PROTO((PyObject *, char *, ...));
-extern DL_IMPORT(int) PyArg_ParseTuple Py_PROTO((PyObject *, char *, ...));
-extern DL_IMPORT(int) PyArg_ParseTupleAndKeywords Py_PROTO((PyObject *, PyObject *,
-						 char *, char **, ...));
-extern DL_IMPORT(PyObject *) Py_BuildValue Py_PROTO((char *, ...));
+extern DL_IMPORT(int) PyArg_Parse(PyObject *, char *, ...);
+extern DL_IMPORT(int) PyArg_ParseTuple(PyObject *, char *, ...);
+extern DL_IMPORT(int) PyArg_ParseTupleAndKeywords(PyObject *, PyObject *,
+                                                  char *, char **, ...);
+extern DL_IMPORT(PyObject *) Py_BuildValue(char *, ...);
 
-#else
+extern DL_IMPORT(int) PyArg_VaParse(PyObject *, char *, va_list);
+extern DL_IMPORT(PyObject *) Py_VaBuildValue(char *, va_list);
 
-#include <varargs.h>
-
-/* Better to have no prototypes at all for varargs functions in this case */
-extern DL_IMPORT(int) PyArg_Parse();
-extern DL_IMPORT(int) PyArg_ParseTuple();
-extern DL_IMPORT(PyObject *) Py_BuildValue();
-
-#endif
-
-extern DL_IMPORT(int) PyArg_VaParse Py_PROTO((PyObject *, char *, va_list));
-extern DL_IMPORT(PyObject *) Py_VaBuildValue Py_PROTO((char *, va_list));
+extern DL_IMPORT(int) PyModule_AddObject(PyObject *, char *, PyObject *);
+extern DL_IMPORT(int) PyModule_AddIntConstant(PyObject *, char *, long);
+extern DL_IMPORT(int) PyModule_AddStringConstant(PyObject *, char *, char *);
 
 #define PYTHON_API_VERSION 1009
 #define PYTHON_API_STRING "1009"
 /* The API version is maintained (independently from the Python version)
    so we can detect mismatches between the interpreter and dynamically
-   loaded modules.  These are diagnosticised by an error message but
+   loaded modules.  These are diagnosed by an error message but
    the module is still loaded (because the mismatch can only be tested
    after loading the module).  The error message is intended to
    explain the core dump a few seconds later.
@@ -80,8 +72,10 @@ extern DL_IMPORT(PyObject *) Py_VaBuildValue Py_PROTO((char *, va_list));
 #define Py_InitModule4 Py_InitModule4TraceRefs
 #endif
 
-extern DL_IMPORT(PyObject *) Py_InitModule4 Py_PROTO((char *, PyMethodDef *,
-					  char *, PyObject *, int));
+extern DL_IMPORT(PyObject *) Py_InitModule4(char *name, PyMethodDef *methods,
+                                            char *doc, PyObject *self,
+                                            int apiver);
+
 #define Py_InitModule(name, methods) \
 	Py_InitModule4(name, methods, (char *)NULL, (PyObject *)NULL, \
 		       PYTHON_API_VERSION)

@@ -1,3 +1,4 @@
+
 /* Support for dynamic loading of extension modules */
 
 #include "Python.h"
@@ -21,8 +22,13 @@
 
 
 const struct filedescr _PyImport_DynLoadFiletab[] = {
+#ifdef __CYGWIN__
+	{".pyd", "rb", C_EXTENSION},
+	{".dll", "rb", C_EXTENSION},
+#else
 	{".so", "rb", C_EXTENSION},
 	{"module.so", "rb", C_EXTENSION},
+#endif
 	{0, 0}
 };
 

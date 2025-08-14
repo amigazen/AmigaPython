@@ -8,6 +8,8 @@ Without you I would've stopped working on Python long ago!
 
 	--Guido
 
+PS: In the standard Python distribution this file is encoded in Latin-1.
+
 Jim Ahlstrom
 Jyrki Alakuijala
 Mark Anacker
@@ -44,6 +46,8 @@ Monty Brandenberg
 Terrence Brannon
 Dave Brennan
 Gary S. Brown
+Oleg Broytmann
+Stan Bubrouski
 Erik de Bueger
 Jan-Hein B"uhrman
 Dick Bulterman
@@ -55,6 +59,7 @@ Mike Carlton
 Donn Cave
 Per Cederqvist
 Jeffrey Chang
+Brad Chapman
 Mitch Chapman
 David Chaum
 Nicolas Chauvat
@@ -76,6 +81,7 @@ Jonathan Dasteel
 John DeGood
 Roger Dev
 Toby Dickenson
+Daniel Dittmar
 Jaromir Dolecek
 Fred Drake
 John DuBois
@@ -114,6 +120,7 @@ Lele Gaifax
 Raymund Galvin
 Fred Gansevles
 Lars Marius Garshol
+Harry Henry Gebel
 Thomas Gellekum
 Ben Gertzfield
 Jonathan Giddy
@@ -139,6 +146,7 @@ Jochen Hayek
 Thomas Heller
 Lance Finn Helsten
 Jonathan Hendry
+James Henstridge
 Chris Herborth
 Ivan Herman
 Gary Herron
@@ -211,8 +219,9 @@ Eric Lindvall
 Per Lindqvist
 Nick Lockwood
 Stephanie Lockwood
-Martin von Loewis
+Martin von Löwis
 Anne Lord
+Tony Lownds
 Ray Loyzaga
 Fredrik Lundh
 Loren Luke
@@ -253,11 +262,14 @@ George Neville-Neil
 Oscar Nierstrasz
 Hrvoje Niksic
 Bill Noon
+Stefan Norberg
 Jeffrey Ollie
 Nigel O'Brian
 Tim O'Malley
+Denis S. Otkidach
 Piet van Oostrum
 Jason Orendorff
+Todd R. Palmer
 Harri Pasanen
 Randy Pausch
 Marcel van der Peijl
@@ -267,6 +279,9 @@ Chris Petrilli
 Geoff Philbrick
 Adrian Phillips
 Christopher J. Phoenix
+Neale Pickett
+Dan Pierson
+François Pinard
 Amrit Prem
 Paul Prescod
 Eric Raymond
@@ -279,6 +294,7 @@ Bernhard Reiter
 Steven Reiz
 Jan Pieter Riegel
 Nicholas Riley
+Jean-Claude Rimbault
 Andy Robinson
 Jim Robinson
 Mike Romberg
@@ -290,6 +306,7 @@ Just van Rossum
 Hugo van Rossum
 Saskia van Rossum
 Donald Wallace Rouse II
+Audun S. Runde
 Jeff Rush
 Sam Rushing
 Nick Russo
@@ -323,9 +340,8 @@ Per Spilling
 Greg Stein
 Dan Stromberg
 Nathan Sullivan
-Neale Pickett
-Dan Pierson
-François Pinard
+Kalle Svensson
+Hajime Saitou
 RajGopal Srinivasan
 Jim St. Pierre
 Quentin Stafford-Fraser
@@ -339,7 +355,6 @@ Amy Taylor
 Tobias Thelen
 Eric Tiedemann
 Tracy Tims
-Christian Tismer
 Christian Tismer
 R Lindsay Todd
 Bennett Todd
@@ -376,13 +391,14 @@ Jean-Claude Wippler
 Lars Wirzenius
 Stefan Witzel
 Klaus-Juergen Wolf
+Dan Wolfe
 Richard Wolff
 Thomas Wouters
 Doug Wyatt
 Ka-Ping Yee
+Bob Yodlowski
 Masazumi Yoshikawa
 Moshe Zadka
 Milan Zamazal
 Siebren van der Zee
 Uwe Zessin
-hajime@jsk.t.u-tokyo.ac.jp

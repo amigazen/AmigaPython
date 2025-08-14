@@ -6,23 +6,25 @@
 	Currently only for MsgPorts and Messages.
 
 -----------------------------------------------
-	©1997 by Irmen de Jong.
+	©Irmen de Jong.
 
 	History:
 
 	14-apr-96   Created.
+	29-okt-00	Fixup for Python 2.0
+
 
 Module members:
 
-	error       -- Exeption string object.  ('execlib.error')
+	error       -- Exeption string object.  ('Execlib.error')
 
 
 **************************************************************************/
 
 #include <exec/memory.h>
 #include <proto/exec.h>
-#include "allobjects.h"
-#include "modsupport.h"
+#include "Python.h"
+//#include "modsupport.h"
 
 
 static PyObject *error;    // Exception
@@ -41,23 +43,23 @@ Execlib_Avail(PyObject *self, PyObject *arg)
 
 /*** FUNCTIONS FROM THE MODULE ***/
 
-static struct methodlist Execlib_global_methods[] = {
-	{"Avail", Execlib_Avail, 0},
+static PyMethodDef Execlib_global_methods[] = {
+	{"Avail", Execlib_Avail,  METH_OLDARGS},
 	{NULL,      NULL}       /* sentinel */
 };
 ///
 
 void
-initexeclib Py_PROTO((void))
+initExeclib Py_PROTO((void))
 {
 	PyObject *m, *d;
 
-	m = Py_InitModule("execlib", Execlib_global_methods);
+	m = Py_InitModule("Execlib", Execlib_global_methods);
 	d = PyModule_GetDict(m);
 
 	/* Initialize error exception */
-	error = PyString_FromString("execlib.error");
+	error = PyString_FromString("Execlib.error");
 	if (error == NULL || PyDict_SetItemString(d, "error", error) != 0)
-		Py_FatalError("can't define execlib.error");
+		Py_FatalError("can't define Execlib.error");
 }
 

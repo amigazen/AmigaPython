@@ -1,3 +1,4 @@
+
 /* MPZ module */
 
 /* This module provides an interface to an alternate Multi-Precision
@@ -84,7 +85,7 @@ static const char initialiser_name[] = "mpz";
 /* #define MPZ_DEBUG */
 
 static mpzobject *
-newmpzobject()
+newmpzobject(void)
 {
 	mpzobject *mpzp;
 
@@ -105,14 +106,11 @@ newmpzobject()
 #endif /* def MPZ_GET_STR_BUG */
 
 static PyObject *
-mpz_format(objp, base, withname)
-	PyObject *objp;
-	int base;
-	unsigned char withname;
+mpz_format(PyObject *objp, int base, unsigned char withname)
 {
 	mpzobject *mpzp = (mpzobject *)objp;
 	PyStringObject *strobjp;
-	int i;
+	size_t i;
 	int cmpres;
 	int taglong;
 	char *cp;
@@ -231,7 +229,7 @@ mpz_format(objp, base, withname)
 
 #ifdef MPZ_DEBUG
 	fprintf(stderr,
-		"mpz_format: cp (str end) 0x%x, begin 0x%x, diff %d, i %d\n",
+		"mpz_format: cp (str end) %p, begin %p, diff %d, i %d\n",
 		cp, PyString_AS_STRING(strobjp),
 		cp - PyString_AS_STRING(strobjp), i);
 #endif /* def MPZ_DEBUG */	
@@ -247,8 +245,7 @@ mpz_format(objp, base, withname)
 /* MPZ methods */
 
 static void
-mpz_dealloc(mpzp)
-	mpzobject *mpzp;
+mpz_dealloc(mpzobject *mpzp)
 {
 #ifdef MPZ_DEBUG
 	fputs( "mpz_dealloc() called...\n", stderr );
@@ -262,8 +259,7 @@ mpz_dealloc(mpzp)
 static mpzobject *mpz_value_zero, *mpz_value_one, *mpz_value_mone;
 
 static int
-mpz_compare(a, b)
-	mpzobject *a, *b;
+mpz_compare(mpzobject *a, mpzobject *b)
 {
 	int cmpres;
 
@@ -274,9 +270,7 @@ mpz_compare(a, b)
 } /* mpz_compare() */
 
 static PyObject *
-mpz_addition(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_addition(mpzobject *a, mpzobject *b)
 {
 	mpzobject *z;
 
@@ -301,9 +295,7 @@ mpz_addition(a, b)
 } /* mpz_addition() */
 
 static PyObject *
-mpz_substract(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_substract(mpzobject *a, mpzobject *b)
 {
 	mpzobject *z;
 
@@ -323,9 +315,7 @@ mpz_substract(a, b)
 } /* mpz_substract() */
 
 static PyObject *
-mpz_multiply(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_multiply(mpzobject *a, mpzobject *b)
 {
 #ifdef MPZ_SPARE_MALLOC
 	int cmpres;
@@ -362,9 +352,7 @@ mpz_multiply(a, b)
 } /* mpz_multiply() */
 
 static PyObject *
-mpz_divide(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_divide(mpzobject *a, mpzobject *b)
 {
 #ifdef MPZ_SPARE_MALLOC
 	int cmpres;
@@ -433,9 +421,7 @@ mpz_divide(a, b)
 } /* mpz_divide() */
 
 static PyObject *
-mpz_remainder(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_remainder(mpzobject *a, mpzobject *b)
 {
 #ifdef MPZ_SPARE_MALLOC
 	int cmpres;
@@ -504,9 +490,7 @@ mpz_remainder(a, b)
 } /* mpz_remainder() */
 
 static PyObject *
-mpz_div_and_mod(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_div_and_mod(mpzobject *a, mpzobject *b)
 {
 	PyObject *z = NULL;
 	mpzobject *x = NULL, *y = NULL;
@@ -564,10 +548,7 @@ mpz_div_and_mod(a, b)
 } /* mpz_div_and_mod() */
 
 static PyObject *
-mpz_power(a, b, m)
-	mpzobject *a;
-	mpzobject *b;
-        mpzobject *m;
+mpz_power(mpzobject *a, mpzobject *b, mpzobject *m)
 {
 	mpzobject *z;
 	int cmpres;
@@ -658,8 +639,7 @@ mpz_power(a, b, m)
 
 
 static PyObject *
-mpz_negative(v)
-	mpzobject *v;
+mpz_negative(mpzobject *v)
 {
 	mpzobject *z;
 
@@ -681,8 +661,7 @@ mpz_negative(v)
 
 
 static PyObject *
-mpz_positive(v)
-	mpzobject *v;
+mpz_positive(mpzobject *v)
 {
 	Py_INCREF(v);
 	return (PyObject *)v;
@@ -690,8 +669,7 @@ mpz_positive(v)
 
 
 static PyObject *
-mpz_absolute(v)
-	mpzobject *v;
+mpz_absolute(mpzobject *v)
 {
 	mpzobject *z;
 
@@ -709,15 +687,13 @@ mpz_absolute(v)
 } /* mpz_absolute() */
 
 static int
-mpz_nonzero(v)
-	mpzobject *v;
+mpz_nonzero(mpzobject *v)
 {
 	return mpz_cmp_ui(&v->mpz, (unsigned long int)0) != 0;
 } /* mpz_nonzero() */
 		
 static PyObject *
-py_mpz_invert(v)
-	mpzobject *v;
+py_mpz_invert(mpzobject *v)
 {
 	mpzobject *z;
 
@@ -731,9 +707,7 @@ py_mpz_invert(v)
 } /* py_mpz_invert() */
 
 static PyObject *
-mpz_lshift(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_lshift(mpzobject *a, mpzobject *b)
 {
 	int cmpres;
 	mpzobject *z;
@@ -771,9 +745,7 @@ mpz_lshift(a, b)
 } /* mpz_lshift() */
 
 static PyObject *
-mpz_rshift(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_rshift(mpzobject *a, mpzobject *b)
 {
 	int cmpres;
 	mpzobject *z;
@@ -802,9 +774,7 @@ mpz_rshift(a, b)
 } /* mpz_rshift() */
 
 static PyObject *
-mpz_andfunc(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_andfunc(mpzobject *a, mpzobject *b)
 {
 	mpzobject *z;
 
@@ -818,10 +788,7 @@ mpz_andfunc(a, b)
 
 /* hack Hack HAck HACk HACK, XXX this code is dead slow */
 void
-mpz_xor(res, op1, op2)
-	MP_INT *res;
-	const MP_INT *op1;
-	const MP_INT *op2;
+mpz_xor(MP_INT *res, const MP_INT *op1, const MP_INT *op2)
 {
 	MP_INT tmpmpz;
 	
@@ -836,9 +803,7 @@ mpz_xor(res, op1, op2)
 } /* mpz_xor() HACK */
 
 static PyObject *
-mpz_xorfunc(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_xorfunc(mpzobject *a, mpzobject *b)
 {
 	mpzobject *z;
 
@@ -851,9 +816,7 @@ mpz_xorfunc(a, b)
 } /* mpz_xorfunc() */
 
 static PyObject *
-mpz_orfunc(a, b)
-	mpzobject *a;
-	mpzobject *b;
+mpz_orfunc(mpzobject *a, mpzobject *b)
 {
 	mpzobject *z;
 
@@ -870,9 +833,7 @@ mpz_orfunc(a, b)
 #include "longintrepr.h"
 
 static PyObject *
-MPZ_mpz(self, args)
-	PyObject *self;
-	PyObject *args;
+MPZ_mpz(PyObject *self, PyObject *args)
 {
 	mpzobject *mpzp;
 	PyObject *objp;
@@ -983,8 +944,7 @@ MPZ_mpz(self, args)
 } /* MPZ_mpz() */
 
 static mpzobject *
-mpz_mpzcoerce(z)
-	PyObject *z;
+mpz_mpzcoerce(PyObject *z)
 {
 	/* shortcut: 9 out of 10 times the type is already ok */
 	if (is_mpzobject(z)) {
@@ -1002,13 +962,11 @@ mpz_mpzcoerce(z)
 } /* mpz_mpzcoerce() */
 	
 /* Forward */
-static void mpz_divm Py_PROTO((MP_INT *res, const MP_INT *num,
-			       const MP_INT *den, const MP_INT *mod));
+static void mpz_divm(MP_INT *res, const MP_INT *num,
+	             const MP_INT *den, const MP_INT *mod);
 
 static PyObject *
-MPZ_powm(self, args)
-	PyObject *self;
-	PyObject *args;
+MPZ_powm(PyObject *self, PyObject *args)
 {
 	PyObject *base, *exp, *mod;
 	mpzobject *mpzbase = NULL, *mpzexp = NULL, *mpzmod = NULL;
@@ -1059,9 +1017,7 @@ MPZ_powm(self, args)
 
 
 static PyObject *
-MPZ_gcd(self, args)
-	PyObject *self;
-	PyObject *args;
+MPZ_gcd(PyObject *self, PyObject *args)
 {
 	PyObject *op1, *op2;
 	mpzobject *mpzop1 = NULL, *mpzop2 = NULL;
@@ -1090,9 +1046,7 @@ MPZ_gcd(self, args)
 
 
 static PyObject *
-MPZ_gcdext(self, args)
-	PyObject *self;
-	PyObject *args;
+MPZ_gcdext(PyObject *self, PyObject *args)
 {
 	PyObject *op1, *op2, *z = NULL;
 	mpzobject *mpzop1 = NULL, *mpzop2 = NULL;
@@ -1131,9 +1085,7 @@ MPZ_gcdext(self, args)
 
 
 static PyObject *
-MPZ_sqrt(self, args)
-	PyObject *self;
-	PyObject *args;
+MPZ_sqrt(PyObject *self, PyObject *args)
 {
 	PyObject *op;
 	mpzobject *mpzop = NULL;
@@ -1158,9 +1110,7 @@ MPZ_sqrt(self, args)
 
 
 static PyObject *
-MPZ_sqrtrem(self, args)
-	PyObject *self;
-	PyObject *args;
+MPZ_sqrtrem(PyObject *self, PyObject *args)
 {
 	PyObject *op, *z = NULL;
 	mpzobject *mpzop = NULL;
@@ -1193,15 +1143,7 @@ MPZ_sqrtrem(self, args)
 
 
 static void
-#if __STDC__
 mpz_divm(MP_INT *res, const MP_INT *num, const MP_INT *den, const MP_INT *mod)
-#else
-mpz_divm(res, num, den, mod)
-	MP_INT *res;
-	const MP_INT *num;
-	const MP_INT *den;
-	const MP_INT *mod;
-#endif
 {
 	MP_INT s0, s1, q, r, x, d0, d1;
 
@@ -1264,12 +1206,10 @@ mpz_divm(res, num, den, mod)
 
 
 static PyObject *
-MPZ_divm(self, args)
-	PyObject *self;
-	PyObject *args;
+MPZ_divm(PyObject *self, PyObject *args)
 {
 	PyObject *num, *den, *mod;
-	mpzobject *mpznum, *mpzden, *mpzmod = NULL;
+	mpzobject *mpznum, *mpzden = NULL, *mpzmod = NULL;
 	mpzobject *z = NULL;
 
 	
@@ -1306,13 +1246,10 @@ MPZ_divm(self, args)
 /* MPZ methods-as-attributes */
 #ifdef MPZ_CONVERSIONS_AS_METHODS
 static PyObject *
-mpz_int(self, args)
-	mpzobject *self;
-	PyObject *args;
+mpz_int(mpzobject *self, PyObject *args)
 #else /* def MPZ_CONVERSIONS_AS_METHODS */
 static PyObject *
-mpz_int(self)
-	mpzobject *self;
+mpz_int(mpzobject *self)
 #endif /* def MPZ_CONVERSIONS_AS_METHODS else */
 {
 	long sli;
@@ -1338,12 +1275,9 @@ mpz_int(self)
 	
 static PyObject *
 #ifdef MPZ_CONVERSIONS_AS_METHODS
-mpz_long(self, args)
-	mpzobject *self;
-	PyObject *args;
+mpz_long(mpzobject *self, PyObject *args)
 #else /* def MPZ_CONVERSIONS_AS_METHODS */
-mpz_long(self)
-	mpzobject *self;
+mpz_long(mpzobject *self)
 #endif /* def MPZ_CONVERSIONS_AS_METHODS else */
 {
 	int i, isnegative;
@@ -1421,13 +1355,10 @@ static const double multiplier = 256.0 * 256.0 * 256.0 * 256.0;
 	
 #ifdef MPZ_CONVERSIONS_AS_METHODS
 static PyObject *
-mpz_float(self, args)
-	mpzobject *self;
-	PyObject *args;
+mpz_float(mpzobject *self, PyObject *args)
 #else /* def MPZ_CONVERSIONS_AS_METHODS */
 static PyObject *
-mpz_float(self)
-	mpzobject *self;
+mpz_float(mpzobject *self)
 #endif /* def MPZ_CONVERSIONS_AS_METHODS else */
 {
 	int i, isnegative;
@@ -1478,13 +1409,10 @@ mpz_float(self)
 
 #ifdef MPZ_CONVERSIONS_AS_METHODS
 static PyObject *
-mpz_hex(self, args)
-	mpzobject *self;
-	PyObject *args;
+mpz_hex(mpzobject *self, PyObject *args)
 #else /* def MPZ_CONVERSIONS_AS_METHODS */
 static PyObject *
-mpz_hex(self)
-	mpzobject *self;
+mpz_hex(mpzobject *self)
 #endif /* def MPZ_CONVERSIONS_AS_METHODS else */
 {
 #ifdef MPZ_CONVERSIONS_AS_METHODS
@@ -1492,18 +1420,15 @@ mpz_hex(self)
 		return NULL;
 #endif /* def MPZ_CONVERSIONS_AS_METHODS */
 	
-	return mpz_format(self, 16, (unsigned char)1);
+	return mpz_format((PyObject *)self, 16, (unsigned char)1);
 } /* mpz_hex() */
 	
 #ifdef MPZ_CONVERSIONS_AS_METHODS
 static PyObject *
-mpz_oct(self, args)
-	mpzobject *self;
-	PyObject *args;
+mpz_oct(mpzobject *self, PyObject *args)
 #else /* def MPZ_CONVERSIONS_AS_METHODS */
 static PyObject *
-mpz_oct(self)
-	mpzobject *self;
+mpz_oct(mpzobject *self)
 #endif /* def MPZ_CONVERSIONS_AS_METHODS else */
 {
 #ifdef MPZ_CONVERSIONS_AS_METHODS
@@ -1511,13 +1436,11 @@ mpz_oct(self)
 		return NULL;
 #endif /* def MPZ_CONVERSIONS_AS_METHODS */
 	
-	return mpz_format(self, 8, (unsigned char)1);
+	return mpz_format((PyObject *)self, 8, (unsigned char)1);
 } /* mpz_oct() */
 	
 static PyObject *
-mpz_binary(self, args)
-	mpzobject *self;
-	PyObject *args;
+mpz_binary(mpzobject *self, PyObject *args)
 {
 	int size;
 	PyStringObject *strobjp;
@@ -1576,18 +1499,14 @@ static PyMethodDef mpz_methods[] = {
 };
 
 static PyObject *
-mpz_getattr(self, name)
-	mpzobject *self;
-	char *name;
+mpz_getattr(mpzobject *self, char *name)
 {
 	return Py_FindMethod(mpz_methods, (PyObject *)self, name);
 } /* mpz_getattr() */
 
 
 static int
-mpz_coerce(pv, pw)
-	PyObject **pv;
-	PyObject **pw;
+mpz_coerce(PyObject **pv, PyObject **pw)
 {
 	PyObject *z;
 
@@ -1606,8 +1525,13 @@ mpz_coerce(pv, pw)
 		*pw = z;
 	}
 	else {
-		if ((z = mpz_float(*pv, NULL)) == NULL)
+#ifdef MPZ_CONVERSIONS_AS_METHODS
+		if ((z = mpz_float((mpzobject *)(*pv), NULL)) == NULL)
 			return -1;
+#else /* def MPZ_CONVERSIONS_AS_METHODS */
+		if ((z = mpz_float((mpzobject *)(*pv))) == NULL)
+			return -1;
+#endif /* def MPZ_CONVERSIONS_AS_METHODS else */
 
 		Py_INCREF(*pw);
 		*pv = z;
@@ -1618,8 +1542,7 @@ mpz_coerce(pv, pw)
 
 
 static PyObject *
-mpz_repr(v)
-	PyObject *v;
+mpz_repr(PyObject *v)
 {
 	return mpz_format(v, 10, (unsigned char)1);
 } /* mpz_repr() */
@@ -1700,11 +1623,10 @@ static PyMethodDef mpz_functions[] = {
 #ifdef MP_TEST_ALLOC
 #define MP_TEST_SIZE		4
 static const char mp_test_magic[MP_TEST_SIZE] = {'\xAA','\xAA','\xAA','\xAA'};
-static mp_test_error( location )
-	int *location;
+static mp_test_error(int *location)
 {
-	/* assumptions: *alloc returns address dividable by 4,
-	mpz_* routines allocate in chunks dividable by four */
+	/* assumptions: *alloc returns address divisible by 4,
+	mpz_* routines allocate in chunks divisible by four */
 	fprintf(stderr, "MP_TEST_ERROR: location holds 0x%08d\n", *location );
 	Py_FatalError("MP_TEST_ERROR");
 } /* static mp_test_error() */
@@ -1720,8 +1642,7 @@ static mp_test_error( location )
 #define MP_DO_TEST(basep,size)
 #endif /* def MP_TEST_ALLOC else */
 
-void *mp_allocate( alloc_size )
-	size_t	alloc_size;
+void *mp_allocate(size_t alloc_size)
 {
 	void *res;
 
@@ -1734,7 +1655,7 @@ void *mp_allocate( alloc_size )
 		Py_FatalError("mp_allocate failure");
 
 #ifdef MPZ_DEBUG
-	fprintf(stderr, "mp_allocate  :     address 0x%08x\n", res);
+	fprintf(stderr, "mp_allocate  :     address %08p\n", res);
 #endif /* def MPZ_DEBUG */	
 
 	MP_SET_TEST(res,alloc_size);
@@ -1743,15 +1664,12 @@ void *mp_allocate( alloc_size )
 } /* mp_allocate() */
 
 
-void *mp_reallocate( ptr, old_size, new_size )
-	void *ptr;
-	size_t old_size;
-	size_t new_size;
+void *mp_reallocate(void *ptr, size_t old_size, size_t new_size)
 {
 	void *res;
 
 #ifdef MPZ_DEBUG
-	fprintf(stderr, "mp_reallocate: old address 0x%08x, old size %ld\n",
+	fprintf(stderr, "mp_reallocate: old address %08p, old size %ld\n",
 		ptr, old_size);
 #endif /* def MPZ_DEBUG */	
 
@@ -1761,7 +1679,7 @@ void *mp_reallocate( ptr, old_size, new_size )
 		Py_FatalError("mp_reallocate failure");
 
 #ifdef MPZ_DEBUG
-	fprintf(stderr, "mp_reallocate: new address 0x%08x, new size %ld\n",
+	fprintf(stderr, "mp_reallocate: new address %08p, new size %ld\n",
 		res, new_size);
 #endif /* def MPZ_DEBUG */	
 
@@ -1771,13 +1689,11 @@ void *mp_reallocate( ptr, old_size, new_size )
 } /* mp_reallocate() */
 
 
-void mp_free( ptr, size )
-	void *ptr;
-	size_t size;
+void mp_free(void *ptr, size_t size)
 {
 
 #ifdef MPZ_DEBUG
-	fprintf(stderr, "mp_free      : old address 0x%08x, old size %ld\n",
+	fprintf(stderr, "mp_free      : old address %08p, old size %ld\n",
 		ptr, size);
 #endif /* def MPZ_DEBUG */	
 
@@ -1790,7 +1706,7 @@ void mp_free( ptr, size )
 /* Initialize this module. */
 
 DL_EXPORT(void)
-initmpz()
+initmpz(void)
 {
 	PyObject *module;
 	PyObject *dict;
@@ -1804,23 +1720,25 @@ initmpz()
 
 	/* create some frequently used constants */
 	if ((mpz_value_zero = newmpzobject()) == NULL)
-		Py_FatalError("initmpz: can't initialize mpz constants");
+		goto finally;
 	mpz_set_ui(&mpz_value_zero->mpz, (unsigned long int)0);
 
 	if ((mpz_value_one = newmpzobject()) == NULL)
-		Py_FatalError("initmpz: can't initialize mpz constants");
+		goto finally;
 	mpz_set_ui(&mpz_value_one->mpz, (unsigned long int)1);
 
 	if ((mpz_value_mone = newmpzobject()) == NULL)
-		Py_FatalError("initmpz: can't initialize mpz constants");
+		goto finally;
 	mpz_set_si(&mpz_value_mone->mpz, (long)-1);
 
 	dict = PyModule_GetDict(module);
 	if (dict != NULL) {
 		PyDict_SetItemString(dict, "MPZType", (PyObject*)&MPZtype);
 	}
-
+  finally:
+	return;
 } /* initmpz() */
+
 #ifdef MAKEDUMMYINT
 int _mpz_dummy_int;	/* XXX otherwise, we're .bss-less (DYNLOAD->Jack?) */
 #endif /* def MAKEDUMMYINT */

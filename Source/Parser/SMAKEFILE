@@ -13,9 +13,9 @@ acceler.o : acceler.c parser.h /include/token.h /include/node.h /include/grammar
 
 grammar1.o : grammar1.c /include/token.h /include/grammar.h assert.h /include/pgenheaders.h
 
-intrcheck.o : intrcheck.c /include/intrcheck.h /include/mymalloc.h /include/myproto.h /include/config.h
+intrcheck.o : intrcheck.c /include/intrcheck.h   /include/config.h
 
-myreadline.o : myreadline.c /include/pythonrun.h /include/intrcheck.h /include/mymalloc.h /include/myproto.h /include/config.h
+myreadline.o : myreadline.c /include/pythonrun.h /include/intrcheck.h   /include/config.h
 
 node.o : node.c /include/node.h /include/pgenheaders.h
 

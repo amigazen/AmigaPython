@@ -36,7 +36,7 @@ Revision history:
   - Changed arg parsing to use PyArg_ParseTuple.
   - Added PyErr_Clear() call(s) where needed.
   - Fix core dumps if user message contains format specifiers.
-  - Change openlog arg defaults to match normal syslog behaviour.
+  - Change openlog arg defaults to match normal syslog behavior.
   - Plug memory leak in openlog().
   - Fix setlogmask() to return previous mask value.
 
@@ -51,17 +51,13 @@ Revision history:
 #include <proto/socket.h>
 #endif
 
-#include "protos/syslogmodule.h"
-
 /*  only one instance, only one syslog, so globals should be ok  */
 static PyObject *S_ident_o = NULL;			/*  identifier, held by openlog()  */
 
 
 #ifndef INET225
 static PyObject * 
-syslog_openlog(self, args)
-	PyObject * self;
-	PyObject * args;
+syslog_openlog(PyObject * self, PyObject * args)
 {
 	long logopt = 0;
 	long facility = LOG_USER;
@@ -87,9 +83,7 @@ syslog_openlog(self, args)
 
 
 static PyObject * 
-syslog_syslog(self, args)
-	PyObject * self;
-	PyObject * args;
+syslog_syslog(PyObject * self, PyObject * args)
 {
 	char *message;
 	int   priority = LOG_INFO;
@@ -109,9 +103,7 @@ syslog_syslog(self, args)
 
 #ifndef INET225
 static PyObject * 
-syslog_closelog(self, args)
-	PyObject * self;
-	PyObject * args;
+syslog_closelog(PyObject *self, PyObject *args)
 {
 	if (!PyArg_ParseTuple(args, ":closelog"))
 		return NULL;
@@ -123,9 +115,7 @@ syslog_closelog(self, args)
 }
 
 static PyObject * 
-syslog_setlogmask(self, args)
-	PyObject * self;
-	PyObject * args;
+syslog_setlogmask(PyObject *self, PyObject *args)
 {
 	long maskpri, omaskpri;
 
@@ -136,9 +126,7 @@ syslog_setlogmask(self, args)
 }
 
 static PyObject * 
-syslog_log_mask(self, args)
-	PyObject * self;
-	PyObject * args;
+syslog_log_mask(PyObject *self, PyObject *args)
 {
 	long mask;
 	long pri;
@@ -149,9 +137,7 @@ syslog_log_mask(self, args)
 }
 
 static PyObject * 
-syslog_log_upto(self, args)
-	PyObject * self;
-	PyObject * args;
+syslog_log_upto(PyObject *self, PyObject *args)
 {
 	long mask;
 	long pri;
@@ -172,6 +158,7 @@ static PyMethodDef syslog_methods[] = {
 	{"LOG_UPTO",	syslog_log_upto,	METH_VARARGS},
 	{NULL,		NULL,			0}
 };
+
 #endif /* !INET225 */
 
 #ifdef INET225
@@ -184,13 +171,11 @@ static PyMethodDef syslog_methods[] = {
 };
 #endif /* INET225 */
 
+
 /* helper function for initialization function */
 
 static void
-ins(d, s, x)
-	PyObject *d;
-	char *s;
-	long x;
+ins(PyObject *d, char *s, long x)
 {
 	PyObject *v = PyInt_FromLong(x);
 	if (v) {
@@ -202,7 +187,7 @@ ins(d, s, x)
 /* Initialization function for the module */
 
 DL_EXPORT(void)
-initsyslog()
+initsyslog(void)
 {
 	PyObject *m, *d;
 
@@ -266,8 +251,4 @@ initsyslog()
 	ins(d, "LOG_CRON",	LOG_CRON);
 	ins(d, "LOG_UUCP",	LOG_UUCP);
 	ins(d, "LOG_NEWS",	LOG_NEWS);
-
-	/* Check for errors */
-	if (PyErr_Occurred())
-		Py_FatalError("can't initialize module syslog");
 }

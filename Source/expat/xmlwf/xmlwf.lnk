@@ -1,0 +1,7 @@
+FROM LIB:c.o "xmlwf/xmlwf.o"+"xmlwf/xmlfile.o"+"xmlwf/codepage.o"+"xmlwf/readfilemap.o"
+TO "xmlwf/xmlwf"
+LIB lib/expat.lib LIB:scm881nb.lib
+    LIB:scnb.lib LIB:amiga.lib
+QUIET
+NOICONS
+

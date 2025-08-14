@@ -27,27 +27,28 @@
 #else
 #include <readline/readline.h> /* You may need to add an -I option to Setup */
 
-extern int rl_parse_and_bind();
-extern int rl_read_init_file();
-extern int rl_insert_text();
-extern int rl_bind_key();
-extern int rl_bind_key_in_map();
-extern int rl_initialize();
-extern int add_history();
+extern int rl_parse_and_bind(char *);
+extern int rl_read_init_file(char *);
+extern int rl_insert_text(char *);
+extern int rl_bind_key(int, Function *);
+extern int rl_bind_key_in_map(int, Function *, Keymap);
+extern int rl_initialize(void);
+extern int add_history(char *);
+extern int read_history(char *);
+extern int write_history(char *);
+extern int history_truncate_file(char *, int);
 extern Function *rl_event_hook;
 #endif
 
 /* Pointers needed from outside (but not declared in a header file). */
-extern int (*PyOS_InputHook)();
-extern char *(*PyOS_ReadlineFunctionPointer) Py_PROTO((char *));
+extern int (*PyOS_InputHook)(void);
+extern char *(*PyOS_ReadlineFunctionPointer)(char *);
 
 
 /* Exported function to send one line to readline's init file parser */
 
 static PyObject *
-parse_and_bind(self, args)
-	PyObject *self;
-	PyObject *args;
+parse_and_bind(PyObject *self, PyObject *args)
 {
 	char *s, *copy;
 	if (!PyArg_ParseTuple(args, "s:parse_and_bind", &s))
@@ -73,9 +74,7 @@ Parse and execute single line of a readline init file.\
 /* Exported function to parse a readline init file */
 
 static PyObject *
-read_init_file(self, args)
-	PyObject *self;
-	PyObject *args;
+read_init_file(PyObject *self, PyObject *args)
 {
 	char *s = NULL;
 	if (!PyArg_ParseTuple(args, "|z:read_init_file", &s))
@@ -94,6 +93,88 @@ The default filename is the last filename used.\
 ";
 
 
+/* Exported function to load a readline history file */
+
+static PyObject *
+read_history_file(PyObject *self, PyObject *args)
+{
+	char *s = NULL;
+	if (!PyArg_ParseTuple(args, "|z:read_history_file", &s))
+		return NULL;
+	errno = read_history(s);
+	if (errno)
+		return PyErr_SetFromErrno(PyExc_IOError);
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
+static int history_length = -1; /* do not truncate history by default */
+static char doc_read_history_file[] = "\
+read_history_file([filename]) -> None\n\
+Load a readline history file.\n\
+The default filename is ~/.history.\
+";
+
+
+/* Exported function to save a readline history file */
+
+static PyObject *
+write_history_file(PyObject *self, PyObject *args)
+{
+	char *s = NULL;
+	if (!PyArg_ParseTuple(args, "|z:write_history_file", &s))
+		return NULL;
+	errno = write_history(s);
+	if (!errno && history_length >= 0)
+		history_truncate_file(s, history_length);
+	if (errno)
+		return PyErr_SetFromErrno(PyExc_IOError);
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
+static char doc_write_history_file[] = "\
+write_history_file([filename]) -> None\n\
+Save a readline history file.\n\
+The default filename is ~/.history.\
+";
+
+
+static char set_history_length_doc[] = "\
+set_history_length(length) -> None\n\
+set the maximal number of items which will be written to\n\
+the history file. A negative length is used to inhibit\n\
+history truncation.\n\
+";
+
+static PyObject*
+set_history_length(PyObject *self, PyObject *args)
+{
+    int length = history_length;
+    if (!PyArg_ParseTuple(args, "i:set_history_length", &length))
+	return NULL;
+    history_length = length;
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
+
+static char get_history_length_doc[] = "\
+get_history_length() -> int\n\
+return the current history length value.\n\
+";
+
+static PyObject*
+get_history_length(PyObject *self, PyObject *args)
+{
+	if (!PyArg_ParseTuple(args, ":get_history_length"))
+		return NULL;
+	return Py_BuildValue("i", history_length);
+}
+
+
+
 /* Exported function to specify a word completer in Python */
 
 static PyObject *completer = NULL;
@@ -104,9 +185,7 @@ static PyObject *endidx = NULL;
 
 /* get the beginning index for the scope of the tab-completion */
 static PyObject *
-get_begidx(self, args)
-	PyObject *self;
-	PyObject *args;
+get_begidx(PyObject *self, PyObject *args)
 {
 	if(!PyArg_NoArgs(args)) {
 		return NULL;
@@ -121,9 +200,7 @@ get the beginning index of the readline tab-completion scope";
 
 /* get the ending index for the scope of the tab-completion */
 static PyObject *
-get_endidx(self, args)
-	PyObject *self;
-	PyObject *args;
+get_endidx(PyObject *self, PyObject *args)
 {
  	if(!PyArg_NoArgs(args)) {
 		return NULL;
@@ -140,9 +217,7 @@ get the ending index of the readline tab-completion scope";
 /* set the tab-completion word-delimiters that readline uses */
 
 static PyObject *
-set_completer_delims(self, args)
-	PyObject *self;
-	PyObject *args;
+set_completer_delims(PyObject *self, PyObject *args)
 {
 	char *break_chars;
 
@@ -163,9 +238,7 @@ set the readline word delimiters for tab-completion";
 /* get the tab-completion word-delimiters that readline uses */
 
 static PyObject *
-get_completer_delims(self, args)
-	PyObject *self;
-	PyObject *args;
+get_completer_delims(PyObject *self, PyObject *args)
 {
 	if(!PyArg_NoArgs(args)) {
 		return NULL;
@@ -178,9 +251,7 @@ get_completer_delims() -> string\n\
 get the readline word delimiters for tab-completion";
 
 static PyObject *
-set_completer(self, args)
-	PyObject *self;
-	PyObject *args;
+set_completer(PyObject *self, PyObject *args)
 {
 	PyObject *function = Py_None;
 	if (!PyArg_ParseTuple(args, "|O:set_completer", &function))
@@ -217,9 +288,7 @@ It should return the next possible completion starting with 'text'.\
 /* Exported function to read the current line buffer */
 
 static PyObject *
-get_line_buffer(self, args)
-	PyObject *self;
-        PyObject *args;
+get_line_buffer(PyObject *self, PyObject *args)
 {
 	if (!PyArg_NoArgs(args))
 		return NULL;
@@ -234,9 +303,7 @@ return the current contents of the line buffer.\
 /* Exported function to insert text into the line buffer */
 
 static PyObject *
-insert_text(self, args)
-	PyObject *self;
-	PyObject *args;
+insert_text(PyObject *self, PyObject *args)
 {
 	char *s;
 	if (!PyArg_ParseTuple(args, "s:insert_text", &s))
@@ -257,27 +324,34 @@ Insert text into the command line.\
 
 static struct PyMethodDef readline_methods[] =
 {
-	{"parse_and_bind", parse_and_bind, 1, doc_parse_and_bind},
-	{"get_line_buffer", get_line_buffer, 0, doc_get_line_buffer},
-	{"insert_text", insert_text, 1, doc_insert_text},
-	{"read_init_file", read_init_file, 1, doc_read_init_file},
-	{"set_completer", set_completer, 1, doc_set_completer},
-	{"get_begidx", get_begidx, 0, doc_get_begidx},
-	{"get_endidx", get_endidx, 0, doc_get_endidx},
+	{"parse_and_bind", parse_and_bind, METH_VARARGS, doc_parse_and_bind},
+	{"get_line_buffer", get_line_buffer, 
+	 METH_OLDARGS, doc_get_line_buffer},
+	{"insert_text", insert_text, METH_VARARGS, doc_insert_text},
+	{"read_init_file", read_init_file, METH_VARARGS, doc_read_init_file},
+	{"read_history_file", read_history_file, 
+	 METH_VARARGS, doc_read_history_file},
+	{"write_history_file", write_history_file, 
+	 METH_VARARGS, doc_write_history_file},
+ 	{"set_history_length", set_history_length, 
+	 METH_VARARGS, set_history_length_doc},
+ 	{"get_history_length", get_history_length, 
+	 METH_VARARGS, get_history_length_doc},
+	{"set_completer", set_completer, METH_VARARGS, doc_set_completer},
+	{"get_begidx", get_begidx, METH_OLDARGS, doc_get_begidx},
+	{"get_endidx", get_endidx, METH_OLDARGS, doc_get_endidx},
 
-	{"set_completer_delims", set_completer_delims, METH_VARARGS,
-		doc_set_completer_delims},
-	{"get_completer_delims", get_completer_delims, 0,
-		doc_get_completer_delims},
+	{"set_completer_delims", set_completer_delims, 
+	 METH_VARARGS, doc_set_completer_delims},
+	{"get_completer_delims", get_completer_delims, 
+	 METH_OLDARGS, doc_get_completer_delims},
 	{0, 0}
 };
 
 /* C function to call the Python completer. */
 
 static char *
-on_completion(text, state)
-	char *text;
-	int state;
+on_completion(char *text, int state)
 {
 	char *result = NULL;
 	if (completer != NULL) {
@@ -316,10 +390,7 @@ on_completion(text, state)
  * before calling the normal completer */
 
 char **
-flex_complete(text, start, end)
-	char *text;
-	int start;
-	int end;
+flex_complete(char *text, int start, int end)
 {
 	Py_XDECREF(begidx);
 	Py_XDECREF(endidx);
@@ -331,7 +402,7 @@ flex_complete(text, start, end)
 /* Helper to initialize GNU readline properly. */
 
 static void
-setup_readline()
+setup_readline(void)
 {
 	rl_readline_name = "python";
 	/* Force rebind of TAB to insert-tab */
@@ -362,9 +433,8 @@ setup_readline()
 static jmp_buf jbuf;
 
 /* ARGSUSED */
-static RETSIGTYPE
-onintr(sig)
-	int sig;
+static void
+onintr(int sig)
 {
 	longjmp(jbuf, 1);
 }
@@ -373,24 +443,24 @@ onintr(sig)
 /* Wrapper around GNU readline that handles signals differently. */
 
 static char *
-call_readline(prompt)
-	char *prompt;
+call_readline(char *prompt)
 {
-	int n;
+	size_t n;
 	char *p, *q;
-	RETSIGTYPE (*old_inthandler)();
-	old_inthandler = signal(SIGINT, onintr);
+	PyOS_sighandler_t old_inthandler;
+	
+	old_inthandler = PyOS_setsig(SIGINT, onintr);
 	if (setjmp(jbuf)) {
 #ifdef HAVE_SIGRELSE
 		/* This seems necessary on SunOS 4.1 (Rasmus Hahn) */
 		sigrelse(SIGINT);
 #endif
-		signal(SIGINT, old_inthandler);
+		PyOS_setsig(SIGINT, old_inthandler);
 		return NULL;
 	}
 	rl_event_hook = PyOS_InputHook;
 	p = readline(prompt);
-	signal(SIGINT, old_inthandler);
+	PyOS_setsig(SIGINT, old_inthandler);
 
 	/* We must return a buffer allocated with PyMem_Malloc. */
 	if (p == NULL) {
@@ -422,7 +492,7 @@ static char doc_module[] =
 "Importing this module enables command line editing using GNU readline.";
 
 DL_EXPORT(void)
-initreadline()
+initreadline(void)
 {
 	PyObject *m;
 

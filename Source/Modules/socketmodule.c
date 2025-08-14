@@ -96,6 +96,10 @@ Socket methods:
 #include "pythread.h"
 #endif
 
+#ifdef HAVE_SYS_PARAM_H
+#include <sys/param.h>
+#endif
+
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -119,13 +123,10 @@ Socket methods:
 
 #include <signal.h>
 #ifndef MS_WINDOWS
-#ifdef HAVE_SYS_PARAM_H
-#include <sys/param.h>
-#endif
 #include <netdb.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#ifndef __BEOS__
+#if !(defined(__BEOS__) || defined(__CYGWIN__))
 #include <netinet/tcp.h>
 #endif
 
@@ -2372,40 +2373,8 @@ OS2init(void)
  */
 
 static char module_doc[] =
-"This module provides socket operations and some related functions.\n\
-On Unix, it supports IP (Internet Protocol) and Unix domain sockets.\n\
-On other systems, it only supports IP.\n\
-\n\
-Functions:\n\
-\n\
-socket() -- create a new socket object\n\
-fromfd() -- create a socket object from an open file descriptor (*)\n\
-gethostname() -- return the current hostname\n\
-gethostbyname() -- map a hostname to its IP number\n\
-gethostbyaddr() -- map an IP number or hostname to DNS info\n\
-getservbyname() -- map a service name and a protocol name to a port number\n\
-getprotobyname() -- mape a protocol name (e.g. 'tcp') to a number\n\
-ntohs(), ntohl() -- convert 16, 32 bit int from network to host byte order\n\
-htons(), htonl() -- convert 16, 32 bit int from host to network byte order\n\
-inet_aton() -- convert IP addr string (123.45.67.89) to 32-bit packed format\n\
-inet_ntoa() -- convert 32-bit packed format IP to string (123.45.67.89)\n\
-ssl() -- secure socket layer support (only available if configured)\n\
-\n\
-(*) not available on all platforms!)\n\
-\n\
-Special objects:\n\
-\n\
-SocketType -- type object for socket objects\n\
-error -- exception raised for I/O errors\n\
-\n\
-Integer constants:\n\
-\n\
-AF_INET, AF_UNIX -- socket domains (first argument to socket() call)\n\
-SOCK_STREAM, SOCK_DGRAM, SOCK_RAW -- socket types (second argument)\n\
-\n\
-Many other constants may be defined; these may be used in calls to\n\
-the setsockopt() and getsockopt() methods.\n\
-";
+"Implementation module for socket operations.  See the socket module\n\
+for documentation.";
 
 static char sockettype_doc[] =
 "A socket represents one endpoint of a network connection.\n\
@@ -2435,30 +2404,19 @@ shutdown() -- shut down traffic in one or both directions\n\
 (*) not available on all platforms!)";
 
 DL_EXPORT(void)
-#if defined(MS_WINDOWS) || defined(PYOS_OS2) || defined(__BEOS__)
 init_socket(void)
-#else
-initsocket(void)
-#endif
 {
 	PyObject *m, *d;
 #ifdef MS_WINDOWS
 	if (!NTinit())
 		return;
-	m = Py_InitModule3("_socket", PySocket_methods, module_doc);
 #else
 #if defined(__TOS_OS2__)
 	if (!OS2init())
 		return;
+#endif /* __TOS_OS2__ */
+#endif /* MS_WINDOWS */
 	m = Py_InitModule3("_socket", PySocket_methods, module_doc);
-#else
-#if defined(__BEOS__)
-	m = Py_InitModule3("_socket", PySocket_methods, module_doc);
-#else
-	m = Py_InitModule3("socket", PySocket_methods, module_doc);
-#endif /* __BEOS__ */
-#endif
-#endif
 	d = PyModule_GetDict(m);
 	PySocket_Error = PyErr_NewException("socket.error", NULL, NULL);
 	if (PySocket_Error == NULL)
