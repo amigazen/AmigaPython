@@ -1,0 +1,90 @@
+
+
+                           PYTHON 1.4 RELEASE 2
+
+                        (minor maintenance release)
+
+                             January 31, 1998.
+
+	
+           Conversion and Amiga specific code by Irmen de Jong.
+              (Original code by Guido van Rossum and others)
+
+
+
+* WHAT'S THIS?
+
+This is the Python interpreter (version 1.4) for AmigaDOS.  If you don't
+know what Python is and what it can do for you, visit the Python homepage
+at <http://www.python.org/>.
+
+
+* WHAT'S IN THIS ARCHIVE?
+
+    - Python 1.4 binaries for 68020/IEEE math, and 68030+FPU.
+    - Installer® installation script (in Dutch and English)
+    - Some demo programs & icons
+    - Python library modules
+    - Some documentation on Python and regular expressions
+
+
+* MINIMAL SYSTEM REQUIREMENTS	
+
+    - 2 megabytes of memory.
+    - Harddisk recommended.
+    - Kickstart 2.04
+    - 68020 CPU (No FPU required for IEEE version)
+    - For networking functions: AmiTCP (Version 4)
+      (version 3 might work too, but I haven't checked this)
+    - For user authorisation stuff: usergroup.library from AmiTCP or
+      MultiUserFileSystem.
+
+
+* CHANGES SINCE THE PREVIOUS RELEASE (version 1.3 Jun 26 1996)
+
+IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.4 Jan 12 1997):
+
+    - Included the bugfixes which were available as a patch file, see below.
+    - Some minor other fixes and changes.
+    - Distributing the source code along with this archive.
+      Look for `Python14_Src.lha' in the same place.
+    - Recompiled with SAS/C 6.58.
+
+  Fixed bugs:
+    - possible enforcer hit or crash at exit (caused by wrong mempools code)
+    - roundoff errors in mathmodule. random.py works again
+    - readlink code (os.readlink) now works correctly
+ 
+
+The following modules are built-in in this release:
+	amiga		arexxll		array		binascii
+	cmath		crypt		doslib		environment
+	errno		grp		imp		marshal
+	math		md5		new		operator
+	pwd		regex		rotor		select
+	socket		soundex		strop		struct
+	sys		syslog		time		timing
+	urlop
+
+
+Check the README file in the archive for more information.  You can also
+find more information on Python at my Python WWW page;
+<http://www.geocities.com/ResearchTriangle/Lab/3172/python.html>
+
+
+IMPORTANT:
+Please let me know if you find any errors, encounter problems, or have any
+suggestions!  But, as I work on this in my spare time, don't expect
+miracles...
+
+SUGGESTION:
+Unpack the archive to where you want the program to be.  The installation
+will then be performed much quicker.
+
+
+					Irmen de Jong
+
+					ijong@gak.nl
+
+
+PS Look out for AmigaPython version 1.5!

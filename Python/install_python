@@ -1,0 +1,365 @@
+;------------------------------------------------------------------------
+;
+; Python Installation script
+;
+; Copyright © 1996,1997 Irmen de Jong.
+; V2.3 (28-dec-96)
+;
+
+(set OSVersion          (/ (getversion) 65536))
+
+(set cpu (database "cpu"))
+
+(set @app-name "Python 1.4")
+
+(set #source-dir (pathonly @icon) )
+
+;
+; ENGLISH STRINGS
+;
+(set #osmsg "ARGH! You have an obsolete Kickstart version!\n\nPython only works on Kickstart 2.04 or higher. Upgrade to 3.1!")
+(set #nopretendmsg "Can only install for real.")
+(set #welcomemsg "Installation of Python 1.4 rel. 2\n\nA new directory (with icon) will be created, in which the program is installed.")
+(set #oldversionmsg "\nDo you have a previous installed version, and if so, do you want to delete that (fully)?\nWARNING: If you select 'yes', the full contents of the directory of the old version will be deleted!\n\n\n(If you have a previous version installed, and you don't delete it, you must install this new version to a new directory)")
+(set #oldversionhelp "Yes: delete all files from old version. You can then install this new version in the place of the old one, otherwise, you'll have to install this version in a new directory.\n\nIf you have any files in the directory of the old version that you want to keep, SELECT 'NO'!")
+(set #whereisold "Where is your previous release installed?")
+(set #deleteoldmsg "\nWill now delete old version. Last chance to keep old data!")
+(set #willdeletemsg "\nWill now delete drawer\n\n%s\n\ncompletely.")
+(set #willdeletehelp "Last chance to keep old files: click 'Abort'!")
+(set #deleteworkmsg "Deleting %s...")
+(set #oldversion "old version")
+(set #deleteinstall "Do you want to delete the installation directory?\n\n(it is no longer needed)")
+(set #installationfiles "installation files")
+(set #whereprompt "Were must Python be installed? Most of the files don't have to be copied, if you accept the offered default.")
+(set #wherehelp "  Here you can specify the location where to install Python.\n  Installation can be made on-place. This is recommended if you have already unarchived the Python archive to its final location. In this case most of the files are left where they are. Only necessary files are moved to different positions.\n  If you choose another location, a new subdirectory will be created (with icon) in which the program is installed.")
+(set #currentmsg "\nInstalling Python to\n\n%s\n\n(the current place)")
+(set #existingerr "Can't install into existing directory!")
+(set #oldstillexistserr "Couldn't fully remove old drawer! (is it still in use?)")
+(set #newmsg "\nInstalling Python to\n\n%s\n\n(a new directory)" )
+(set #whichprompt "Which version of the program should be installed?")
+(set #whichhelp "Choose the version which matches your CPU/FPU configuration best.\nRead the README file for info on how to obtain other versions.\n\n")
+(set #startupprompt "The following commands will be added to your \"S:User-Startup\" file (You'll need them to run Python):\n\nASSIGN Python: %s\nPATH Python: ADD\n")
+(set #readmemsg (cat "Please read shown information...\n\n\n(It is also wise to read the README file)"))
+(set #ver_68020_IEEE "Python  68020, no FPU")
+(set #ver_68030_882  "Python  68030, 68882 FPU")
+(set #abort "Abort")
+(set #proceed "Proceed")
+
+;
+; NEDERLANDSE STRINGS
+;
+(if (= @language "nederlands")
+(
+(set #osmsg "ARGH! U heeft een verouderde Kickstart versie!\n\nPython werkt alleen op Kickstart 2.04 of nieuwer. Upgrade naar 3.1!")
+(set #nopretendmsg "Kan alleen echte installatie uitvoeren.")
+(set #welcomemsg "Installatie van Python 1.4 rel. 2\n\nEr wordt een nieuwe lade (met ikoon) aangemaakt, waarin het programma wordt geïnstalleerd.")
+(set #oldversionmsg "\nHeeft u een vorige versie geïnstalleerd, en zo ja, wilt u deze dan (in zijn geheel) verwijderen?\nWAARSCHUWING: als u 'ja' kiest, wordt de complete inhoud van de lade van de oude versie gewist!\n\n\n(Als u een vorige versie geïnstalleerd heeft, en deze niet verwijdert, moet u de nieuwe versie in een nieuwe lade installeren)")
+(set #oldversionhelp "Ja: verwijder alle files van de oude versie. U kunt dan deze nieuwe versie op de plaats van de oude installeren, anders moet u dat in een nieuwe lade doen.\n\nAls u files heeft in de lade van de oude versie die u wilt bewaren, KIES DAN 'NEE'!")
+(set #whereisold "Waar is uw vorige versie geïnstalleerd?")
+(set #deleteoldmsg "\nOude versie wordt nu verwijderd. Laatste kans om oude files te bewaren!")
+(set #willdeletemsg "\nDe lade\n\n%s\n\nwordt in zijn geheel verwijderd.")
+(set #willdeletehelp "Laatste kans om oude files te bewaren: klik 'Stop'!")
+(set #deleteworkmsg "%s wordt verwijderd...")
+(set #oldversion "Oude versie")
+(set #deleteinstall "Wilt u de installatie-lade verwijderen?\n\n(die is niet langer nodig)")
+(set #installationfiles "Installatie files")
+(set #whereprompt "Waar moet Python geïnstalleerd worden? De meeste files hoeven niet gekopiëerd te worden, als u de standaard keuze accepteert.")
+(set #wherehelp "  Hier kunt u de lokatie van Python opgeven.\n  De installatie kan ter plekke plaatsvinden. Dit is aanbevolen als u de Python archive al in de juiste plaats heeft uitgepakt. In dit geval worden de meeste files met rust gelaten. Slechts een paar files worden naar hun benodigde lokatie gekopiëerd.\n  Als u een andere lokatie kiest, wordt een nieuwe lade (met ikoon) aangemaakt, waarin Python wordt geïnstalleerd.")
+(set #currentmsg "\nInstalleren van Python in\n\n%s\n\n(de huidige plaats)")
+(set #existingerr "Kan niet in bestaande lade installeren!")
+(set #oldstillexistserr "Kan oude lade niet volledig verwijderen! (wordt hij nog gebruikt?)")
+(set #newmsg "\nPython wordt geïnstalleerd in\n\n%s\n\n(een nieuwe lade)" )
+(set #whichprompt "Welke versie van het programma moet geïnstalleerd worden?")
+(set #whichhelp "Kies de versie die het beste bij uw CPU/FPU configuratie past.\nLees het README bestand voor informatie over hoe andere versies te verkrijgen.\n\n")
+(set #startupprompt "De volgende commando's zullen aan uw \"S:User-Startup\" bestand worden toegevoegd (ze zijn nodig om Python te kunnen gebruiken):\n\nASSIGN Python: %s\nPATH Python: ADD\n")
+(set #readmemsg (cat "Leest u AUB de getoonde informatie...\n\n\n(Het is ook verstandig om de README file te lezen)"))
+(set #ver_68020_IEEE "Python  68020, geen FPU")
+(set #ver_68030_882  "Python  68030, 68882 FPU")
+(set #abort "Stop")
+(set #proceed "Ga verder")
+)
+)
+
+;------------------------------------------------------------------------
+;;;;
+;;;; Subroutines follow below:
+;;;;
+
+;;;;
+;;;; Check if OS version is good enough.
+;;;;
+(procedure checkKick
+ (if (< OSVersion 37)
+    (message #osmsg)
+ )
+)
+
+;;;;
+;;;; Find out which pager to use ($PAGER or sys:utilities/multiview)
+;;;;
+(procedure installPager
+ (set pager-cmd
+   (if (exists "ENV:PAGER" (noreq)) (getenv "PAGER") ("SYS:Utilities/Multiview")
+   )
+ )
+)
+
+;;;;
+;;;; Ask user if she wants to delete an old version.
+;;;;
+(procedure removeOldversion
+(if (askbool 
+	(prompt #oldversionmsg)
+	(help #oldversionhelp)
+	)
+	(
+		(set oldreleasepath "Python:")
+		(set oldreleasepath (expandpath
+		    (askdir
+		        (prompt #whereisold)
+		        (help "Select directory")
+		        (default "Python:")
+		    ) )
+		)    
+
+		(if (askbool
+			(prompt (#willdeletemsg oldreleasepath))
+			(help #willdeletehelp)
+			(choices #proceed #abort)
+			)
+			(
+				(working (#deleteworkmsg #oldversion))
+				(run "assign Python: remove")
+				(run ("delete >NIL: %s %s.info FORCE ALL" oldreleasepath oldreleasepath))
+				;;; Check if indeed all stuff went to the bitbasket
+			        (if (exists oldreleasepath) (abort #oldstillexistserr))
+			)
+			(abort)
+		)
+	)
+)
+)
+
+;;;;
+;;;; Select destination. Create drawer if necessary.
+;;;;
+(procedure selectDestination
+(set destination
+    (askdir
+        (prompt #whereprompt)
+        (help #wherehelp)
+        (newpath)
+        (default #source-dir)
+    )
+)    
+
+(set @default-dest destination)
+
+(if (= #source-dir destination)
+    (
+        (set #otherdir FALSE)
+        (message (#currentmsg destination))
+    )
+    (
+        (set #otherdir TRUE)
+        (set tempdest destination)
+        (set destination (tackon destination "Python-1.4"))
+
+        (if (exists destination) (abort #existingerr))
+
+        (message (#newmsg destination))
+        (makedir destination)
+        (copyfiles
+        (source (tackon #source-dir "Icons/Drawer.info"))
+        (dest tempdest)
+        (newname "Python-1.4.info")
+        )
+    )
+)
+)
+
+;;;;
+;;;; Choose the desired binary version.
+;;;;
+(procedure chooseBinary
+(set prog 1)
+(if (= cpu "68000") (set prog 0))
+(if (= cpu "68010") (set prog 0))
+(if (= cpu "68020") (set prog 0))
+(if (= cpu "68030") (set prog 1))
+(if (= cpu "68040") (set prog 1))
+
+; Ask version of program
+(set which_version
+        (askchoice
+                (prompt #whichprompt)
+                (help #whichhelp @askoptions-help)
+                (choices
+			#ver_68020_IEEE
+			#ver_68030_882
+                )
+                (default prog)
+        )
+)
+)
+
+;;;;
+;;;; Install the correct Python binary.
+;;;;
+(procedure installprog
+ (if #otherdir
+   (
+    (if (= which_version 0)             ; 68020
+      (
+        (copyfiles
+        (source (tackon #source-dir "Python_020_IEEE"))
+        (dest destination)
+        (newname "Python")
+        )
+      )
+    )
+    (if (= which_version 1)             ; 68030+FPU
+      (
+        (copyfiles
+        (source (tackon #source-dir "Python_030_882"))
+        (dest destination)
+        (newname "Python")
+        )
+      )
+    )
+    (run ("delete >NIL: FORCE %s/python_#?" destination))
+   )
+   (
+    (if (= which_version 0)             ; 68020
+        (rename (tackon #source-dir "Python_020_IEEE") (tackon #source-dir "Python") )
+    )
+    (if (= which_version 1)             ; 68030+FPU
+        (rename (tackon #source-dir "Python_030_882") (tackon #source-dir "Python") )
+    )
+   )
+ )
+)
+
+
+;;;;
+;;;; Ask user if she wants to delete the installation drawer.
+;;;;
+;;;; BUG: hmm this doesnt work because installer keeps a lock in that drawer.
+;;;;
+;(procedure removeInstallation
+;(if (askbool (prompt #deleteinstall) (help ""))
+;    (
+;	(working (#deleteworkmsg #installationfiles))
+;	(message ("delete >NIL: %s %s.info FORCE ALL" #source-dir #source-dir))
+;	(run ("delete >NIL: %s %s.info FORCE ALL" #source-dir #source-dir))
+;    )
+;)
+;)
+
+
+;------------------------------------------------------------------------
+;;;;
+;;;; Main installation sequence starts here
+;;;;
+
+(if (= @pretend 1)
+    (abort #nopretendmsg)
+)
+
+(message #welcomemsg)
+
+(checkKick)
+
+(installPager)
+
+(complete 0)
+
+(removeOldversion)
+
+(complete 10)
+
+(selectDestination)
+
+(complete 25)
+
+(chooseBinary)
+
+;;;;
+;;;; Now, install the files.
+;;;;
+(if #otherdir
+  (
+    (installprog)
+    (complete 50)
+    (copyfiles
+    (source #source-dir)
+    (dest destination)
+    (pattern "(Lib|Demo|Docs|Icons)")
+    (infos)
+    )
+    (complete 90)
+    (copyfiles
+    (source (tackon #source-dir "DISCL_and_COPYRIGHT"))
+    (dest destination) (infos))
+    (copyfiles
+    (source (tackon #source-dir "README"))
+    (dest destination) (infos))
+    (copyfiles
+    (source (tackon #source-dir "Test.py"))
+    (dest destination) (infos))
+    (copyfiles
+    (source (tackon #source-dir "Icons/def_py.info"))
+    (dest destination)
+    (newname "Test.py.info")
+    )
+
+    (copyfiles
+    (source (tackon #source-dir "Icons/Python.info"))
+    (dest destination)
+    (newname "Python.info")
+    )
+
+    ;;;; Because we installed to another drawer, the installation files can be removed.
+    ;(removeInstallation)	; Doesn't work: installer still locks drawer
+
+  )
+  (
+    (complete 50)
+    (installprog)
+    (complete 75)
+    (copyfiles
+    (source (tackon #source-dir "Icons/Python.info"))
+    (dest destination)
+    (newname "Python.info")
+    )
+    (copyfiles
+    (source (tackon #source-dir "Icons/def_py.info"))
+    (dest destination)
+    (newname "Test.py.info")
+    )
+    (run ("delete >NIL: FORCE %s/(python_#?|install#?)" destination))
+  )
+)
+
+(complete 95)
+
+(startup @app-name
+        (prompt (#startupprompt destination))
+        (help @startup-help)
+        (command ("ASSIGN Python: %s\n" destination))
+        (command "PATH Python: ADD\n")
+)
+
+(run ("ASSIGN >NIL: Python: %s" destination))
+
+(if (exists "sys:utilities/multiview")
+    (run ("run sys:utilities/multiview %s/%s" destination "DISCL_and_COPYRIGHT") (safe))
+    (run (cat "run " pager-cmd) ("%s/%s" destination "DISCL_and_COPYRIGHT") (safe))
+)
+
+(message #readmemsg)
+
+(run "delete >NIL: ram:more FORCE")
+
+(complete 100) ; 100% done!
+

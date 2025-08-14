@@ -1,0 +1,172 @@
+# AmigaPython Project - Build Artifacts
+# This .gitignore excludes all build artifacts for all git repositories in the project
+
+# =============================================================================
+# PYTHON BUILD ARTIFACTS
+# =============================================================================
+
+# Python compilation
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# celery beat schedule file
+celerybeat-schedule
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+
+# =============================================================================
+# CONFIGURATION AND TEMPORARY FILES
+# =============================================================================
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Log files
+*.log
+logs/
+
+# =============================================================================
+# AMIGA-SPECIFIC CONFIGURATION
+# =============================================================================
+
+# Amiga build scripts output
+output.txt
+
+# =============================================================================
+# ARCHIVE FILES
+# =============================================================================
+
+# Compressed archives
+*.tar
+*.tar.gz
+*.tgz
+*.zip
+*.rar
+*.7z
+
+# Amiga-specific build artifacts
+*.o
+*.so
+*.O
+*.lib
+*.exe
+amigapython.lib
+amigapythonamitcp.lib
+
+# All subdirectories build artifacts
+**/build-*/
+**/dist/
+**/*.o
+**/*.O
+**/*.a
+**/*.lib
+**/*.exe
+**/*.GST
+**/*.gst

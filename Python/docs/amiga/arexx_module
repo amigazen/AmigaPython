@@ -1,0 +1,404 @@
+
+***************************************************************************
+
+                           PYTHON AREXX SUPPORT
+
+                         ARexx and arexxll modules
+	
+                     by Irmen de Jong - ijong@gak.nl
+
+                          Last update: 17-Nov-96
+
+                               BETA VERSION
+
+***************************************************************************
+
+As  this  document  describes  the  BETA VERSION of the ARexx support there
+might  be  changes  to what is described below.  This depends on bugs found
+and  suggestions  received.   So please:  test the ARexx support and let me
+hear any problems/bugs/suggestions (ijong@gak.nl).
+
+NOTE:  The ARexx support relies on the dos.library support; please read the
+documentation on that subject first (Dos_module, python module dos.py).
+
+
+***************************************************************************
+
+                              MODULE: arexxll
+
+                            File: N/A (builtin)
+
+***************************************************************************
+
+This module provides the lowlevel ARexx functionality.
+
+IMPORTANT:   It  is  DISCOURAGED to use this module directly, use the arexx
+module instead (see below).  This is because it is quite likely that in the
+future  some things will be changed in this module.  Furthermore, using the
+arexx module instead is much easier.
+
+
+This module defines:
+
+  error		- The exception that will be raised when an
+		  error occurs related to ARexx. ('arexx.error')
+
+  port()	- Function returning a new lowlevel ARexx port object.
+		  The lowlevel ARexx port object is NOT DOCUMENTED.
+		  Use a higher-level object from the ARexx module instead.
+
+  errorstring()	- Returns string associated with arexx error number:
+		  str = arexxll.errorstring(number)
+
+
+ARexx message objects
+~~~~~~~~~~~~~~~~~~~~~
+This  module  also implements the ARexx message object.  A message arriving
+at  a  ARexx  port  will  be  returned  as  a  ARexx  message  object (type
+'arexxmsg'), which has the following attributes:
+
+  reply()	- replies the message with the given results.
+		  See rc, rc2 and result.  Each message must be replied to!
+		  Messages which are deleted will be replied automatically,
+		  if this is not yet done.
+  setvar()	- sets ARexx variable for result: setvar('varname','value')
+  getvar()	- get value of ARexx variable from caller's environment
+
+  wantresult	- does the message require a result string? (int/bool)
+  msg		- the message itself (string)
+  rc		- result code for reply() (int)
+  rc2		- secondary (error) result (string or None)
+  result	- result string (string or None)
+
+For  details  on  passing  results to the calling application/ARexx script,
+refer  to  the  topic  below,  "HOW  RESULTS ARE PASSED BACK TO THE CALLING
+APPLICATION".
+
+
+
+***************************************************************************
+
+                               MODULE: ARexx
+
+                              File: ARexx.py
+
+***************************************************************************
+
+This  module  implements  the  Python  ARexx support classes and such.  You
+should  use  this module and not arexxll directly, if your code must remain
+compatible with future versions.
+
+This module defines:
+
+  error		- The exception that will be raised when an
+		  error occurs related to ARexx. This is the same
+		  exception as the one in the arexxll module.
+		  ('arexx.error')
+
+  errorstring()	- Returns string associated with arexx error number:
+		  str = arexxll.errorstring(number)
+
+  RC_OK		- ARexx 'success' return code (0)
+  RC_WARN	- ARexx 'warning' return code (5)
+  RC_ERROR	- ARexx 'error' return code (10)
+  RC_FATAL	- ARexx 'severe failure' return code (20)
+
+
+class `port'
+~~~~~~~~~~~~
+This  is  the message port abstraction.  Don't create objects of this class
+directly!   Instead,  use  one  of  the  derived  classes  `privateport' or
+`publicport'.   This  class  is  used  as base class for other port classes
+only.
+
+
+class `privateport' (derived from `port')
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This  is  the  private  ARexx port abstraction.  The port is a private one,
+which  means  it  has no name (and is therefore not public) and can only be
+used to send ARexx messages to other ports (which are public).
+
+Privateport objects are created as follows:
+	p = arexx.privateport()
+
+Attributes of privateport objects:
+  port		- The lowlevel ARexx port. DON'T TOUCH.
+  signal	- The AmigaDOS signal mask of the port.
+
+Methods defined on privateport objects:
+  close()
+	Close the port.
+  send(to,cmd,async=0)
+	Send a ARexx message to another port. Currently, all pending
+		messages (if any) are removed before the message is sent.
+		to = name of port to send message to. (string)
+		cmd = command to send (string)
+		async = Asynchronous processing? Default=no (0).
+	Asynchronous sends will not return a result, but synchronous
+	sends do, so you should call this method like:
+		result = p.send('REXX','\"return 4*8',0)
+	which will put '32' in result. Errors are returned as a 2-tuple
+	argument (rc,rc2) to the error exception.
+  flush()
+	Remove all pending messages (if any) from the port.
+  wait()
+	private-- behavior not documented for private port objects.
+        Don't use it.
+  getmsg()
+	private-- behavior not documented for private port objects.
+        Don't use it.
+
+
+class `publicport' (derived from `port')
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This  is the public ARexx port abstraction.  The port is public, so it must
+have  a  name.  It can be used for receiving ARexx messages and for sending
+them.  A publicport is the core of the ARexx host class, see below.
+
+Publicport objects are created as follows:
+	p = arexx.publicport()		# default portname PYTHON
+	p = arexx.publicport('FOOBAR')	# portname FOOBAR
+
+	When a port with the desired name already exists, sequence numbers
+	are automatically appended to the name (PYTHON.1, PYTHON.2 etc).
+
+	When you provide a name, it is converted to uppercase.
+	If it is not a valid ARexx port name, error will be raised.
+	Valid portnames consist of uppercase letters, digits, decimal
+	points and underscores, and no other characters.
+	
+
+Attributes of publicport objects:
+  port		- The lowlevel ARexx port. See arexxll module.
+  signal	- The AmigaDOS signal mask of the port.
+  name		- The actual port name.
+
+Methods defined on publicport objects:
+  close()
+	Close the port.
+  send(to,cmd,async=0)
+	See privateport.
+  flush()
+	See privateport.
+  wait()
+	Wait until a message arrives. Currently the wait can be aborted
+	with a ^C signal. This behavior might change in the future.
+  getmsg()
+	Receive a message. The message will be removed from the port,
+	and it is returned as `message' object (see below).
+	Returns None if no messages have arrived, i.e. this operation
+        is non-blocking.
+
+
+
+class `host' (derived from `publicport')
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This   is  the  important  one:   this  class  is  a  complete  ARexx  host
+abstraction!   It  contains  all  code  for  setting up the host, receiving
+messages,  parsing  the commands and dispatching automatically.  Setting up
+your own ARexx host has never been easier.
+
+An ARexx host is created as follows:
+
+	h = arexx.host()		# default portname 'PYTHON'
+	h = arexx.host('FOOBAR')	# custom port name
+	h = arexx.host('FOOBAR',cmds)	# custom port name + initial cmds
+
+	The port name is used as a public port name. See the notes on
+	public port names above, at class `publicport'.
+	The third call above supplies an initial list of commands for this
+	host. You may also install the list later using the setcommands
+	member function.
+
+The host has one default command built-in:
+
+	HELP COMMAND,STEM/K,VAR/K
+
+This  command  works  as  follows.   Without  args  it  returns  the set of
+available  commands  like this:  <#commands> <cmd1> ...  <cmdN>.  A COMMAND
+argument  gets  help  on  the  specified  command:  the command template is
+returned.   The  result is usually put into the RESULT variable.  RC is the
+error  code,  RC2  is  the  error string (if any).  Use the VAR argument to
+specify a variable yourself to put the result into, instead of RESULT.  Use
+the STEM argument to get the result in a slightly different format:
+
+	HELP STEM X.
+
+gets  the  list  of commands like this:  X.COUNT will contain the number of
+result  values (i.e.  the number of commands), where X.1, X.2, X.3...  will
+contain the individual results (i.e.  the commands).
+
+The  default  help  service  is  implemented  in  the std_help_func command
+function, which can be found in the ARexx module.
+
+
+Attributes of host objects:
+
+  commands	- dictionary of installed ARexx commands. Keys are the
+		  commands, data is tuple of ArgParser object for the
+		  template and the command function to call.
+  cmderror	- error string for calling app when command is unknown.
+		  Default is 'Unknown command'.
+  catch		- will exceptions in ARexx commands be catched or not (0/1)
+		  Default is 0; don't catch. Beware: the calling app may
+		  freeze if your ARexx command raises an exception (because
+		  the message is not replied to). Just exit Python and
+		  all will be fine.
+  name		- see publicport class
+  port		- see publicport class
+  signal	- see publicport class
+
+Methods defined on host objects:
+
+  close()
+	Close the ARexx port (shutdown the host)
+	You can also just delete the host object.
+
+  setcommands(cmdlist)
+	Specify a list of commands for this host.
+	cmdlist = list of commands (4-tuple: command, template,
+	defaults, function. See setcommand.)
+
+  setcommand(cmd,templ,defaults,func)
+	Install a single command for this host
+	cmd = the command, for instance 'HELP'. Uppercase please.
+	templ = the argument template, ReadArg() format, for instance
+	        'COMMAND,STEM/K,VAR/K,AMOUNT/N'. See also the ArgParser
+	        class from the `dos' module. You can also specify None,
+		then no argument parser will be associated with this
+	        command. This means that all arguments are passed straight
+		to the command function. This can be used for creating ARexx
+		commands with non-ReadArg() style arguments.
+		Use the empty string if you want the command to have NO
+	        arguments! This is different than None! 
+	defaults = either None or a dictionary which specifies for some
+	           keywords in the template what the default values are, if
+	           the user doesn't specify them. Example: {'AMOUNT': 10}.
+	           If you use None, some sensible values are chosen,
+	           depending on the types of the keywords.
+	func = the command function which is associated with this command.
+	       See the topic, "HOW TO IMPLEMENT COMMAND FUNCTIONS".
+
+  setdefaults(cmd,defaults)
+	Install (new) default values for a command's argument template
+	cmd = the command
+	defaults = see above (setcommand)
+
+  defaults(cmd)
+	Query default values for a command's argument template
+	cmd = the command
+
+  catchExceptions(flag)
+	flag= int/boolean argument:
+	 0 : don't catch exceptions. When an exception occurs in an
+	     ARexx command function, your program aborts (=default).
+	 1 : catch exceptions. When an exception occurs in an Arexx command
+	     function, it will be passed back to the calling application as
+	     an error string, while your python program continues.
+  dispatch()
+	When a message is present, process it. The arguments will
+	be parsed according  to the command's template and the
+	correct command function is executed. The following
+	return codes are defined:
+	  -1 : there were no messages
+	   0 : (false) a command function returned false, i.e. it failed
+	   1 : message processed ok, command function executed ok
+
+  flush()
+	Process each pending message untill there are none left.
+  run()
+	Enter a wait/dispatch loop until one of the command
+	functions returns false (0) or an error occurs.
+
+
+
+
+HOW TO IMPLEMENT COMMAND FUNCTIONS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+They must be declared like this:
+	def cmd_func(host,msg,cmd,args)
+where
+	host	= ARexx host object invoking this function
+	msg	= the ARexx message which was received
+	cmd	= the command which was called (string)
+	args	= dictionary of arguments and their valued provided for
+		  this command. See also ArgParser class from `dos' module.
+		  Optionally, this is a regular string which contains
+		  the argument line unchanged. This is the case when the
+		  command has been added without an argument template.
+		  See the setcommand memberfunction of the host class.
+
+They  must  return  either 1 (true) or 0 (false).  0 indicates an error and
+will  cause  the  `run' memberfunction of your ARexx host to abort (because
+`dispatch' returns 0).
+
+
+HOW RESULTS ARE PASSED BACK TO THE CALLING APPLICATION
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Lets call the message you've received from your ARexx host `M'.  First, you
+might  want to check the value of M.wantresult.  If it is zero (false), the
+calling  app  is not expecting any results (if it's an ARexx script, it has
+not  set  `options  results').  If it is non-zero (true) the calling app is
+possibly expecting a result value (Arexx script has set `options results').
+Ofcourse  your  function  should  eventually decide if it needs to return a
+result value.
+
+M.rc  must  be  set  to  the  appropriate  ARexx return code (one of RC_OK,
+RC_WARN, RC_ERROR and RC_FATAL).  By default it is set to RC_OK (0).
+
+If  M.rc  is  RC_OK  (0), put the result string in M.result.  M.rc2 remains
+unchanged  (None).   If  you  must  return  results in other variables, use
+M.setvar  to  set them.  See the implementation of the default HELP command
+for  how  this  can  be  done (the user can ask for the result to be put in
+another variable, instead of RESULT).
+
+If  M.rc  is  not  RC_OK  (0),  you should put a secondary result string in
+M.rc2.  Usually this will be a string describing what went wrong.  M.result
+does  not  need  to  have  a  value  in this case.  Other variables (set by
+M.setvar) can still have a result value.
+
+When  you're  done, you must reply the message.  This can be done by either
+deleting  the  message  or  (better) by invoking M.reply() explicitly.  The
+latter is not necessary but then you must make sure M gets deleted on time,
+otherwise the message is not replied to, and the calling app will freeze.
+
+
+HOW THE CALLING APPLICATION GETS RESULTS BACK FROM A CALL
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+If  you require results and you are using an ARexx script, you should issue
+the `options results' command first.  The following result variables exist:
+
+  RC	- primary return code
+  RC2	- secondary result (error)string, if RC != 0
+  RESULT - regular result value.
+
+If  RC is 0, all went well and RESULT will contain the result, if any.  RC2
+has no value in this case.
+
+If  RC  is  not  0, there was some error and RC2 will contain the secondary
+result string, this is usually a string describing what went wrong.  RESULT
+has no value in this case.
+
+Sometimes it is possible to get the results in other variables than RESULT.
+This  depends  on  the  function  you're calling.  The documentation of the
+function   should  say  exactly  what  to  expect  from  it.   The  default
+implementation  of  the HELP command is such a function:  you can specify a
+variable yourself instead of relying on RESULT.
+
+
+The `std_help_func' utility function
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+This is the default command function connected with the `HELP' command.  It
+might be a good example of implementing a command function.  You might want
+to  write  your  own help function, for example to give more extensive help
+descriptions.   Just  use  the  `setcommand'  memberfunction to replace the
+existing `HELP' command.  Do NOT change the source code of the default help
+function!!!
+
+The `std_debug_func' utility function
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+When  you  use  this  function as a command function for a command, it will
+print  out  some  debug  information  to  the screen and reply the command.
+Useful for testing or for unfinished commands.
+

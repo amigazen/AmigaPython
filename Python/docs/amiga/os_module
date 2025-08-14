@@ -1,0 +1,41 @@
+
+
+                                 OS MODULE
+
+                      Irmen de Jong - ijong@gak.nl
+                               27 dec. 1996
+
+
+This document describes the module `os'.  This is the portable interface to
+the `amiga' module (`posix' module on Unix systems).  You should always use
+this module instead of the `amiga' module.
+
+This module includes everything that the `amiga' module exports.
+
+ 
+Additional functions in `os' module:
+
+    execl, execle, execlp, execlpe, execvp, execvpe
+
+    All of these raise an exception because they are not implemented.
+
+  DATA MEMBERS: (Items marked (*): see below, ABOUT ENVIRONMENT)
+
+    curdir	: ''
+    defpath	: 'C:'
+    name	: 'amiga'
+    pardir	: '/'
+    pathsep	: ';'
+    sep		: '/'
+
+
+  SUB MODULES:
+
+    path	(=amigapath module. Always use os.path instead of amigapath)
+
+
+For documentation, see regular docs on the os module.
+
+
+SEE ALSO: amiga module, amigapath module
+

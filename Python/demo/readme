@@ -1,0 +1,15 @@
+This subdirectory contains some Python demo programs.
+
+
+
+classes/        Some examples of how to use classes.
+
+scripts/        Some useful Python scripts that can be put in your
+		command path.  No optional built-in modules needed.
+		Might need some changes on the Amiga.
+
+socket/         Examples for the 'socket' builtin module.
+
+ChatServer.py   Multi-user chat server, written by Irmen de Jong.
+		The special thing is the mud-like interface.
+

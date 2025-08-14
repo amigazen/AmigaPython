@@ -1,0 +1,84 @@
+
+This  directory  contains  Amiga specific documentation.  First consult the
+regular Python documentation on the required subjects.
+
+IMPORTANT FILES:
+~~~~~~~~~~~~~~~~
+Dos_module, ARexx_module.
+They contain the documentation on the new Amiga-specific modules.
+
+
+
+FILE			CONTAINS SUBJECT
+~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+general			module search path
+			Amiga specific modules
+			posix replacements
+			networking support
+			timezones
+			sys.platform
+			modifying library files
+			source code
+			other files
+			Workbench startup
+
+amigapath_module	amigapath module
+			os.path
+
+amiga_module		amiga module
+			os module
+			filesystem link support
+			environment vars
+
+Dos_module		dos module
+			doslib module
+			ArgParser class
+
+ARexx_module		ARexx module
+			arexxll module
+
+environment_module	environment module
+			
+os_module		os module
+			os.path
+
+other			select module
+			urllib module
+			urlop module
+			time module
+			time module
+			tempfile module
+
+
+
+
+
+WHAT SUBJECT		WHERE CAN IT BE FOUND (FILE)
+~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+amigapath module	amigapath_module
+os.path			amigapath_module, os_module
+amiga module		amiga_module
+os module		os_module, amiga_module
+environment		environment_module, amiga_module
+filesystem links	amiga_module
+select module		other
+urllib module		other
+urlop module		other
+time module		other
+tempfile module		other
+dos module		Dos_module
+doslib module		Dos_module
+ArgParser class		Dos_module
+arexx module		ARexx_module
+arexxll module		ARexx_module
+
+module search path	general
+Amiga specific modules	general
+posix replacements	general
+networking support	general
+timezones		general
+sys.platform		general
+modifying library files	general
+source code		general
+other files		general
+Workbench startup	general

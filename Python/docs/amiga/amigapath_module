@@ -1,0 +1,94 @@
+
+
+                             AMIGAPATH MODULE
+
+                      Irmen de Jong - ijong@gak.nl
+                               27 dec. 1996
+
+
+This  document describes the module `amigapath'.  This is the Amiga version
+of  the  `posixpath' module which is used on Unix.  You should not directly
+import this module!  Always use module `os' instead and then use os.path.
+
+Functions in this module:
+
+    basename
+    commonprefix
+    dirname
+    exists
+    expanduser
+    expandvars
+(*) fullpath
+(*) isabs
+    isdir
+    isfile
+    islink
+(*) ismount
+    join
+(*) normcase
+(*) normpath
+    samefile
+    sameopenfile
+    samestat
+(*) split
+(*) splitdrive
+    splitext
+(*) walk
+
+For  documentation, see docs on posixpath module.  Functions marked (*) are
+different from the ones in the posixpath module and are described below.
+
+
+  fullpath
+  ~~~~~~~~
+New function.  Returns the full pathname of a file/directory (i.e.  expands
+assigns).   Implemented  in  amiga  module  but  don't use it directly from
+there, always use os.path.fullpath.
+
+
+  isabs
+  ~~~~~
+On the Amiga, a path is absolute when a ':' occurs in it.
+
+
+  ismount
+  ~~~~~~~
+On the Amiga, a mount point is considered to be a device name.
+
+
+  normcase
+  ~~~~~~~~
+On the Amiga, actually does convert the path to lowercase.
+
+
+  normpath
+  ~~~~~~~~
+On  the Amiga, does nothing because x/y//z is different than x/y/z, because
+a double slash (//) in a path means 'parent directory'.
+
+
+  split
+  ~~~~~
+Split  a  path in head (everything up to the last '/' or ':') and tail (the
+rest).  If the path ends in '/' or ':', tail will be empty.  If there is no
+'/'  or  ':'  in  the path, head will be empty.  DIFFERENCE WITH posixpath:
+only  ONE  trailing '/' will be stripped from head!  (on the Amiga a double
+slash  means  "parent  dir"!   ) This means that if head ends in a '/', you
+MUST  add  a  '/'  to it when reconstructing the path, or you will lose the
+"parent  dir"  slash.   Functions  that  depend  on  this function are also
+affected!  (basename, dirname)
+
+(Suggested by Kent Polk, kent@eaenki.nde.swri.edu)
+
+
+  splitdrive
+  ~~~~~~~~~~
+Splits  a pathname into a drive specification and the rest of the path.  On
+the Amiga this is useful (not on Unix).
+
+
+  walk
+  ~~~~
+As  the  Amiga  doesn't  know  the  concept of '.' and '..' directories, no
+exceptions are made for them.
+

@@ -1,0 +1,130 @@
+
+             GENERAL NOTES ON THE AMIGA VERSION OF PYTHON 1.4
+
+                      Irmen de Jong - ijong@gak.nl
+                               27 dec. 1996
+
+
+MODULE SEARCH PATH
+------------------
+
+Version  1.4  introduced  a  different treatment of the module search path.
+The  current  directory  is  no longer by default part of the module search
+path.   Instead,  the  following  procedure  gives  the  module search path
+(sys.path):
+
+- sys.path is set to the default PYTHONPATH, which is "Python:lib"
+- if  the  global  environment  variable  PYTHONPATH is set, the paths listed
+  there  will be inserted before the default path.  PYTHONPATH is a semicolon
+  (;) separated list of directories, like "WORK:pylib;Python:lib/mymods".
+- the  path of the script which was given as an argument is inserted in front
+  of the search path. If no script was given as argument, '' will be inserted
+  (which is the current directory).
+
+
+AMIGA SPECIFIC MODULES
+----------------------
+
+Version  1.4 introduced a clean way of installing platform specific library
+files.   In  the Lib drawer there is anoter drawer called site-python.  All
+Amiga  specific modules are put here.  There is a simple way of using them:
+place the
+
+	import site
+
+statement  somewhere  at  the  top  of all code that must use site-specific
+modules.   This  will  modify  the module search path and also run any site
+specific  initialization code (by importing the sitecustomize module, which
+should  also  be  placed in the site-python drawer).  Currently there is no
+sitecustomize  module  on  the Amiga.  If you don't like to import the site
+module (why?) just use sys.path.append('Python:Lib/site-python').
+
+You  can  now  simply import any Amiga specific modules, regardless of them
+being built-in (like arexxll) or in a .py source file:
+
+	import ARexx
+
+
+
+POSIX REPLACEMENTS
+------------------
+
+In  lib/ there are dummy modules `posixpath' and `posix'.  They just import
+`amigapath'  and  `amiga', thereby making some other modules and files work
+because they don't use os.path and os.
+
+
+About the networking support (AmiTCP)
+-------------------------------------
+
+The  python  binary is compiled with AmiTCP support.  The interpreter still
+works  even  if  you don't have AmiTCP, but the extra functionality (mainly
+the  socket  module)  can't be used without AmiTCP (obviously).  Some extra
+functions  already work if you only have the usergroup.library, and not the
+full  AmiTCP  package:   the  crypt,  pwd  and grp modules for instance.  A
+MultiuserFileSystem-compatible  usergroup.library can be found on Aminet (I
+didn't  try it -- beware).  Usergroup.library can also be found in the demo
+version of AmiTCP, which is also on Aminet.
+
+
+About Timezones
+---------------
+
+As  another  side-effect  of  linking  in AmiTCP stuff, Python extracts the
+timezone information from your current locale preferences.  No need anymore
+for a TZ environment var.  (One small problem:  the name of the timezone is
+no longer known, and is replaced by '???'.) If the locale prefs couldn't be
+read, the timezone information is taken from ENV:TZ, which must be a string
+like 'MET-1' (MET, -1 hour from GMT).
+
+
+sys.platform
+------------
+
+This is defined as 'amiga'. No upper case A.
+
+
+About modifying library files
+-----------------------------
+
+You  should  not  change anything in one of the library files.  The library
+files  should  always  behave the same on all platforms that supports them.
+(Note:   I  said BEHAVE.  You are free to modify the implementation but the
+BEHAVIOR should remain the same.)
+
+
+Workbench startup
+-----------------
+
+Since  1.4,  Amiga Python contains some code to make it possible to use the
+Workbench  to start python or python programs.  The interpreter already has
+an  icon.   Doubleclick  it  to  start python in interactive mode.  Use the
+well-known multiselect (shift-click) to select any scripts to execute.  Any
+additional  files  which  are multi-selected will be passed as command line
+arguments.
+
+SCRIPT  ICONS.   Look  in  the  `Icons'  directory for icon templates:  use
+def_py.info  and  def_pyc.info  as  icon  templates for .py and .pyc files.
+Just  make  sure the default tool is set to `Python:Python'.  Any tooltypes
+in  the  icon  are  converted  to  command  line  arguments  for the Python
+interpreter.   The  `-c'  option  is special:  don't enter the program text
+after the `-c' option, but make a NEW TOOLTYPE for it, right after the `-c'
+tooltype.   Using  the  `-c'  option you can even make python scripts which
+reside  in  the  icon  only, without a scriptfile on disk.  When starting a
+Python   program  from  the  Workbench,  any  additional  files  which  are
+multi-selected will be passed as command line arguments.
+
+
+SOURCE CODE and other files
+---------------------------
+
+For  the original source code distribution, which also includes all library
+files,    a    bunch   of   docs   and   many   example   programs,   check
+http://www.python.org.    BTW,   this  site  contains  a  lot  more  stuff:
+reference  manuals,  contributed  files, online documentation, FAQ's, news,
+etc.  etc.
+
+For the Amiga source code, see Aminet in the same location as you found
+this.  It should be named `Python14_Src.lha'.
+
+

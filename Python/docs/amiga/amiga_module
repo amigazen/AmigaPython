@@ -1,0 +1,161 @@
+
+
+                               AMIGA MODULE
+
+                      Irmen de Jong - ijong@gak.nl
+                               27 dec. 1996
+
+
+This document describes the builtin module `amiga'. This is the Amiga version
+of the `posix' module which is used on Unix. You should not directly import
+this module! Always use module `os' instead.
+
+Functions in `amiga' module:
+
+    chdir
+    chmod
+    chown
+    close
+(*) dup		(needs bsdsocket.library for actual use)
+(*) dup2	(needs bsdsocket.library for actual use)
+    fdopen
+    fstat
+(*) fullpath
+    getcwd
+    getegid	(requires usergroup.library)
+    geteuid	(requires usergroup.library)
+    getgid	(requires usergroup.library)
+    getpgrp	(requires usergroup.library)
+(*) getpid
+    getuid	(requires usergroup.library)
+    link	(will use usergroup.library if present)
+    listdir
+    lseek
+    lstat
+(*) mkdir	(will use usergroup.library if present)
+    open
+    popen
+    putenv
+    read
+    readlink
+    remove
+    rename
+    rmdir
+    setgid	(requires usergroup.library)
+    setsid	(requires usergroup.library)
+    setuid	(requires usergroup.library)
+    stat
+    symlink
+    system
+    umask	(requires usergroup.library)
+    unlink
+    utime
+    write
+
+  NOT SUPPORTED ARE:
+    execv, execve, _exit, fork, getppid, kill, nice, pipe,
+    times, uname, wait, waitpid.
+
+  DATA MEMBERS: (Items marked (*): see below, ABOUT ENVIRONMENT)
+(*) environ
+    error
+(*) globalvars
+(*) shellaliases
+(*) shellvars
+
+
+For  documentation,  see  docs  on  posix  module.   Items  marked  (*) are
+different from the ones in the posix module and are described below.
+
+Note   that   some   functions   require   AmiTCP   (bsdsocket.library)  or
+usergroup.library.   If  you  don't  have  it,  you'll  get  a  SystemError
+exception.   Some  functions  work better with usergroup.library but do not
+require it.
+
+
+  dup  &  dup2
+  ~~~~~~~~~~~~
+Currently  only  socket  filedescriptors  can be dup'ed.  If you want to do
+this, you will need bsdsocket.library (AmiTCP).
+
+  fullpath
+  ~~~~~~~~
+New function.  Returns the full pathname of a file/directory (i.e.  expands
+assigns).    Implemented  here  but  don't  use  it  directly,  always  use
+os.path.fullpath (amigapath imports this function).
+
+  getpid
+  ~~~~~~
+Currently  the  memory  address  of  the process structure (FindTask(0)) is
+taken as pid.
+
+  mkdir
+  ~~~~~
+Since Python 1.4, the protection mode can be omitted. It defaults to 0777.
+
+
+
+ABOUT FILESYSTEM LINK SUPPORT
+-----------------------------
+
+(Functions: link, symlink, readlink)
+
+You can make hardlinks and softlinks, using link and symlink, respectively.
+You  can  read the value of a symbolic (soft) link using readlink.  Keep in
+mind  that  the  filesystem  must  support links (2.04+ FFS does) All three
+functions are designed for compatibility with their Posix equivalents.
+
+NOTE:  because of implementation issues, readlink fails when passing only a
+device  name  as argument.  This is not a big problem (devices can never be
+links anyway).
+
+
+
+ABOUT ENVIRONMENT VARIABLES
+---------------------------
+
+I made up an extensive but CGI script compatible (and compatible with other
+scripts  that expect a Unix system) environment handling system.  Thanks to
+Mike Meyer (mwm@contessa.phone.net) for helping me out on the problems with
+the old system.
+
+    Environment variable dictionaries
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+os.environ       - contains BOTH GLOBAL (ENV:) AND LOCAL (shell) variables
+                   If a variable occurs both as global and as local var,
+                   the local value has higher prioriy.
+os.globalvars    - contains ONLY GLOBAL (ENV:) variables
+os.shellvars     - contains ONLY LOCAL (shell) variables
+
+IMPORTANT:   changes  made  to the environment variables in os.environ will
+now    also    be    made    in    ENV:.    This   means   the   assignment
+os.environ['PAGER']='c:more'  will  now  also  set the environment variable
+ENV:PAGER  to "c:more".  This feature was introduced in Python version 1.4.
+Note  however  that  an  assignment  to a variable in os.environ that was a
+local  shell-var  does  NOT  result  in updating the shell variable:  a new
+global  variable  with  the same name will be created.  If this is not what
+you  want, check out the `environment' module.  Note well that the above is
+not  true  for  os.globalvars  and os.shellvars:  they remain read-only and
+changes are not propagated to the environment.
+
+    The new function: putenv
+    ~~~~~~~~~~~~~~~~~~~~~~~~
+Python  1.4  introduced a new function in the posix module:  putenv.  So in
+our  case  the  amigamodule now also contains this function.  Portable code
+should  use  this function (os.putenv), but Amiga specific code can use the
+environment module, mentioned below.
+
+    Aliases
+    ~~~~~~~
+Shell   aliases   can   be   accessed  in  the  os.shellaliases  dictionary
+(read-only).
+
+
+    The `environment' module
+    ~~~~~~~~~~~~~~~~~~~~~~~~
+This  module  contains a bunch of environment handling functions.  Read the
+document `environment_module' for a description of this module.
+
+
+
+SEE ALSO: os module

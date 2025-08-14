@@ -1,0 +1,49 @@
+
+                          NOTES TO OTHER MODULES
+
+                      Irmen de Jong - ijong@gak.nl
+                               27 dec. 1996
+
+
+
+SELECT MODULE
+-------------
+
+The  Amiga  implementation of the select.select() function is improved.  It
+now  takes  an  optional  5th argument, which is an AmigaDOS signal mask to
+wait  on  (example:  4096 is ^C signal).  When the signal mask is not zero,
+select  will  return  a 4-tuple (instead of the usual 3-tuple) in which the
+4th  element is the signal mask of the signals that occured.  If no signals
+occured  it  is  zero,  ofcourse.   Hint:  pass `None' for the 4th argument
+(timeout value) if you want no timeouts.
+
+
+URLLIB MODULE
+-------------
+
+Uses builtin module urlop for huge speedup on quote and unquote functions.
+
+
+TIME MODULE
+-----------
+
+The   floatsleep   function   will   use   the   select   system   call  if
+bsdsocket.library  (AmiTCP)  is  available.  You will then be able to abort
+the  floatsleep by a ^C signal.  If bsdsocket.library is not available, the
+regular  dos.library  Delay  function  is  used  and  you  cannot abort the
+floatsleep.
+
+
+TEMPFILE MODULE
+---------------
+
+The search path for a temporary directory is as follows:
+	T:	(usually RAM:T)
+	:T 	(a T directory in the root of the current device)
+	SYS:T
+
+If  the  global  (ENV:)  environment  variable  TMPDIR  is  set, it will be
+considered first (before T:).  The paths are checked for correctness.
+
+
+

@@ -1,0 +1,270 @@
+
+***************************************************************************
+
+                        PYTHON dos.library SUPPORT
+
+                          dos and doslib modules
+	
+                     by Irmen de Jong - ijong@gak.nl
+
+                          Last update: 31-Dec-96
+
+                               BETA VERSION
+
+***************************************************************************
+
+As  this  document  describes  the  BETA VERSION of the dos.library support
+there  might come changes to what is described below.  This depends on bugs
+found  and  suggestions received.  So please:  test the dos.library support
+and let me hear any problems/bugs/suggestions (ijong@gak.nl).
+
+
+***************************************************************************
+
+                              MODULE: doslib
+
+                            FILE: N/A (builtin)
+
+***************************************************************************
+
+This module provides the low-level dos.library functionality.
+
+IMPORTANT:   It  is  DISCOURAGED  to  use this module directly, use the dos
+module  instead  (see  below).  The dos module imports everything from this
+module  so  you can access everything through the dos module instead.  This
+is  much  like  how the string module uses the builtin strop module:  don't
+use the builtin lowlevel module directly!
+
+This module defines the following exception:
+
+  error		- The exception that will be raised when an
+		  error occurs related to dos.library. ('doslib.error')
+
+
++--------------------------------------+
+|                                      |
+|          DEFINED FUNCTIONS           |
+|                                      |
++--------------------------------------+
+
+ReadArgs
+    INTENTIONALLY UNDOCUMENTED. USE ArgParser CLASS FROM `dos' MODULE!
+
+WaitSignal(what)
+    Generic Wait() function to wait for signals, modeled after the `select'
+    function. Usage: (sigs,objlist) = WaitSignal(what)
+       what = integer, object, or a list of ints and/or objects.
+       Integers are sigmask values. Objects must have a 'signal' attribute
+       which is their sigmask value. When a list is given the sigmasks of
+       the items are or-ed together (max 32 items).
+    RESULT: sigs = the signals that occured (sigmask).
+            objlist = a list of the objects whose signal occured.
+    NOTE: any signals that were detected are cleared when WaitSignal()
+    returns. Signals that were not waited upon are not cleared.
+
+CheckSignal(what)
+    Like WaitSignal (see above) but DOESN'T WAIT, merely checks if certain
+    signals are set. NOTE: any signals that were detected are cleared when
+    CheckSignal() returns. Signals that were not checked upon are not
+    cleared.
+
+CompareDates(d1,d2)
+    Compares the two 3-tuple DateStamps d1 and d2 and returns:
+    <0 if d1 is later than d2
+     0 if d1 = d2
+    >0 if d1 is before d2
+
+DateStamp()
+    Returns 3-tuple AmigaDOS DateStamp (current date & time).
+
+DateToStr(date,format=FORMAT_DOS,flags=0)
+    Convert 3-tuple DateStamp to readable 3-tuple date string.
+    date = DateStamp
+    format and flags are optional.
+    format = how to format the string (see dos.py module for definitions)
+    flags = flags (see dos.py module for definitions)
+    
+StrToDate(dstr [,timestring, format = FORMAT_DOS, flags = 0] )
+    Convert AmigaDOS date string to AmigaDOS DateStamp.
+    dstr = date string (like '27-Aug-96')
+    timestring = time string (optional, like '16:12:00')
+    format = string format (optional, see dos.py module for definitions)
+    flags = flags (see dos.py module for definitions)
+    
+Fault(err [,header])
+    Returns DOS error message string.
+    err = dos error code
+    header = error header string (optional, defaults to None which means
+             no header)
+
+IoErr()
+    Returns last DOS IoErr() error value.
+
+SetIoErr(err)
+    Set new DOS IoErr() error value, and returns previous value.
+
+IsFileSystem(path)
+    Checks if path is a filesystem device.
+
+Relabel(oldvolname,newvolname)
+    Relabel a disk.
+    oldvolname = old volume name (including :)
+    newvolname = new volume name (without :)
+    
+SetProtection(file,protbits)
+    Set DOS file protection bits.
+    file = filename
+    protbits = protection bits for this file (see dos.py module for
+               definitions)
+
+SetComment(file,comment)
+    Set DOS file comment string.
+    file = filename
+    comment = file comment string for this file
+    
+Examine(file)
+    Examine a file or directory. Returns the following tuple:
+    (filename,size,type,protection,diskkey,#blocks,
+     3-tuple DateStamp, comment, owner UID, owner GID )
+
+DS2time(ds)
+    Convert DateStamp tuple to time() value (see time module)
+
+time2DS
+    Convert time() value (see time module) to DateStamp tuple
+
+
+
+
+
+***************************************************************************
+
+                                MODULE: dos
+
+                               FILE: dos.py
+
+***************************************************************************
+
+This module is the interface to the Amiga's dos.library.
+
+IMPORTANT:  this module uses the builtin doslib module.  Don't use it
+yourself directly, always use the `dos' module.
+
+NOTE:
+ The whole lot of dos LVO's that are not covered are considered:
+    - not useful;
+ or - unsafe (with regards to memory/lists/nodes/structs etc);
+ or - very difficult to use from Python.
+ Check the os and (amiga)path modules for things like file I/O,
+ path operations and other stuff.
+
+
+This module defines the following exception:
+
+  error		- The exception that will be raised when an
+		  error occurs related to dos.library. ('doslib.error')
+		  This is the same exception as the one from
+		  the builtin doslib module.
+
+
++--------------------------------------+
+|                                      |
+|          DEFINED FUNCTIONS           |
+|                                      |
++--------------------------------------+
+
+As  this  module  imports everything from the doslib module, see above what
+functions  are  provided.  Use the functions through this module, don't use
+the doslib module directly.
+
+
++--------------------------------------------+
+|                                            |
+|  DEFINED CONSTANTS (taken from dos/dos.h)  |
+|                                            |
++--------------------------------------------+
+
+- The break flags, SIGBREAKF_CTRL_C to SIGBREAKF_CTRL_F.
+- AmigaDOS file protection bits, including the `group' and `other' bits.
+- Flags and Format definitions for DateToStr and StrToDate.
+
+
++--------------------------------------+
+|                                      |
+|          ARGPARSER CLASS             |
+|                                      |
++--------------------------------------+
+
+This  module  defines  the  ArgParser  class,  which  is an argument string
+parser.   It  can  be  used to parse ReadArgs() argument strings (the usual
+Amiga  style  for  command  lines,  all  CLI commands use it).  It works as
+follows:
+
+p = dos.ArgParser(template)
+
+    Create new parser for the specified template.
+    template = ReadArgs template, like 'FROM/A/M,TO/A,QUIET/S'. 
+    
+    When parsing an argument string (see below) the type of the returned
+    Python value depends on the type of the argument in the template,
+    f.i. /N arguments will return an integer value.
+    `Multi'-options will ofcourse return a list.
+
+    NOTE: /T (Switch Toggle) options are not supported.
+          (SystemError will be raised when you try to use /T)
+
+    NOTE: ValueError will be raised when the template is considered
+          invalid.
+
+
+** ArgParser objects have the following attributes:
+
+defaults	- dictionary which contains the default values for each
+		  template option which is not required (i.e. which is not
+		  specified with /A switch). YOU MAY MODIFY THIS to change
+		  the default options!!!
+template	- the template string. DO NOT MODIFY THIS! (use the `new'
+		  member function to change the template)
+types		- internal type tuple. DO NOT MODIFY THIS! The structure is
+		  as follows: ( (<template option>, <option type>), ... )
+		  For instance when the template is 'FROM/A/M,TO/A,QUIET/S'
+		  types will be (('FROM', ??), ('TO', ??), ('QUIET', ??)).
+		  THE TYPE ENCODING IS PRIVATE, DO NOT TRY TO USE IT.
+
+
+** ArgParser objects have the following member functions:
+
+new(template)
+    modify the parser to use the new template
+
+reset()
+    re-initialise the parser; reset defaults dictionary
+
+parse(args)
+    The important one: parse the argument string args according to the
+    template of this ArgParser. Returns a dictionary containing the actual
+    arguments. The defaults dictionary is used to substitute default values
+    for unspecified arguments. Example:
+
+	>>> p=dos.ArgParser('FROM/A/M,TO/A,QUIET/S')
+	>>> p.defaults
+	{'QUIET': 0}
+	>>> p.types
+	(('FROM', 'A'), ('TO', 'X'), ('QUIET', 'S'))
+	>>> p.template
+	'FROM/A/M,TO/A,QUIET/S'
+	>>> p.parse('C:')
+	doslib.error: You've forgotten an argument
+	>>> p.parse('C: ram:')
+	{'FROM': ['C:'], 'TO': 'ram:', 'QUIET': 0}
+	>>> r=p.parse('c:dir c:list c:copy TO RAM: quiet')
+	>>> print r
+	{'FROM': ['c:dir', 'c:list', 'c:copy'], 'TO': 'RAM:', 'QUIET': -1}
+	>>> for (o,t) in p.types: print 'Arg for',o,'is',r[o]
+	Arg for FROM is ['c:dir', 'c:list', 'c:copy']
+	Arg for TO is RAM:
+	Arg for QUIET is -1
+
+Other member functions ARE PRIVATE.
+
+  

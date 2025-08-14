@@ -1,0 +1,83 @@
+
+
+                            ENVIRONMENT MODULE
+
+                      Irmen de Jong - ijong@gak.nl
+                               27 dec. 1996
+
+
+This  document  describes  the  builtin  module `environment'.  This module
+contains  a  set  of functions for managing environment variables.  Because
+the  module  is  not  defined  in  the  Python  docs  I  assume there is no
+requirement for it being Posix compliant or portable.  Hence I made a whole
+new  module,  which  is  Amiga-specific.   It  consists  of  the  following
+functions:
+
+putenv
+~~~~~~
+  Set global (ENV:) environment variable.
+
+  Use:	putenv(str)
+	str: string of the form "name=value"
+	No returnvalue.
+
+getenv
+~~~~~~
+  Get value of global (ENV:) environment variable.
+
+  Use:	value=getenv(name)
+	name: string which is the variable to get
+	Returns the value of the variable (string), or None if the var
+	doesn't exist.
+
+setenv
+~~~~~~
+  Set global (ENV:) environment variable.
+
+  Use:	setenv(name,value,overwrite)
+	name: name of variable to set (string)
+	value: value for this var (string)
+	overwrite: boolean flag (0/1) indicating if the value
+	           should be overwritten if the var already exists.
+	No returnvalue.
+
+unsetenv
+~~~~~~~~
+  Remove a global (ENV:) environment variable.
+
+  Use:	unsetenv(name)
+	name: string which is the name of the var to remove
+	No returnvalue.
+
+setvar
+~~~~~~
+  See setenv, but works on local (shell) vars instead of global.
+
+  Use:	setvar(name,value,overwrite)
+	see setenv
+
+getvar
+~~~~~~
+  See getenv, but works on local (shell) vars instead of global.
+
+  Use:	getvar(name)
+	see getenv
+
+unsetvar
+~~~~~~~~
+  See unsetenv, but works on local (shell) vars only, not global.
+
+  Use:	unsetvar(name)
+	see unsetenv
+
+
+
+Note that empty environment variables ('' - the empty string) are accepted.
+
+All  functions  are  implemented using the dos.library's variable calls, to
+keep code short (it's around 1Kb).
+
+
+
+SEE ALSO:
+	amiga module: environment dictionaries and putenv() function
