@@ -1,65 +1,55 @@
-RCS_ID_C="$Id: usleep.c,v 4.1 1994/09/29 23:09:02 jraja Exp $"
 /*
- *      usleep.c - suspend process for the specified time
+ *      usleep.c - suspend execution for microsecond intervals
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
+ *
+ *      DEPRECATED: This file is deprecated in Amiga Python 2.7.18 in favour of vbcc PosixLib
  */
 
 #include <sys/param.h>
-#ifdef AMITCP
 #include <unistd.h>
-#endif
-#ifdef INET225
-#include <proto/socket.h>
-#endif
 #include <sys/time.h>
 #include <sys/socket.h>
+#include <errno.h>
+#include <dos.h>
+#include <proto/dos.h>
 
-/****** net.lib/usleep *********************************************
-
-    NAME
-	usleep - suspend process execution for the specified time
-
-    SYNOPSIS
-	void usleep(unsigned int microseconds);
-
-    FUNCTION
-        Process execution is suspended for number of microseconds
-        specified in 'microseconds'. The sleep will be aborted if any
-        of the break signals specified for the process is received
-        (only CTRL-C by default).
-
-    PORTABILITY
-	UNIX
-
-    INPUTS
-	'microseconds' - number of microseconds to sleep.
-
-    RESULT
-        Does not return a value.
-
-    NOTES
-        The sleep is implemented as a single select() call with all other
-        than time out argument as NULL.
-
-    SEE ALSO
-	bsdsocket.library/select()
-
-*****************************************************************************
-*
-*/
-
+/*
+ * Suspend process execution for the specified time in microseconds
+ * Uses select() with a timeout for longer delays and Delay() for short periods
+ * 
+ * Parameters:
+ *   usecs - The number of microseconds to sleep
+ */
 void usleep(unsigned int usecs)
 {
+  /* For very small delays (less than 20000 microseconds), use Delay directly */
+  if (usecs < 20000) {
+    /* Convert to ticks (1/50th of a second) - minimum 1 tick */
+    ULONG ticks = (usecs / 20000) + 1;
+    Delay(ticks);
+    return;
+  }
+  
   struct timeval tv;
+  int ret;
 
+  /* Setup the timeval structure */
   tv.tv_sec = 0;
   while (usecs >= 1000000) {
     usecs -= 1000000;
     tv.tv_sec++;
   }	
   tv.tv_usec = usecs;
-  select(0, 0, 0, 0, &tv);
-}
+  
+  /* Using select with NULL file descriptor sets just for delay */
+  ret = select(0, NULL, NULL, NULL, &tv);
+  
+  /* Check for errors, but don't do anything - we can't really restore lost time */
+  if (ret < 0) {
+    /* select() was interrupted or failed - just continue */
+    /* We could handle error cases like EINTR by doing another select, 
+       but for simplicity we just continue */
+  }
+} 

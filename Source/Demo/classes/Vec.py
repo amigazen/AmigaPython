@@ -1,64 +1,68 @@
-# A simple vector class
-
-
-def vec(*v):
-	return apply(Vec, v)
-
-
 class Vec:
+    """ A simple vector class
 
-	def __init__(self, *v):
-		self.v = []
-		for x in v:
-			self.v.append(x)
+    Instances of the Vec class  can be constructed from numbers
 
+    >>> a = Vec(1, 2, 3)
+    >>> b = Vec(3, 2, 1)
 
-	def fromlist(self, v):
-		self.v = []
-		if type(v) <> type([]):
-			raise TypeError
-		self.v = v[:]
-		return self
+    added
+    >>> a + b
+    Vec(4, 4, 4)
 
+    subtracted
+    >>> a - b
+    Vec(-2, 0, 2)
 
-	def __repr__(self):
-		return 'vec(' + `self.v`[1:-1] + ')'
+    and multiplied by a scalar on the left
+    >>> 3.0 * a
+    Vec(3.0, 6.0, 9.0)
 
-	def __len__(self):
-		return len(self.v)
+    or on the right
+    >>> a * 3.0
+    Vec(3.0, 6.0, 9.0)
+    """
+    def __init__(self, *v):
+        self.v = list(v)
 
-	def __getitem__(self, i):
-		return self.v[i]
+    @classmethod
+    def fromlist(cls, v):
+        if not isinstance(v, list):
+            raise TypeError
+        inst = cls()
+        inst.v = v
+        return inst
 
-	def __add__(a, b):
-		# Element-wise addition
-		v = []
-		for i in range(len(a)):
-			v.append(a[i] + b[i])
-		return Vec().fromlist(v)
+    def __repr__(self):
+        args = ', '.join(repr(x) for x in self.v)
+        return 'Vec({0})'.format(args)
 
-	def __sub__(a, b):
-		# Element-wise subtraction
-		v = []
-		for i in range(len(a)):
-			v.append(a[i] - b[i])
-		return Vec().fromlist(v)
+    def __len__(self):
+        return len(self.v)
 
-	def __mul__(self, scalar):
-		# Multiply by scalar
-		v = []
-		for i in range(len(self.v)):
-			v.append(self.v[i]*scalar)
-		return Vec().fromlist(v)
+    def __getitem__(self, i):
+        return self.v[i]
 
+    def __add__(self, other):
+        # Element-wise addition
+        v = [x + y for x, y in zip(self.v, other.v)]
+        return Vec.fromlist(v)
+
+    def __sub__(self, other):
+        # Element-wise subtraction
+        v = [x - y for x, y in zip(self.v, other.v)]
+        return Vec.fromlist(v)
+
+    def __mul__(self, scalar):
+        # Multiply by scalar
+        v = [x * scalar for x in self.v]
+        return Vec.fromlist(v)
+
+    __rmul__ = __mul__
 
 
 def test():
-	a = vec(1, 2, 3)
-	b = vec(3, 2, 1)
-	print a
-	print b
-	print a+b
-	print a*3.0
+    import doctest
+    doctest.testmod()
 
 test()

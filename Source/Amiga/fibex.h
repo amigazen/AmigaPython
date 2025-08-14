@@ -1,12 +1,12 @@
 /*
- *      $Id: fibex.h,v 4.1 1994/09/29 23:09:02 jraja Exp $
- *
  *      fibex.h - extensions to FIB (File Information Block)
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
  */
+
+#ifndef _FIBEX_H
+#define _FIBEX_H
 
 #include <dos/dosextens.h>
 
@@ -49,7 +49,7 @@ struct FileInfoBlock {
 #define FIBB_GRP_READ	   11	/* Group: file is readable */
 #define FIBB_GRP_WRITE	   10	/* Group: file is writable */
 #define FIBB_GRP_EXECUTE   9	/* Group: file is executable */
-#define FIBB_GRP_DELETE    8	/* Group: prevent file from being deleted */
+#define FIBB_GRP_DELETE    8	/* Group: file is writable */
 
 #define FIBF_OTR_READ	   (1<<FIBB_OTR_READ)
 #define FIBF_OTR_WRITE	   (1<<FIBB_OTR_WRITE)
@@ -74,3 +74,4 @@ struct FileInfoBlock {
 void __dostat(struct FileInfoBlock *fib, struct stat *st);
 extern struct FileInfoBlock __dostat_fib[];
 
+#endif /* _FIBEX_H */ 

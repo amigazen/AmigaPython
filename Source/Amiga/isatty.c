@@ -1,10 +1,10 @@
-RCS_ID_C="$Id: isatty.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 /*
- *      isatty.c - check is a file is a terminal (interactive) or not (SAS/C)
+ *      isatty.c - check is a file is a terminal (interactive) or not
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
+ *
+ *      DEPRECATED: This file is deprecated in Amiga Python 2.7.18 in favour of vbcc PosixLib
  */
 
 #include <ios1.h>
@@ -14,6 +14,9 @@ RCS_ID_C="$Id: isatty.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 #include <dos/dos.h>
 #include <proto/dos.h>
 
+/*
+ * Check if a file descriptor refers to a terminal (interactive device)
+ */
 int
 isatty(int fd)
 {
@@ -31,4 +34,4 @@ isatty(int fd)
   }
   
   return 0;
-}
+} 

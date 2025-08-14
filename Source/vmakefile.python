@@ -1,0 +1,206 @@
+# vmakefile.python for Python 2.7.18 Python directory using VBCC
+# Based on the original SMAKEFILE but adapted for VBCC toolchain
+
+# VBCC toolchain
+CC=vc
+VLINK=vlink
+MKDIR=MakeDir ALL
+CONFIG=+aos68k_posix
+CFLAGS=-c -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -stack-check
+
+# Source directory
+SRCDIR=Python
+
+# Core Python objects for 2.7.18 
+OBJECTS = modsupport.o pythonrun.o errors.o bltinmodule.o \
+	ceval.o compile.o frozen.o getargs.o \
+	getcompiler.o getcopyright.o \
+	getversion.o getplatform.o graminit.o import.o \
+	importdl.o marshal.o structmember.o sysmodule.o \
+	traceback.o sigcheck.o pystate.o \
+	codecs.o dynload_stub.o \
+	ast.o asdl.o _warnings.o \
+	getopt.o random.o mysnprintf.o pystrtod.o pyfpe.o pymath.o \
+	Python-ast.o pyarena.o pyctype.o symtable.o mystrtoul.o \
+	pystrcmp.o future.o peephole.o formatter_string.o
+
+# Convert to full paths
+OBJ=$(patsubst %,$(ODIR)/%,$(OBJECTS))
+
+# Default target - just compile all .c files
+all: $(OBJ)
+
+# Generic rule for .c files
+$(ODIR)/%.o: $(SRCDIR)/%.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+# Special rules for specific files
+$(ODIR)/bltinmodule.o: $(SRCDIR)/bltinmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/ceval.o: $(SRCDIR)/ceval.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) -c -O0 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data -stack-check -o $@ $<
+
+$(ODIR)/compile.o: $(SRCDIR)/compile.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/errors.o: $(SRCDIR)/errors.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/frozen.o: $(SRCDIR)/frozen.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/getargs.o: $(SRCDIR)/getargs.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/getcompiler.o: $(SRCDIR)/getcompiler.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -DCOMPILER="[VBCC]" -o $@ $<
+
+$(ODIR)/getcopyright.o: $(SRCDIR)/getcopyright.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/getplatform.o: $(SRCDIR)/getplatform.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -DPLATFORM="amiga" -o $@ $<
+
+$(ODIR)/getversion.o: $(SRCDIR)/getversion.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/graminit.o: $(SRCDIR)/graminit.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/import.o: $(SRCDIR)/import.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/importdl.o: $(SRCDIR)/importdl.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/marshal.o: $(SRCDIR)/marshal.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/modsupport.o: $(SRCDIR)/modsupport.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/pystate.o: $(SRCDIR)/pystate.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/pythonrun.o: $(SRCDIR)/pythonrun.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/sigcheck.o: $(SRCDIR)/sigcheck.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/structmember.o: $(SRCDIR)/structmember.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/sysmodule.o: $(SRCDIR)/sysmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/traceback.o: $(SRCDIR)/traceback.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/codecs.o: $(SRCDIR)/codecs.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/dynload_stub.o: $(SRCDIR)/dynload_stub.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/ast.o: $(SRCDIR)/ast.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/asdl.o: $(SRCDIR)/asdl.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_warnings.o: $(SRCDIR)/_warnings.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/getopt.o: $(SRCDIR)/getopt.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/random.o: $(SRCDIR)/random.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/mysnprintf.o: $(SRCDIR)/mysnprintf.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/pystrtod.o: $(SRCDIR)/pystrtod.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/pyfpe.o: $(SRCDIR)/pyfpe.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/pymath.o: $(SRCDIR)/pymath.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/Python-ast.o: $(SRCDIR)/Python-ast.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/pyarena.o: $(SRCDIR)/pyarena.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/pyctype.o: $(SRCDIR)/pyctype.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/symtable.o: $(SRCDIR)/symtable.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/mystrtoul.o: $(SRCDIR)/mystrtoul.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/pystrcmp.o: $(SRCDIR)/pystrcmp.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/future.o: $(SRCDIR)/future.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/peephole.o: $(SRCDIR)/peephole.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/formatter_string.o: $(SRCDIR)/formatter_string.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+clean:
+	delete $(ODIR)/*.o
+
+.PHONY: clean 

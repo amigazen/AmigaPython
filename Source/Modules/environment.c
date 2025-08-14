@@ -42,9 +42,9 @@ static struct PyMethodDef environment_methods[] = {
 };
  
 
-void initenvironment Py_PROTO((void))
+void initenvironment(void)
 {
-	(void)Py_InitModule("environment", environment_methods);
+    (void)Py_InitModule3("environment", environment_methods, "Extended Environment module for Amiga. Provides functions to operate on the global or local environment of Python.");
 }
    
 /*
@@ -119,6 +119,8 @@ static PyObject *unset_environ(PyObject *self, PyObject *args)
 }
 
 #ifdef _AMIGA
+/* Define DEVICES_TIMER_H to prevent timer.h conflicts with Amiga headers */
+#define DEVICES_TIMER_H
 #include <proto/dos.h>
 #include <dos/var.h>
 

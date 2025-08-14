@@ -1,3 +1,5 @@
+# SMAKEFILE for Python 2.7.18 Parser directory
+# Based on Python 2.0 source but updated for 2.7.18
 
 OBJECTS = acceler.o grammar1.o myreadline.o node.o parser.o parsetok.o \
         tokenizer.o intrcheck.o 
@@ -8,20 +10,21 @@ Parser.lib: $(OBJECTS)
 $(OBJECTS)
 <
 
+# Dependencies
+acceler.o : acceler.c parser.h ../Include/token.h ../Include/node.h ../Include/grammar.h ../Include/pgenheaders.h
 
-acceler.o : acceler.c parser.h /include/token.h /include/node.h /include/grammar.h /include/pgenheaders.h
+grammar1.o : grammar1.c ../Include/token.h ../Include/grammar.h assert.h ../Include/pgenheaders.h
 
-grammar1.o : grammar1.c /include/token.h /include/grammar.h assert.h /include/pgenheaders.h
+intrcheck.o : intrcheck.c ../Include/intrcheck.h ../Include/config.h
 
-intrcheck.o : intrcheck.c /include/intrcheck.h   /include/config.h
+myreadline.o : myreadline.c ../Include/pythonrun.h ../Include/intrcheck.h ../Include/config.h
 
-myreadline.o : myreadline.c /include/pythonrun.h /include/intrcheck.h   /include/config.h
+node.o : node.c ../Include/node.h ../Include/pgenheaders.h
 
-node.o : node.c /include/node.h /include/pgenheaders.h
+parser.o : parser.c ../Include/errcode.h parser.h ../Include/node.h ../Include/grammar.h ../Include/token.h assert.h ../Include/pgenheaders.h
 
-parser.o : parser.c /include/errcode.h parser.h /include/node.h /include/grammar.h /include/token.h assert.h /include/pgenheaders.h
+parsetok.o : parsetok.c ../Include/errcode.h ../Include/parsetok.h parser.h ../Include/grammar.h ../Include/node.h tokenizer.h ../Include/pgenheaders.h ../Include/token.h
 
-parsetok.o : parsetok.c /include/errcode.h /include/parsetok.h parser.h /include/grammar.h /include/node.h tokenizer.h /include/pgenheaders.h /include/token.h
+tokenizer.o : tokenizer.c ../Include/errcode.h tokenizer.h ../Include/pgenheaders.h ../Include/token.h
 
-tokenizer.o : tokenizer.c /include/errcode.h tokenizer.h /include/pgenheaders.h /include/token.h
-
+# --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS PRECEDE --- 

@@ -1,10 +1,10 @@
-RCS_ID_C="$Id: _open.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 /*
- *      _open.c - Unix compatible open() (SAS/C)
+ *      _open.c - open a file descriptor
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
+ *
+ *      DEPRECATED: This file is deprecated in Amiga Python 2.7.18 in favour of vbcc PosixLib
  */
 
 #include <ios1.h>
@@ -20,10 +20,7 @@ RCS_ID_C="$Id: _open.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 #include <unistd.h>
 
 #include <bsdsocket.h>
-#include "Python.h"
-#include "protos.h"
-
-#include "netlib.h"
+#include "libcheck.h"
 
 extern int (*__closefunc)(int);
 
@@ -57,11 +54,12 @@ __open(const char *name, int mode, ...)
    * malloc space for the name & copy it
    */
   if ((ufb->ufbfn = malloc(strlen(name)+1)) == NULL) {
-    SET_OSERR(ERROR_NO_FREE_STORE);
+    _OSERR = ERROR_NO_FREE_STORE;
     errno = ENOMEM;
     return -1;
   }
   strcpy(ufb->ufbfn, name);
+  
   /*
    * Translate mode to ufb flags
    */
@@ -83,30 +81,33 @@ __open(const char *name, int mode, ...)
     errno = EINVAL;
     return -1;
   }
+  
   if (mode & O_APPEND)
     flags |= UFB_APP;
   if (mode & O_XLATE)
     flags |= UFB_XLAT;
   if (mode & O_TEMP)
     flags |= UFB_TEMP;
+    
   if (mode & O_CREAT) {
     BPTR lock;
     if (lock = Lock((char *)name, SHARED_LOCK)) {
       if (mode & O_EXCL) {
-	UnLock(lock);
-	errno = EEXIST;
-	free(ufb->ufbfn);
-	return -1;
+        UnLock(lock);
+        errno = EEXIST;
+        free(ufb->ufbfn);
+        return -1;
       }
 
       if (mode & O_TRUNC)
-	newfile = FALSE;
+        newfile = FALSE;
       else
-	mode &= ~O_CREAT;
+        mode &= ~O_CREAT;
 
       UnLock(lock);
     }
   }
+  
   if (mode & O_CREAT) {
     if ((file = Open((char *)name, MODE_NEWFILE)) == NULL)
       goto osfail;
@@ -117,22 +118,22 @@ __open(const char *name, int mode, ...)
 
       va_start(va, mode);
 
-	/* needs usergroup.library -- I.J. */
-	if(!checkusergrouplib())
-	{
-		PyErr_Clear();
-		cmode=va_arg(va,int);		/* don't use getumask() */
-	}
-	else
-		cmode = va_arg(va, int) & ~getumask();
+      /* needs usergroup.library */
+      if(!checkusergrouplib())
+      {
+        PyErr_Clear();
+        cmode=va_arg(va,int);    /* don't use getumask() */
+      }
+      else
+        cmode = va_arg(va, int) & ~getumask();
       
       chmod((char *)name, cmode); /* hope this doesn't fail :-) */
     }
   }
   else {
     if ((file = Open((char *)name,
-		     (flags & UFB_WA && mode & O_LOCK) ? 
-		     MODE_READWRITE : MODE_OLDFILE)) == NULL)
+             (flags & UFB_WA && mode & O_LOCK) ? 
+             MODE_READWRITE : MODE_OLDFILE)) == NULL)
       goto osfail;
   }
 
@@ -150,7 +151,7 @@ osfail:
     int code = IoErr();
     if (ufb->ufbfn)
       free(ufb->ufbfn);
-    set_errno(code);
+    errno = __io2errno(code);
   }
   return -1;
-}
+} 

@@ -1,51 +1,42 @@
-RCS_ID_C="$Id: getopt.c,v 4.3 1994/10/04 07:42:11 jraja Exp $";
 /*
  *      getopt.c - Unix compatible command line option parsing
- */
-
-/*
-**	@(#)getopt.c	2.5 (smail) 9/15/87
-*/
-
-/*
- * Here's something you've all been waiting for:  the AT&T public domain
- * source for getopt(3).  It is the code which was given out at the 1985
- * UNIFORUM conference in Dallas.  I obtained it by electronic mail
- * directly from AT&T.  The people there assure me that it is indeed
- * in the public domain.
- * 
- * There is no manual page.  That is because the one they gave out at
- * UNIFORUM was slightly different from the current System V Release 2
- * manual page.  The difference apparently involved a note about the
- * famous rules 5 and 6, recommending using white space between an option
- * and its first argument, and not grouping options that have arguments.
- * Getopt itself is currently lenient about both of these things White
- * space is allowed, but not mandatory, and the last option in a group can
- * have an argument.  That particular version of the man page evidently
- * has no official existence, and my source at AT&T did not send a copy.
- * The current SVR2 man page reflects the actual behavor of this getopt.
- * However, I am not about to post a copy of anything licensed by AT&T.
+ *
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
+ *
+ *      This is AT&T public domain source for getopt(3) from the 1985
+ *      UNIFORUM conference in Dallas.
+ *
+ *      DEPRECATED: This file is deprecated in Amiga Python 2.7.18 in favour of vbcc PosixLib
  */
 
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
-/*LINTLIBRARY*/
+/*
+ * Error reporting macro
+ */
 #define ERR(s, c)\
-  if(opterr) { fprintf(stderr, "%s%s%lc\n", argv[0], s, c); }
+  if(opterr) { fprintf(stderr, "%s%s%c\n", argv[0], s, c); }
 
+/* Global variables used by getopt */
 int	opterr = 1;
 int	optind = 1;
 int	optopt;
 char	*optarg;
 
 /*
- * Using the 'const' on the argv below increases code size on SAS/C 6.51 by
- * 24 bytes, even when it should have no effect on the generated code!
+ * Parse command-line options
+ * 
+ * argc - argument count
+ * argv - argument vector
+ * opts - string of valid option characters, colons indicate options with arguments
+ * 
+ * Returns the next option character, EOF when done, or '?' for errors
  */
 int
-getopt(int argc, char * /*const*/ argv[], char const *opts)
+getopt(int argc, char *argv[], const char *opts)
 {
 	static int sp = 1;
 	register int c;
@@ -60,7 +51,7 @@ getopt(int argc, char * /*const*/ argv[], char const *opts)
 			return(EOF);
 		}
 	optopt = c = argv[optind][sp];
-	if(c == ':' || (cp=index(opts, c)) == NULL) {
+	if(c == ':' || (cp=strchr(opts, c)) == NULL) {
 		ERR(": illegal option -- ", c);
 		if(argv[optind][++sp] == '\0') {
 			optind++;
@@ -86,4 +77,4 @@ getopt(int argc, char * /*const*/ argv[], char const *opts)
 		optarg = NULL;
 	}
 	return(c);
-}
+} 

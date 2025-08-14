@@ -2,37 +2,28 @@
 #define Py_PYTHON_H
 /* Since this is a "meta-include" file, no #ifdef __cplusplus / extern "C" { */
 
-
-/* Enable compiler features; switching on C lib defines doesn't work
-   here, because the symbols haven't necessarily been defined yet. */
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE	1
-#endif
-
-/* Forcing SUSv2 compatibility still produces problems on some
-   platforms, True64 and SGI IRIX begin two of them, so for now the
-   define is switched off. */
-#if 0
-#ifndef _XOPEN_SOURCE
-# define _XOPEN_SOURCE	500
-#endif
-#endif
-
 /* Include nearly all Python header files */
 
 #include "patchlevel.h"
-#include "config.h"
+#include "pyconfig.h"
+#include "pymacconfig.h"
 
-#ifdef HAVE_LIMITS_H
+/* Cyclic gc is always enabled, starting with release 2.3a1.  Supply the
+ * old symbol for the benefit of extension modules written before then
+ * that may be conditionalizing on it.  The core doesn't use it anymore.
+ */
+#ifndef WITH_CYCLE_GC
+#define WITH_CYCLE_GC 1
+#endif
+
 #include <limits.h>
+
+#ifndef UCHAR_MAX
+#error "Something's broken.  UCHAR_MAX should be defined in limits.h."
 #endif
 
-/* config.h may or may not define DL_IMPORT */
-#ifndef DL_IMPORT	/* declarations for DLL import/export */
-#define DL_IMPORT(RTYPE) RTYPE
-#endif
-#ifndef DL_EXPORT	/* declarations for DLL import/export */
-#define DL_EXPORT(RTYPE) RTYPE
+#if UCHAR_MAX != 255
+#error "Python's source code assumes C's unsigned char is an 8-bit type."
 #endif
 
 #if defined(__sgi) && defined(WITH_THREAD) && !defined(_SGI_MP_SOURCE)
@@ -45,35 +36,50 @@
 #endif
 
 #include <string.h>
+#ifdef HAVE_ERRNO_H
 #include <errno.h>
-#ifdef HAVE_STDLIB_H
+#endif
 #include <stdlib.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
 #endif
+#ifdef HAVE_CRYPT_H
+#include <crypt.h>
+#endif
+
+/* For size_t? */
+#ifdef HAVE_STDDEF_H
+#include <stddef.h>
+#endif
+
+/* CAUTION:  Build setups should ensure that NDEBUG is defined on the
+ * compiler command line when building Python in release mode; else
+ * assert() calls won't be removed.
+ */
 #include <assert.h>
-#ifdef _AMIGA
-# ifdef HAVE_FCNTL_H
-#  include <fcntl.h>
-# endif
-# if !defined(AMITCP) && !defined(INET225)
-#  include <stat.h>
-typedef unsigned long pid_t;
-# endif
-#endif
-/* Include proper Amiga SAS/C math include files */
-#ifdef __SASC
-#if defined(_IEEE) && !defined(_M68881)
-#include <mieeedoub.h>
-#endif
-#ifdef _FFP
-#include <mffp.h>
-#endif
-#ifdef _M68881
-#include <m68881.h>
-#endif
-#endif
 
 #include "pyport.h"
 
+
+
+/* pyconfig.h or pyport.h may or may not define DL_IMPORT */
+#ifndef DL_IMPORT	/* declarations for DLL import/export */
+#define DL_IMPORT(RTYPE) RTYPE
+#endif
+#ifndef DL_EXPORT	/* declarations for DLL import/export */
+#define DL_EXPORT(RTYPE) RTYPE
+#endif
+
+/* Debug-mode build with pymalloc implies PYMALLOC_DEBUG.
+ *  PYMALLOC_DEBUG is in error if pymalloc is not in use.
+ */
+#if defined(Py_DEBUG) && defined(WITH_PYMALLOC) && !defined(PYMALLOC_DEBUG)
+#define PYMALLOC_DEBUG
+#endif
+#if defined(PYMALLOC_DEBUG) && !defined(WITH_PYMALLOC)
+#error "PYMALLOC_DEBUG requires WITH_PYMALLOC"
+#endif
+#include "pymath.h"
 #include "pymem.h"
 
 #include "object.h"
@@ -83,6 +89,7 @@ typedef unsigned long pid_t;
 
 #include "unicodeobject.h"
 #include "intobject.h"
+#include "boolobject.h"
 #include "longobject.h"
 #include "floatobject.h"
 #ifndef WITHOUT_COMPLEX
@@ -90,43 +97,66 @@ typedef unsigned long pid_t;
 #endif
 #include "rangeobject.h"
 #include "stringobject.h"
+#include "memoryobject.h"
 #include "bufferobject.h"
+#include "bytesobject.h"
+#include "bytearrayobject.h"
 #include "tupleobject.h"
 #include "listobject.h"
 #include "dictobject.h"
+#include "enumobject.h"
+#include "setobject.h"
 #include "methodobject.h"
 #include "moduleobject.h"
 #include "funcobject.h"
 #include "classobject.h"
 #include "fileobject.h"
 #include "cobject.h"
+#include "pycapsule.h"
 #include "traceback.h"
 #include "sliceobject.h"
+#include "cellobject.h"
+#include "iterobject.h"
+#include "genobject.h"
+#include "descrobject.h"
+#include "warnings.h"
+#include "weakrefobject.h"
 
 #include "codecs.h"
 #include "pyerrors.h"
 
 #include "pystate.h"
 
+#include "pyarena.h"
 #include "modsupport.h"
-#include "ceval.h"
 #include "pythonrun.h"
+#include "ceval.h"
 #include "sysmodule.h"
 #include "intrcheck.h"
 #include "import.h"
 
 #include "abstract.h"
 
+#include "compile.h"
+#include "eval.h"
+
+#include "pyctype.h"
+#include "pystrtod.h"
+#include "pystrcmp.h"
+#include "dtoa.h"
+
+/* _Py_Mangle is defined in compile.c */
+PyAPI_FUNC(PyObject*) _Py_Mangle(PyObject *p, PyObject *name);
+
+/* PyArg_GetInt is deprecated and should not be used, use PyArg_Parse(). */
 #define PyArg_GetInt(v, a)	PyArg_Parse((v), "i", (a))
+
+/* PyArg_NoArgs should not be necessary.
+   Set ml_flags in the PyMethodDef to METH_NOARGS. */
 #define PyArg_NoArgs(v)		PyArg_Parse(v, "")
 
-/* Convert a possibly signed character to a nonnegative int */
-/* XXX This assumes characters are 8 bits wide */
-#ifdef __CHAR_UNSIGNED__
-#define Py_CHARMASK(c)		(c)
-#else
-#define Py_CHARMASK(c)		((c) & 0xff)
-#endif
+/* Argument must be a char or an int in [-128, 127] or [0, 255]. */
+#define Py_CHARMASK(c)		((unsigned char)((c) & 0xff))
 
 #include "pyfpe.h"
 
@@ -140,4 +170,14 @@ typedef unsigned long pid_t;
 /* GNU pth user-space thread support */
 #include <pth.h>
 #endif
+
+/* Define macros for inline documentation. */
+#define PyDoc_VAR(name) static char name[]
+#define PyDoc_STRVAR(name,str) PyDoc_VAR(name) = PyDoc_STR(str)
+#ifdef WITH_DOC_STRINGS
+#define PyDoc_STR(str) str
+#else
+#define PyDoc_STR(str) ""
+#endif
+
 #endif /* !Py_PYTHON_H */

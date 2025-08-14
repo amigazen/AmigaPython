@@ -1,5 +1,5 @@
 
-; $VER: CRC32 2.0 (17.10.99) ©1999 Irmen de Jong
+; $VER: CRC32 2.0 (17.10.99) ï¿½1999 Irmen de Jong
 
 ;****************************************************************
 ;*                                                              *
@@ -23,11 +23,7 @@ _CalcCRC32:
 	movem.l	d1/d2/d3/d4/a2,-(sp)
 	move.l	d0,d2		; keep crc in d2
 	lea.l	_crc_table,a2	; crc table in a2
-  IFND M68000
-	tst.l	a0		; buffer == 0?
-  ELSE
-	cmp.l	#0,a0
-  ENDC
+	cmp.l	#0,a0		; buffer == 0?
 	bne.s	.L3
 	moveq.l	#0,d0		; yes --> crc=0
 	bra.w	.exit
@@ -48,52 +44,36 @@ _CalcCRC32:
 	move.b	(a0)+,d0	; fetch data byte 2
 	eor.b	d2,d0
 	lsr.l	#8,d2
-  IFND M68000
-	move.l	(a2,d0.w*4),d0	; crc table lookup
-  ELSE
 	add.w	d0,d0
 	add.w	d0,d0
 	move.l	0(a2,d0.w),d0
-  ENDC
 	eor.l	d0,d2
 
 	moveq.l	#0,d0
 	move.b	(a0)+,d0	; fetch data byte 2
 	eor.b	d2,d0
 	lsr.l	#8,d2
-  IFND M68000
-	move.l	(a2,d0.w*4),d0	; crc table lookup
-  ELSE
 	add.w	d0,d0
 	add.w	d0,d0
 	move.l	0(a2,d0.w),d0
-  ENDC
 	eor.l	d0,d2
 
 	moveq.l	#0,d0
 	move.b	(a0)+,d0	; fetch data byte 3
 	eor.b	d2,d0
 	lsr.l	#8,d2
-  IFND M68000
-	move.l	(a2,d0.w*4),d0	; crc table lookup
-  ELSE
 	add.w	d0,d0
 	add.w	d0,d0
 	move.l	0(a2,d0.w),d0
-  ENDC
 	eor.l	d0,d2
 
 	moveq.l	#0,d0
 	move.b	(a0)+,d0	; fetch data byte 4
 	eor.b	d2,d0
 	lsr.l	#8,d2
-  IFND M68000
-	move.l	(a2,d0.w*4),d0	; crc table lookup
-  ELSE
 	add.w	d0,d0
 	add.w	d0,d0
 	move.l	0(a2,d0.w),d0
-  ENDC
 	eor.l	d0,d2
 
 	subq.l	#4,d1
@@ -111,13 +91,9 @@ _CalcCRC32:
 	move.b	(a0)+,d0	; fetch data byte
 	eor.b	d2,d0
 	lsr.l	#8,d2
-  IFND M68000
-	move.l	(a2,d0.w*4),d0	; crc table lookup
-  ELSE
 	add.w	d0,d0
 	add.w	d0,d0
 	move.l	0(a2,d0.w),d0
-  ENDC
 	eor.l	d0,d2
 	dbra	d1,.restloop	; again if we have more bytes left
 

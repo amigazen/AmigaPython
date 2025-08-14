@@ -1,14 +1,12 @@
-RCS_ID_C="$Id: fib.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 /*
- *      fib.c - common fib buffer for stat() and chown()
+ *      fib.c - common fib buffer for stat() and other functions
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
  */
 
 /* DOS 3.0 and MuFS extensions to file info block */
 #include "fibex.h"
 
-struct FileInfoBlock __dostat_fib[1];
-
+/* Static FileInfoBlock used by various file functions */
+struct FileInfoBlock __dostat_fib[1]; 

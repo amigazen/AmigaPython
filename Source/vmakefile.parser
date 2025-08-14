@@ -1,0 +1,62 @@
+# vmakefile.parser for Python 2.7.18 Parser directory using VBCC
+# Based on the original SMAKEFILE but adapted for VBCC toolchain
+
+# VBCC toolchain
+CC=vc
+VLINK=vlink
+MKDIR=MakeDir ALL
+CONFIG=+aos68k_posix
+CFLAGS=-c -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -stack-check
+
+# Parser objects for Python 2.7.18
+OBJECTS = acceler.o grammar1.o myreadline.o node.o parser.o parsetok.o \
+        tokenizer.o intrcheck.o
+
+# Convert to full paths
+OBJ=$(patsubst %,$(ODIR)/%,$(OBJECTS))
+
+# Default target - just compile all .c files
+all: $(OBJ)
+
+# Generic rule for .c files
+$(ODIR)/%.o: Parser/%.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+# Special rules for specific files
+$(ODIR)/acceler.o: Parser/acceler.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/grammar1.o: Parser/grammar1.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/myreadline.o: Parser/myreadline.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/node.o: Parser/node.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/parser.o: Parser/parser.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/parsetok.o: Parser/parsetok.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/tokenizer.o: Parser/tokenizer.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/intrcheck.o: Parser/intrcheck.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+clean:
+	delete $(ODIR)/*.o
+
+.PHONY: clean 

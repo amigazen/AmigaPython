@@ -1,14 +1,17 @@
+# SMAKEFILE for Python 2.7.18 Python directory
+# Based on Python 2.0 source but updated for 2.7.18
 
 COMPILERSTRING=*" [SAS/C 6.x]*"
 
-
+# Core Python objects for 2.7.18
 OBJECTS = modsupport.o pythonrun.o errors.o bltinmodule.o \
 	ceval.o compile.o frozen.o getargs.o \
 	getcompiler.o getcopyright.o getmtime.o \
 	getversion.o getplatform.o graminit.o import.o \
 	importdl.o marshal.o structmember.o sysmodule.o \
-	traceback.o sigcheck.o hypot.o mystrtoul.o pystate.o \
-	codecs.o dynload_stub.o exceptions.o
+	traceback.o sigcheck.o pystate.o \
+	codecs.o dynload_stub.o exceptions.o \
+	ast.o asdl.o _warnings.o
 
 Python.lib: $(OBJECTS)
 	-delete >NIL: Python.lib
@@ -16,66 +19,64 @@ Python.lib: $(OBJECTS)
 $(OBJECTS)
 <
 
+# Dependencies
+bltinmodule.o : bltinmodule.c ../Include/eval.h ../Include/compile.h ../Include/node.h ../Include/Python.h
 
-# sigcheck.o: sigcheck.c
-#	SC sigcheck.c $(COPTS) NOOPTINLINE
-#
-
-bltinmodule.o : bltinmodule.c /include/eval.h /include/compile.h /include/node.h /include/Python.h
-
-ceval.o : ceval.c /include/pythread.h /include/opcode.h /include/eval.h /include/frameobject.h /include/compile.h /include/Python.h
+ceval.o : ceval.c ../Include/pythread.h ../Include/opcode.h ../Include/eval.h ../Include/frameobject.h ../Include/compile.h ../Include/Python.h
 	SC ceval.c NOOPTGLOBAL
 
-compile.o : compile.c /include/structmember.h /include/opcode.h /include/compile.h /include/graminit.h /include/token.h /include/node.h /include/Python.h
+compile.o : compile.c ../Include/structmember.h ../Include/opcode.h ../Include/compile.h ../Include/graminit.h ../Include/token.h ../Include/node.h ../Include/Python.h
 
-errors.o : errors.c /include/Python.h
+errors.o : errors.c ../Include/Python.h
 
-fmod.o : fmod.c  /include/config.h
+frozen.o : frozen.c ../Include/Python.h
 
-frozen.o : frozen.c /include/Python.h
+getargs.o : getargs.c ../Include/Python.h
 
-getargs.o : getargs.c /include/Python.h
-
-getcompiler.o : getcompiler.c /include/Python.h
+getcompiler.o : getcompiler.c ../Include/Python.h
 	sc getcompiler.c DEFINE "COMPILER=$(COMPILERSTRING)"
 
-getcopyright.o : getcopyright.c /include/Python.h
+getcopyright.o : getcopyright.c ../Include/Python.h
 
-getmtime.o : getmtime.c  /include/config.h
+getmtime.o : getmtime.c ../Include/config.h
 
 getplatform.o : getplatform.c 
 	sc getplatform.c DEFINE=PLATFORM="amiga"
 
-getversion.o : getversion.c /include/patchlevel.h /include/Python.h
+getversion.o : getversion.c ../Include/patchlevel.h ../Include/Python.h
 
-graminit.o : graminit.c /include/grammar.h /include/pgenheaders.h
+graminit.o : graminit.c ../Include/grammar.h ../Include/pgenheaders.h
 
-hypot.o : hypot.c   /include/config.h
+import.o : import.c importdl.h ../Include/osdefs.h ../Include/eval.h ../Include/compile.h ../Include/marshal.h ../Include/errcode.h ../Include/token.h ../Include/node.h ../Include/Python.h
 
-import.o : import.c importdl.h /include/osdefs.h /include/eval.h /include/compile.h /include/marshal.h /include/errcode.h /include/token.h /include/node.h /include/Python.h
+importdl.o : importdl.c importdl.h ../Include/osdefs.h ../Include/Python.h
 
-importdl.o : importdl.c importdl.h /include/osdefs.h /include/Python.h
+marshal.o : marshal.c ../Include/marshal.h ../Include/compile.h ../Include/longintrepr.h ../Include/Python.h
 
-marshal.o : marshal.c /include/marshal.h /include/compile.h /include/longintrepr.h /include/Python.h
+modsupport.o : modsupport.c ../Include/Python.h
 
-modsupport.o : modsupport.c /include/Python.h
+pystate.o : pystate.c ../Include/Python.h
 
-mystrtoul.o : mystrtoul.c 
+pythonrun.o : pythonrun.c ../Include/pythread.h ../Include/marshal.h ../Include/eval.h ../Include/compile.h ../Include/errcode.h ../Include/parsetok.h ../Include/node.h ../Include/grammar.h ../Include/Python.h
 
-pyfpe.o : pyfpe.c /include/pyfpe.h /include/config.h
+sigcheck.o : sigcheck.c ../Include/Python.h
 
-pystate.o : pystate.c /include/Python.h
+structmember.o : structmember.c ../Include/structmember.h ../Include/Python.h
 
-pythonrun.o : pythonrun.c /include/pythread.h /include/marshal.h /include/eval.h /include/compile.h /include/errcode.h /include/parsetok.h /include/node.h /include/grammar.h /include/Python.h
+sysmodule.o : sysmodule.c ../Include/osdefs.h ../Include/Python.h
 
-sigcheck.o : sigcheck.c /include/Python.h
-
-structmember.o : structmember.c /include/structmember.h /include/Python.h
-
-sysmodule.o : sysmodule.c /include/osdefs.h /include/Python.h
-
-traceback.o : traceback.c /include/osdefs.h /include/structmember.h /include/frameobject.h /include/compile.h /include/Python.h
+traceback.o : traceback.c ../Include/osdefs.h ../Include/structmember.h ../Include/frameobject.h ../Include/compile.h ../Include/Python.h
 
 codecs.o : codecs.c
 
 dynload_stub.o: dynload_stub.c
+
+exceptions.o : exceptions.c ../Include/Python.h
+
+ast.o : ast.c ../Include/Python.h
+
+asdl.o : asdl.c ../Include/Python.h
+
+_warnings.o : _warnings.c ../Include/Python.h
+
+# --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS PRECEDE --- 

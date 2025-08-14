@@ -1,0 +1,24 @@
+# AmigaOS module configuration
+
+# Core Amiga components
+amiga amiga/amigamodule.c
+amigapath amiga/amigapathmodule.c
+
+# Network modules when compiled with AMITCP/Genesis
+socket socketmodule.c
+
+# Standard modules that should work on Amiga
+array arraymodule.c
+math mathmodule.c
+time timemodule.c
+select selectmodule.c
+binascii binascii.c
+_codecs _codecsmodule.c
+cStringIO cStringIO.c
+cPickle cPickle.c
+errno errnomodule.c
+posix posixmodule.c
+operator operator.c
+_weakref _weakref.c
+_struct _struct.c
+zlib zlibmodule.c -lz 

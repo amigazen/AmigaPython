@@ -6,7 +6,7 @@ extern "C" {
 
 /* The unique ellipsis object "..." */
 
-extern DL_IMPORT(PyObject) _Py_EllipsisObject; /* Don't use this directly */
+PyAPI_DATA(PyObject) _Py_EllipsisObject; /* Don't use this directly */
 
 #define Py_Ellipsis (&_Py_EllipsisObject)
 
@@ -16,22 +16,33 @@ extern DL_IMPORT(PyObject) _Py_EllipsisObject; /* Don't use this directly */
 
 A slice object containing start, stop, and step data members (the
 names are from range).  After much talk with Guido, it was decided to
-let these be any arbitrary python type. 
+let these be any arbitrary python type.  Py_None stands for omitted values.
 */
 
 typedef struct {
     PyObject_HEAD
-    PyObject *start, *stop, *step;
+    PyObject *start, *stop, *step;	/* not NULL */
 } PySliceObject;
 
-extern DL_IMPORT(PyTypeObject) PySlice_Type;
+PyAPI_DATA(PyTypeObject) PySlice_Type;
+PyAPI_DATA(PyTypeObject) PyEllipsis_Type;
 
-#define PySlice_Check(op) ((op)->ob_type == &PySlice_Type)
+#define PySlice_Check(op) (Py_TYPE(op) == &PySlice_Type)
 
-DL_IMPORT(PyObject *) PySlice_New(PyObject* start, PyObject* stop,
+PyAPI_FUNC(PyObject *) PySlice_New(PyObject* start, PyObject* stop,
                                   PyObject* step);
-DL_IMPORT(int) PySlice_GetIndices(PySliceObject *r, int length,
-                                  int *start, int *stop, int *step);
+PyAPI_FUNC(PyObject *) _PySlice_FromIndices(Py_ssize_t start, Py_ssize_t stop);
+PyAPI_FUNC(int) PySlice_GetIndices(PySliceObject *r, Py_ssize_t length,
+                                  Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step);
+PyAPI_FUNC(int) PySlice_GetIndicesEx(PySliceObject *r, Py_ssize_t length,
+				    Py_ssize_t *start, Py_ssize_t *stop, 
+				    Py_ssize_t *step, Py_ssize_t *slicelength);
+
+PyAPI_FUNC(int) _PySlice_Unpack(PyObject *slice,
+                                Py_ssize_t *start, Py_ssize_t *stop, Py_ssize_t *step);
+PyAPI_FUNC(Py_ssize_t) _PySlice_AdjustIndices(Py_ssize_t length,
+                                              Py_ssize_t *start, Py_ssize_t *stop,
+                                              Py_ssize_t step);
 
 #ifdef __cplusplus
 }

@@ -1,10 +1,8 @@
-RCS_ID_C="$Id: _chkufb.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 /*
- *      _chkufb.c - return struct ufb * from a file handle (SAS/C)
+ *      _chkufb.c - return struct ufb * from a file handle
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
  */
 
 #include <ios1.h>
@@ -24,39 +22,23 @@ extern int (*__closefunc)(int);
 long ASM fdCallback(REG(d0) int fd, REG(d1) int action);
 
 /*
- * The initializator priority is just above the standard I/O, so that this
- * will be called after the standard I/O is initialized
+ * Actually this doesn't work with Python 2.7.
+ * You must call it after the interpreter has been initialised.
  */
-//long __stdargs
-//_STI_510_install_AmiTCP_callback(void)
-//CONSTRUCTOR_P(install_AmiTCP_callback,510)
-
-/*
-* Actually this doesn't work with Python 1.5.
-* You must call it after the interpreter has been initialised.
-*/
 long _install_AmiTCP_callback(void)
 {
-  /* needs bsdsocket.library -- I.J. */
+  /* needs bsdsocket.library */
   if(checksocketlib())
   {
-	if (SocketBaseTags(SBTM_SETVAL(SBTC_FDCALLBACK), &fdCallback, TAG_END)) {
-	syslog(LOG_ERR, "Cannot install fdCallback!");
-
-	return 1;
-/****
-#if __VERSION__ > 6 || __REVISION__ > 3
-	return 1;
-#else
-	exit(20);
-#endif
-****/
-	}
+    if (SocketBaseTags(SBTM_SETVAL(SBTC_FDCALLBACK), &fdCallback, TAG_END)) {
+      syslog(LOG_ERR, "Cannot install fdCallback!");
+      return 1;
+    }
   }
   else
-	{
-		PyErr_Clear();             /* don't report error if socketlib not found */
-	}
+  {
+    PyErr_Clear();             /* don't report error if socketlib not found */
+  }
 
   /*
    * Set up __closefunc (which is used at stdio cleanup)
@@ -83,49 +65,49 @@ fdCallback(REG(d0) int fd, REG(d1) int action)
 
   switch (action) {
   case FDCB_FREE:
-	ufb = __chkufb(fd);
-	if (ufb == NULL)
-	  return EBADF;
+    ufb = __chkufb(fd);
+    if (ufb == NULL)
+      return EBADF;
 
-	if (!(ufb->ufbflg & UFB_SOCK) && ufb->ufbflg != 0) {
+    if (!(ufb->ufbflg & UFB_SOCK) && ufb->ufbflg != 0) {
 #ifdef DEBUG
-	  syslog(LOG_ERR, "fdCallback: fd (%d) is not a socket!", fd);
+      syslog(LOG_ERR, "fdCallback: fd (%d) is not a socket!", fd);
 #endif
-	  return ENOTSOCK;
-	}
+      return ENOTSOCK;
+    }
 
-	ufb->ufbflg = 0;
-	return 0;
+    ufb->ufbflg = 0;
+    return 0;
 
   case FDCB_ALLOC:
-	do {
-	  ufb = __allocufb(&fd2);
-	  if (ufb == NULL)
-	return ENOMEM;
+    do {
+      ufb = __allocufb(&fd2);
+      if (ufb == NULL)
+        return ENOMEM;
 #ifdef DEBUG
-	  if (fd2 > fd) {
-	syslog(LOG_ERR, "fdCallback: fd2(%d) > fd(%d)!", fd2, fd);
-	return EINVAL;
-	  }
+      if (fd2 > fd) {
+        syslog(LOG_ERR, "fdCallback: fd2(%d) > fd(%d)!", fd2, fd);
+        return EINVAL;
+      }
 #endif
-	  ufb->ufbflg = UFB_SOCK | UFB_WA | UFB_RA; /* read/write socket */
-	  ufb->ufbfh = NULL; /* no file handle */
-	  ufb->ufbfn = NULL; /* no name */
-	} while (fd2 < fd);
-	return 0;
+      ufb->ufbflg = UFB_SOCK | UFB_WA | UFB_RA; /* read/write socket */
+      ufb->ufbfh = NULL; /* no file handle */
+      ufb->ufbfn = NULL; /* no name */
+    } while (fd2 < fd);
+    return 0;
 
   case FDCB_CHECK:
-	ufb = __chkufb(fd);
-	if (ufb != NULL && ufb->ufbflg != 0) 
-	  return EBADF;
-	
-	return 0;
+    ufb = __chkufb(fd);
+    if (ufb != NULL && ufb->ufbflg != 0) 
+      return EBADF;
+    
+    return 0;
 
   default:
 #ifdef DEBUG
-	syslog(LOG_ERR, "fdCallback: invalid action.");
+    syslog(LOG_ERR, "fdCallback: invalid action.");
 #endif
-	return EINVAL;
+    return EINVAL;
   }
 }
 
@@ -142,29 +124,29 @@ __chkufb(int fd)
   _OSERR = 0;
 
   if ((unsigned int)fd >= __nufbs) { /* unsigned cast checks for (fd < 0) */
-	errno = EBADF;
-	return NULL;
+    errno = EBADF;
+    return NULL;
   }
 
   /*
    * Check the cache first
    */
   if (fd == last_fd)
-	return last_ufb;
+    return last_ufb;
 
   last_fd = fd; /* update cache */
   ufb = __ufbs;
   while (fd > 0 && ufb != NULL) {
-	fd--;
-	ufb = ufb->ufbnxt;
+    fd--;
+    ufb = ufb->ufbnxt;
   }
   last_ufb = ufb; /* update cache */
   
   if (ufb == NULL) {
-	last_fd = -1; /* invalidate cache */
-	errno = EIO;
-	return NULL;
+    last_fd = -1; /* invalidate cache */
+    errno = EIO;
+    return NULL;
   }
   else
-	return ufb;
-}
+    return ufb;
+} 

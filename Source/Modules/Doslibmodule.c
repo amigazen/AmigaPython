@@ -1,10 +1,10 @@
 
-/********************************************************************
+/*
 
 	Lowlevel Amiga dos.library module.
 
 -----------------------------------------------
-	©Irmen de Jong.
+	ï¿½Irmen de Jong.
 
 	History:
 
@@ -43,8 +43,12 @@ Module members:
 	time2DS     -- convert time() value to DateStamp tuple (see time module)
 
 
-**************************************************************************/
+*/
 
+/* Define DEVICES_TIMER_H to prevent timer.h conflicts with Amiga headers */
+#define DEVICES_TIMER_H
+
+#pragma amiga-align
 #include <stdlib.h>
 #include <exec/types.h>
 #include <exec/memory.h>
@@ -53,11 +57,18 @@ Module members:
 #include <dos/rdargs.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
+#pragma default-align
 #include "Python.h"
 
+static PyObject *error;    /* Exception */
 
-static PyObject *error;    // Exception
-
+/* Simple stpblk replacement - strip leading whitespace */
+static char *stpblk(char *s)
+{
+	while (*s == ' ' || *s == '\t' || *s == '\n' || *s == '\r')
+		s++;
+	return s;
+}
 
 /* Convenience; sets error with IoError() string, return NULL */
 /* If ok, return Py_NONE */
@@ -76,14 +87,13 @@ static PyObject *check_ok(BOOL ok)
 }
 
 
-/************** MODULE FUNCTIONS *******************/
 
 static PyObject *
 Doslib_ReadArgs(PyObject *self, PyObject *arg)
 {
 	char *template;
 	char *args;
-	PyObject *types;        // the keywords & their types (tuple of tuples)
+	PyObject *types;        /* the keywords & their types (tuple of tuples) */
 
 	PyObject *result=NULL;
 
@@ -118,10 +128,11 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 			SetIoErr(ERROR_TOO_MANY_ARGS);
 			return check_ok(FALSE);
 		}
-		return PyDict_New();        // empty result dictionary
+		return PyDict_New();        /* empty result dictionary */
 	}
 
-	if(argarray=calloc(sizeof(LONG),num_args))
+	argarray = calloc(sizeof(LONG),num_args);
+	if(argarray)
 	{
 		struct RDArgs *rdargs;
 		int arglen=strlen(args);
@@ -131,7 +142,7 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 			char *t = malloc(arglen+2);
 			if(t)
 			{
-				strcpy(t,args); t[arglen++]='\n'; t[arglen]=0;  // add \n !!!
+				strcpy(t,args); t[arglen++]='\n'; t[arglen]=0;  /* add \n !!! */
 				args=t; free_args=TRUE;
 			}
 			else
@@ -141,13 +152,14 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 			}
 		}
 
-		if(rdargs = AllocDosObject(DOS_RDARGS, NULL))
+		rdargs = AllocDosObject(DOS_RDARGS, NULL);
+		if(rdargs)
 		{
 			rdargs->RDA_Flags = RDAF_NOPROMPT;
 			rdargs->RDA_Source.CS_Buffer = args;
 			rdargs->RDA_Source.CS_Length = arglen;
 			rdargs->RDA_Source.CS_CurChr = 0;
-			rdargs->RDA_DAList = NULL;
+			rdargs->RDA_DAList = 0;
 			rdargs->RDA_Buffer = NULL;
 
 			if( !ReadArgs(template, argarray, rdargs) )
@@ -156,7 +168,8 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 			}
 			else
 			{
-				if(result=PyDict_New())
+				result = PyDict_New();
+				if(result)
 				{
 					/************
 					Traverse the types tuple and for each argument,
@@ -195,17 +208,19 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 						}
 
 						switch (type_c[0]) {
-						case 'S':       // boolean switch
-							if(val=PyInt_FromLong(argarray[cnt]))
+						case 'S':       /* boolean switch */
+							val = PyInt_FromLong(argarray[cnt]);
+						if(val)
 							{
 								result_ok=(0==PyDict_SetItem(result,keyword,val));
 								Py_DECREF(val);
 							}
 							break;
-						case 'N':       // number
+						case 'N':       /* number */
 							if(argarray[cnt])
 							{
-								if(val=PyInt_FromLong(*(LONG*)argarray[cnt]))
+								val = PyInt_FromLong(*(LONG*)argarray[cnt]);
+							if(val)
 								{
 									result_ok=(0==PyDict_SetItem(result,keyword,val));
 									Py_DECREF(val);
@@ -213,10 +228,11 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 							}
 							else result_ok=(0==PyDict_SetItem(result,keyword,Py_None));
 							break;
-						case 'X':       // string
+						case 'X':       /* string */
 							if(argarray[cnt])
 							{
-								if(val=PyString_FromString((STRPTR)argarray[cnt]))
+								val = PyString_FromString((STRPTR)argarray[cnt]);
+							if(val)
 								{
 									result_ok=(0==PyDict_SetItem(result,keyword,val));
 									Py_DECREF(val);
@@ -224,9 +240,10 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 							}
 							else result_ok=(0==PyDict_SetItem(result,keyword,Py_None));
 							break;
-						case 'A':       // array of strings
-						case 'I':       // array of numbers
-							if(val=PyList_New(0))
+						case 'A':       /* array of strings */
+						case 'I':       /* array of numbers */
+							val = PyList_New(0);
+							if(val)
 							{
 								if(argarray[cnt])
 								{
@@ -237,7 +254,8 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 										/* build the string list */
 										while(*str)
 										{
-											if(so=PyString_FromString(*str))
+											so = PyString_FromString(*str);
+											if(so)
 											{
 												if(!(result_ok=(0==PyList_Append(val,so))))
 													break;
@@ -254,7 +272,8 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 										/* build the integer list */
 										while(*ia)
 										{
-											if(io=PyInt_FromLong(**ia))
+											io = PyInt_FromLong(**ia);
+											if(io)
 											{
 												if(!(result_ok=(0==PyList_Append(val,io))))
 													break;
@@ -268,7 +287,7 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 								}
 								else
 								{
-									// insert the empty list.
+									/* insert the empty list. */
 									result_ok=(0==PyDict_SetItem(result,keyword,val));
 								}
 								Py_DECREF(val);
@@ -302,79 +321,92 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 }
 
 
+/* Helper function to process a single signal item */
+static int process_signal_item(PyObject *item, struct {
+	PyObject *ob;
+	ULONG sigmask;
+} *objs, int *listsize, ULONG *signal)
+{
+	PyObject *attr;
+	ULONG s;
+
+	if(PyInt_Check(item))
+	{
+		s = PyInt_AsLong(item);
+		objs[*listsize].ob = NULL;
+		objs[*listsize].sigmask = s;
+		(*listsize)++;
+		*signal |= s;
+		return 1;
+	}
+	
+	attr = PyObject_GetAttrString(item,"signal");
+	if(attr)
+	{
+		s = PyInt_AsLong(attr);
+		if((s==-1) && PyErr_Occurred())
+		{
+			Py_DECREF(attr);
+			return 0;
+		}
+		
+		*signal |= s;
+		objs[*listsize].ob = item;
+		objs[*listsize].sigmask = s;
+		(*listsize)++;
+		return 1;
+	}
+	
+	return 0;
+}
+
 static PyObject *
 CheckOrWaitSignal(PyObject *self, PyObject *arg, BOOL doWait)
 {
 	struct {
-		PyObject *ob;       // the object, NULL means: only sigmask value
+		PyObject *ob;       /* the object, NULL means: only sigmask value */
 		ULONG sigmask;
 	} objs[32];
 	int i,listsize = 0;
 	PyObject *argo, *result;
-	ULONG signal;
+	ULONG signal = 0;
 
 	if(!PyArg_ParseTuple(arg,"O",&argo)) return NULL;
 
+	/* Handle integer argument */
 	if(PyInt_Check(argo))
 	{
-		/* 1 int arg */
-		signal=PyInt_AsLong(argo);
-		objs[0].ob=NULL;
-		objs[0].sigmask=signal;
-		listsize++;
+		signal = PyInt_AsLong(argo);
+		objs[0].ob = NULL;
+		objs[0].sigmask = signal;
+		listsize = 1;
 	}
+	/* Handle list argument */
 	else if(PyList_Check(argo))
 	{
-		/* 1 list arg */
-		int len=PyList_Size(argo);
-
+		int len = PyList_Size(argo);
 		if(len==0 || len>32)
 		{
 			PyErr_SetString(PyExc_ValueError,"list size must be 1..32");
 			return NULL;
 		}
 
-		signal = 0;
-
 		for(i=0;i<len;i++)
 		{
-			PyObject *attr;
 			PyObject *item = PyList_GetItem(argo,i);
-			ULONG s;
-
-			if(PyInt_Check(item))
+			if(!process_signal_item(item, objs, &listsize, &signal))
 			{
-				s = PyInt_AsLong(item);
-				objs[listsize].ob = NULL;
-				objs[listsize++].sigmask=s;
-				signal |= s;
+				return (PyObject*)PyErr_BadArgument();
 			}
-			else if(attr = PyObject_GetAttrString(item,"signal"))
-			{
-				ULONG s = PyInt_AsLong(attr);
-
-				if((s==-1) && PyErr_Occurred())
-				{
-					Py_DECREF(attr);
-					return NULL;
-				}
-				
-				signal |= s;
-				objs[listsize].ob=item;
-				objs[listsize++].sigmask=s;
-			}
-			else return (PyObject*)PyErr_BadArgument();
 		}
 	}
+	/* Handle object with signal attribute */
 	else
 	{
-		/* other, try signal attribute */
-		PyObject *attr;
-		if(attr=PyObject_GetAttrString(argo,"signal"))
+		PyObject *attr = PyObject_GetAttrString(argo,"signal");
+		if(attr)
 		{
-			/* Found! */
 			signal = PyInt_AsLong(attr);
-
 			if((signal==-1) && PyErr_Occurred())
 			{
 				Py_DECREF(attr);
@@ -383,17 +415,23 @@ CheckOrWaitSignal(PyObject *self, PyObject *arg, BOOL doWait)
 
 			objs[0].ob = attr;
 			objs[0].sigmask = signal;
-			listsize++;
+			listsize = 1;
 		}
-		else return NULL;
+		else 
+		{
+			return NULL;
+		}
 	}
 	
+	/* Wait or check for signals */
 	if(doWait)
 		signal = Wait(signal);
 	else
 		signal = CheckSignal(signal);
 
-	if(result=PyList_New(0))
+	/* Build result list */
+	result = PyList_New(0);
+	if(result)
 	{
 		PyObject *tup;
 
@@ -432,7 +470,7 @@ Doslib_CheckSignal(PyObject *self, PyObject *arg)
 static PyObject *
 Doslib_DateToStr(PyObject *self, PyObject *arg)
 {
-	// (datestamp[,format=FORMAT_DOS,flags=0]) -> string
+	/* (datestamp[,format=FORMAT_DOS,flags=0]) -> string */
 
 	struct DateTime dt;
 	PyObject *ds_t;
@@ -458,7 +496,7 @@ Doslib_DateToStr(PyObject *self, PyObject *arg)
 static PyObject *
 Doslib_StrToDate(PyObject *self, PyObject *arg)
 {
-	// (datestring[,timestring,format=FORMAT_DOS,flags=0]) -> datestamp
+	/* (datestring[,timestring,format=FORMAT_DOS,flags=0]) -> datestamp */
 
 	struct DateTime dt;
 	
@@ -478,7 +516,7 @@ Doslib_StrToDate(PyObject *self, PyObject *arg)
 }
 
 static PyObject *
-Doslib_CompareDates(PyObject *self, PyObject *arg)      // (ds1, ds2) -> <0,0,>0
+Doslib_CompareDates(PyObject *self, PyObject *arg)      /* (ds1, ds2) -> <0,0,>0 */
 {
 	PyObject *ds_t1, *ds_t2;
 	struct DateStamp ds1,ds2;
@@ -493,7 +531,7 @@ Doslib_CompareDates(PyObject *self, PyObject *arg)      // (ds1, ds2) -> <0,0,>0
 }
 
 static PyObject *
-Doslib_DateStamp(PyObject *self, PyObject *arg)     // () -> datestamp
+Doslib_DateStamp(PyObject *self, PyObject *arg)     /* () -> datestamp */
 {
 	struct DateStamp ds;
 	if(!PyArg_NoArgs(arg)) return NULL;
@@ -503,16 +541,18 @@ Doslib_DateStamp(PyObject *self, PyObject *arg)     // () -> datestamp
 }
 
 static PyObject *
-Doslib_Info(PyObject *self, PyObject *arg)     // (name) -> infoblock
+Doslib_Info(PyObject *self, PyObject *arg)     /* (name) -> infoblock */
 {
 	struct InfoData *_id;
 	char *name;
 
 	if(!PyArg_ParseTuple(arg,"s",&name)) return NULL;
-	if(_id=AllocVec(sizeof(struct InfoData),MEMF_PUBLIC))
+	_id = AllocVec(sizeof(struct InfoData),MEMF_PUBLIC);
+	if(_id)
 	{
 		BPTR lock;
-		if(lock=Lock(name, SHARED_LOCK))
+		lock = Lock(name, SHARED_LOCK);
+		if(lock)
 		{
 			if(Info(lock,_id))
 			{
@@ -541,7 +581,7 @@ Doslib_Info(PyObject *self, PyObject *arg)     // (name) -> infoblock
 }
 
 static PyObject *
-Doslib_Fault(PyObject *self, PyObject *arg)         // (errnum[, header]) -> string
+Doslib_Fault(PyObject *self, PyObject *arg)         /* (errnum[, header]) -> string */
 {
 	int errnum;
 	char *header=NULL;
@@ -553,12 +593,13 @@ Doslib_Fault(PyObject *self, PyObject *arg)         // (errnum[, header]) -> str
 }
 
 static PyObject *
-Doslib_GetProgramDir(PyObject *self, PyObject *arg) // () -> string
+Doslib_GetProgramDir(PyObject *self, PyObject *arg) /* () -> string */
 {
 	BPTR lock;
 	if(!PyArg_NoArgs(arg)) return NULL;
 	
-	if(lock=GetProgramDir())
+	lock = GetProgramDir();
+	if(lock)
 	{
 		char name[256];
 		if(NameFromLock(lock, name, 256))
@@ -571,7 +612,7 @@ Doslib_GetProgramDir(PyObject *self, PyObject *arg) // () -> string
 }
 
 static PyObject *
-Doslib_GetProgramName(PyObject *self, PyObject *arg) // () -> string
+Doslib_GetProgramName(PyObject *self, PyObject *arg) /* () -> string */
 {
 	char name[256];
 	if(!PyArg_NoArgs(arg)) return NULL;
@@ -584,14 +625,14 @@ Doslib_GetProgramName(PyObject *self, PyObject *arg) // () -> string
 }
 
 static PyObject *
-Doslib_IoErr(PyObject *self, PyObject *arg)         // () -> int
+Doslib_IoErr(PyObject *self, PyObject *arg)         /* () -> int */
 {
 	if(!PyArg_NoArgs(arg)) return NULL;
 	return PyInt_FromLong(IoErr());
 }
 
 static PyObject *
-Doslib_Inhibit(PyObject *self, PyObject *arg) // (drive [,switch]) -> bool
+Doslib_Inhibit(PyObject *self, PyObject *arg) /* (drive [,switch]) -> bool */
 {
 	char *name;
 	int swtch=1;
@@ -602,7 +643,7 @@ Doslib_Inhibit(PyObject *self, PyObject *arg) // (drive [,switch]) -> bool
 }
 
 static PyObject *
-Doslib_SetIoErr(PyObject *self, PyObject *arg)      // (int) -> int
+Doslib_SetIoErr(PyObject *self, PyObject *arg)      /* (int) -> int */
 {
 	int errnum;
 
@@ -611,7 +652,7 @@ Doslib_SetIoErr(PyObject *self, PyObject *arg)      // (int) -> int
 }
 
 static PyObject *
-Doslib_IsFileSystem(PyObject *self, PyObject *arg)      // (string) -> bool
+Doslib_IsFileSystem(PyObject *self, PyObject *arg)      /* (string) -> bool */
 {
 	char *name;
 
@@ -620,7 +661,7 @@ Doslib_IsFileSystem(PyObject *self, PyObject *arg)      // (string) -> bool
 }
 
 static PyObject *
-Doslib_Relabel(PyObject *self, PyObject *arg)   // (oldvolname, newvolname)
+Doslib_Relabel(PyObject *self, PyObject *arg)   /* (oldvolname, newvolname) */
 {
 	char *old, *new;
 
@@ -639,7 +680,7 @@ Doslib_Relabel(PyObject *self, PyObject *arg)   // (oldvolname, newvolname)
 }
 
 static PyObject *
-Doslib_SetProtection(PyObject *self, PyObject *arg) // (file,protbits) -> bool
+Doslib_SetProtection(PyObject *self, PyObject *arg) /* (file,protbits) -> bool */
 {
 	char *name;
 	int pb;
@@ -650,7 +691,7 @@ Doslib_SetProtection(PyObject *self, PyObject *arg) // (file,protbits) -> bool
 }
 
 static PyObject *
-Doslib_SetFileDate(PyObject *self, PyObject *arg) // (file,datestamp) -> bool
+Doslib_SetFileDate(PyObject *self, PyObject *arg) /* (file,datestamp) -> bool */
 {
 	struct DateStamp ds;
 	PyObject *ds_t;
@@ -665,14 +706,15 @@ Doslib_SetFileDate(PyObject *self, PyObject *arg) // (file,datestamp) -> bool
 }
 
 static PyObject *
-Doslib_Examine(PyObject *self, PyObject *arg)       // (filename) -> fib structure
+Doslib_Examine(PyObject *self, PyObject *arg)       /* (filename) -> fib structure */
 {
 	char *name;
 	BPTR lock;
-	struct FileInfoBlock __aligned fib;
+	struct FileInfoBlock fib;  /* long-word aligned! */
 
 	if(!PyArg_ParseTuple(arg,"s",&name)) return NULL;
-	if(lock=Lock(name,ACCESS_READ))
+	lock = Lock(name,ACCESS_READ);
+	if(lock)
 	{
 		if(Examine(lock,&fib))
 		{
@@ -709,7 +751,7 @@ Doslib_Examine(PyObject *self, PyObject *arg)       // (filename) -> fib structu
 }
 
 static PyObject *
-Doslib_SetComment(PyObject *self, PyObject *args)	// (file,comment) -> bool
+Doslib_SetComment(PyObject *self, PyObject *args)	/* (file,comment) -> bool */
 {
 	char *path, *note;
 
@@ -718,7 +760,7 @@ Doslib_SetComment(PyObject *self, PyObject *args)	// (file,comment) -> bool
 }
 
 static PyObject *
-Doslib_SetOwner(PyObject *self, PyObject *args)		// (file, uid, gid) -> bool
+Doslib_SetOwner(PyObject *self, PyObject *args)		/* (file, uid, gid) -> bool */
 {
 	char *file;
 	int uid, gid;
@@ -898,7 +940,7 @@ initDoslib Py_PROTO((void))
 {
 	PyObject *m, *d;
 
-	m = Py_InitModule("Doslib", Doslib_global_methods);
+	m = Py_InitModule3("Doslib", Doslib_global_methods, "Lowlevel Amiga dos.library module.");
 	d = PyModule_GetDict(m);
 
 	/* Initialize error exception */

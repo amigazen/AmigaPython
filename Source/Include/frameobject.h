@@ -14,73 +14,74 @@ typedef struct {
 } PyTryBlock;
 
 typedef struct _frame {
-    PyObject_HEAD
+    PyObject_VAR_HEAD
     struct _frame *f_back;	/* previous frame, or NULL */
     PyCodeObject *f_code;	/* code segment */
     PyObject *f_builtins;	/* builtin symbol table (PyDictObject) */
     PyObject *f_globals;	/* global symbol table (PyDictObject) */
-    PyObject *f_locals;		/* local symbol table (PyDictObject) */
+    PyObject *f_locals;		/* local symbol table (any mapping) */
     PyObject **f_valuestack;	/* points after the last local */
+    /* Next free slot in f_valuestack.  Frame creation sets to f_valuestack.
+       Frame evaluation usually NULLs it, but a frame that yields sets it
+       to the current stack top. */
+    PyObject **f_stacktop;
     PyObject *f_trace;		/* Trace function */
+
+    /* If an exception is raised in this frame, the next three are used to
+     * record the exception info (if any) originally in the thread state.  See
+     * comments before set_exc_info() -- it's not obvious.
+     * Invariant:  if _type is NULL, then so are _value and _traceback.
+     * Desired invariant:  all three are NULL, or all three are non-NULL.  That
+     * one isn't currently true, but "should be".
+     */
     PyObject *f_exc_type, *f_exc_value, *f_exc_traceback;
+
     PyThreadState *f_tstate;
     int f_lasti;		/* Last instruction if called */
+    /* Call PyFrame_GetLineNumber() instead of reading this field
+       directly.  As of 2.3 f_lineno is only valid when tracing is
+       active (i.e. when f_trace is set).  At other times we use
+       PyCode_Addr2Line to calculate the line from the current
+       bytecode index. */
     int f_lineno;		/* Current line number */
-    int f_restricted;		/* Flag set if restricted operations
-				   in this scope */
     int f_iblock;		/* index in f_blockstack */
     PyTryBlock f_blockstack[CO_MAXBLOCKS]; /* for try and loop blocks */
-    int f_nlocals;		/* number of locals */
-    int f_stacksize;		/* size of value stack */
     PyObject *f_localsplus[1];	/* locals+stack, dynamically sized */
 } PyFrameObject;
 
 
 /* Standard object interface */
 
-extern DL_IMPORT(PyTypeObject) PyFrame_Type;
+PyAPI_DATA(PyTypeObject) PyFrame_Type;
 
-#define PyFrame_Check(op) ((op)->ob_type == &PyFrame_Type)
+#define PyFrame_Check(op) (Py_TYPE(op) == &PyFrame_Type)
+#define PyFrame_IsRestricted(f) \
+	((f)->f_tstate && (f)->f_builtins != (f)->f_tstate->interp->builtins)
 
-DL_IMPORT(PyFrameObject *) PyFrame_New(PyThreadState *, PyCodeObject *,
+PyAPI_FUNC(PyFrameObject *) PyFrame_New(PyThreadState *, PyCodeObject *,
                                        PyObject *, PyObject *);
 
 
 /* The rest of the interface is specific for frame objects */
 
-/* Tuple access macros */
-
-#ifndef Py_DEBUG
-#define GETITEM(v, i) PyTuple_GET_ITEM((PyTupleObject *)(v), (i))
-#define GETITEMNAME(v, i) \
-	PyString_AS_STRING((PyStringObject *)GETITEM((v), (i)))
-#else
-#define GETITEM(v, i) PyTuple_GetItem((v), (i))
-#define GETITEMNAME(v, i) PyString_AsString(GETITEM(v, i))
-#endif
-
-#define GETUSTRINGVALUE(s) ((unsigned char *)PyString_AS_STRING(s))
-
-/* Code access macros */
-
-#define Getconst(f, i)	(GETITEM((f)->f_code->co_consts, (i)))
-#define Getname(f, i)	(GETITEMNAME((f)->f_code->co_names, (i)))
-#define Getnamev(f, i)	(GETITEM((f)->f_code->co_names, (i)))
-
-
 /* Block management functions */
 
-DL_IMPORT(void) PyFrame_BlockSetup(PyFrameObject *, int, int, int);
-DL_IMPORT(PyTryBlock *) PyFrame_BlockPop(PyFrameObject *);
+PyAPI_FUNC(void) PyFrame_BlockSetup(PyFrameObject *, int, int, int);
+PyAPI_FUNC(PyTryBlock *) PyFrame_BlockPop(PyFrameObject *);
 
 /* Extend the value stack */
 
-DL_IMPORT(PyObject **) PyFrame_ExtendStack(PyFrameObject *, int, int);
+PyAPI_FUNC(PyObject **) PyFrame_ExtendStack(PyFrameObject *, int, int);
 
 /* Conversions between "fast locals" and locals in dictionary */
 
-DL_IMPORT(void) PyFrame_LocalsToFast(PyFrameObject *, int);
-DL_IMPORT(void) PyFrame_FastToLocals(PyFrameObject *);
+PyAPI_FUNC(void) PyFrame_LocalsToFast(PyFrameObject *, int);
+PyAPI_FUNC(void) PyFrame_FastToLocals(PyFrameObject *);
+
+PyAPI_FUNC(int) PyFrame_ClearFreeList(void);
+
+/* Return the line of code the frame is currently executing. */
+PyAPI_FUNC(int) PyFrame_GetLineNumber(PyFrameObject *);
 
 #ifdef __cplusplus
 }

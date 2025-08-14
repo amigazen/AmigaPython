@@ -2,20 +2,14 @@
 **                                                            **
 **  UNIX 'emulation' functions for AmigaDOS                   **
 **                                                            **
-**  Made by Irmen de Jong (irmen@bigfoot.com)                 **
+**  Based on Irmen de Jong's original Amiga port              **
+**  Updated for Python 2.7.18                                 **
 **                                                            **
-**  21-jan-98: Created. Moved some functions from             **
-**             Modules/Amigamodule.c to here.                 **
-**  25-dec-98: Added I-Net 225 support                        **
-**             Added ftruncate (but not used due to bugs)     **
-**                                                            **
-**  NOTE: Don't forget __io2errno conversion!!!!!!!!!!!!!!!!  **
+**  NOTE: Don't forget __io2errno conversion!                 **
 **                                                            **
 \**************************************************************/
 
-#ifndef INET225
-#include <dos.h>
-#endif
+#include <dos/dos.h>
 #include <sys/stat.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
@@ -25,10 +19,6 @@
 #include <proto/usergroup.h>
 #include <proto/socket.h>
 #endif
-#ifdef INET225
-#include <proto/socket.h>
-static int _OSERR;
-#endif
 #include "Python.h"
 #include "protos.h"
 
@@ -37,57 +27,58 @@ static int _OSERR;
 /*** checkLink: check for link loops and other errors ***/
 static BOOL checkLink(char *from, BPTR to, BOOL root)
 {
-	struct FileInfoBlock __aligned fib;
+    struct FileInfoBlock __aligned fib;
 
-	if(Examine(to,&fib))
-	{
-		if(fib.fib_EntryType>0)
-		{
-			// directory! Check some things (loops etc)
-			char* pp;
-			char p;
-			BPTR fromLock,temp;
+    if(Examine(to, &fib))
+    {
+        if(fib.fib_EntryType > 0)
+        {
+            // directory! Check some things (loops etc)
+            char* pp;
+            char p;
+            BPTR fromLock, temp;
 
-			// only superuser may link directories
-			if(!root)
-			{
-				errno=EPERM; return FALSE;
-			}
+            // only superuser may link directories
+            if(!root)
+            {
+                errno = EPERM; 
+                return FALSE;
+            }
 
-			pp = PathPart(from);
-			p = *pp;
-			*pp = 0;
-			fromLock=Lock(from,SHARED_LOCK);
-			*pp=p;
+            pp = PathPart(from);
+            p = *pp;
+            *pp = 0;
+            fromLock = Lock(from, SHARED_LOCK);
+            *pp = p;
 
-			if(fromLock)
-			{
-				do {
-					if(SameLock(fromLock,to)==LOCK_SAME)
-					{
-						UnLock(fromLock);
+            if(fromLock)
+            {
+                do {
+                    if(SameLock(fromLock, to) == LOCK_SAME)
+                    {
+                        UnLock(fromLock);
 #ifdef ELOOP
-						errno = ELOOP;
+                        errno = ELOOP;
 #else
-						errno = EMLINK;
+                        errno = EMLINK;
 #endif
-						return FALSE;       // link loop
-					}
+                        return FALSE;   // link loop
+                    }
 
-					temp = fromLock;
-					fromLock = ParentDir(fromLock);
-					UnLock(temp);
-				} while (fromLock);
+                    temp = fromLock;
+                    fromLock = ParentDir(fromLock);
+                    UnLock(temp);
+                } while (fromLock);
 
-				return TRUE;       // dir, OK.
-			}
-			else errno=__io2errno(_OSERR=IoErr());
-		}
-		else return TRUE;      // file, OK.
-	}
-	else errno=__io2errno(_OSERR=IoErr());
+                return TRUE;   // dir, OK.
+            }
+            else errno = __io2errno(_OSERR = IoErr());
+        }
+        else return TRUE;  // file, OK.
+    }
+    else errno = __io2errno(_OSERR = IoErr());
 
-	return FALSE;
+    return FALSE;
 }
 
 
@@ -98,278 +89,220 @@ static BOOL checkLink(char *from, BPTR to, BOOL root)
 /* 0=ok, -1=err */
 int link(const char *to, const char *from)
 {
-	BOOL root = TRUE;
-	BPTR toLock;
+    BOOL root = TRUE;
+    BPTR toLock;
 
-#if defined(AMITCP) || defined(INET225)
-	/* are we superuser? */
 #ifdef AMITCP
-	if (!checkusergrouplib())
-#else /* INET */
-	if (!checksocketlib())
+    /* are we superuser? */
+    if (!checkusergrouplib())
+    {
+        PyErr_Clear();
+        root = TRUE;  /* can't tell... so be root */
+    }
+    else if(getuid() == 0) root = TRUE;
+    else root = FALSE;
 #endif
-	{
-		PyErr_Clear();
-		root=TRUE;  /* can't tell... so be root */
-	}
-	else if(getuid()==0) root = TRUE;
-	else root=FALSE;
-#endif /* AMITCP or INET */
 
-	if(toLock=Lock(to,SHARED_LOCK))
-	{
-		if(checkLink(from,toLock,root))
-		{
-			if(MakeLink(from,(LONG)toLock,FALSE))
-			{
-				UnLock(toLock);
-				return 0;
-			}
-			else errno=__io2errno(_OSERR=IoErr());
-		}
-		UnLock(toLock);
-	}
-	else errno=__io2errno(_OSERR=IoErr());
-	
-	return -1;
+    if((toLock = Lock(to, SHARED_LOCK)))
+    {
+        if(checkLink((char *)from, toLock, root))
+        {
+            if(MakeLink((char *)from, (LONG)toLock, FALSE))
+            {
+                UnLock(toLock);
+                return 0;
+            }
+            else errno = __io2errno(_OSERR = IoErr());
+        }
+        UnLock(toLock);
+    }
+    else errno = __io2errno(_OSERR = IoErr());
+    
+    return -1;
 }
 
 /************** symlink(2): create symbolic (soft) link ********/
 int symlink(const char *to, const char *from)
 {
-	/* symbolic link 'from' is created to 'to' */
-	/* 0=ok, else -1 + errno */
+    /* symbolic link 'from' is created to 'to' */
+    /* 0=ok, else -1 + errno */
 
-	BPTR toLock;
+    BPTR toLock;
 
-	if(toLock=Lock(to,SHARED_LOCK))
-	{
-		if(checkLink(from,toLock,TRUE))
-		{
-			UnLock(toLock);
-			if(MakeLink(from,(LONG)to,TRUE)) return 0;
-			else errno=__io2errno(_OSERR=IoErr());
-		}
-		else UnLock(toLock);
-	}
-	else errno=__io2errno(_OSERR=IoErr());
-	
-	return -1;
+    if((toLock = Lock(to, SHARED_LOCK)))
+    {
+        if(checkLink((char *)from, toLock, TRUE))
+        {
+            UnLock(toLock);
+            if(MakeLink((char *)from, (LONG)to, TRUE)) return 0;
+            else errno = __io2errno(_OSERR = IoErr());
+        }
+        else UnLock(toLock);
+    }
+    else errno = __io2errno(_OSERR = IoErr());
+    
+    return -1;
 }
-
-
 
 /************** readlink(2): read value of a symbolic link ***********/
-
 int readlink(const char *path, char *buf, int bufsiz)
 {
-	struct MsgPort *port;
-	struct stat st;
+    struct MsgPort *port;
+    struct stat st;
 
-	if(!(port=DeviceProc(path)))
-	{
-		errno=EIO; return -1;
-	}
+    if(!(port = DeviceProc(path)))
+    {
+        errno = EIO; 
+        return -1;
+    }
 
-	buf[bufsiz-1]=0;
-	errno=0;
+    buf[bufsiz-1] = 0;
+    errno = 0;
 
-	if(lstat(path,&st)>=0)
-	{
+    if(lstat(path, &st) >= 0)
+    {
 #ifdef S_ISLNK
-		if(S_ISLNK(st.st_mode))
-		{
+        if(S_ISLNK(st.st_mode))
+        {
 #endif
-			char c;
-			BPTR dirlock;
-			BPTR olddir;
-			char *p;
-			char *link;
+            char c;
+            BPTR dirlock;
+            BPTR olddir;
+            char *p;
+            char *link;
 
-			p = PathPart(path);
-			link = FilePart(path);
-			c = *p; *p='\0';
-			dirlock=Lock(path,ACCESS_READ); *p=c;
-			if(dirlock)
-			{
-				olddir=CurrentDir(dirlock);
+            p = PathPart(path);
+            link = FilePart(path);
+            c = *p; *p = '\0';
+            dirlock = Lock(path, ACCESS_READ); *p = c;
+            if(dirlock)
+            {
+                olddir = CurrentDir(dirlock);
 
-				if(!ReadLink(port,dirlock,link,buf,bufsiz))
-					errno=__io2errno(_OSERR=IoErr());
+                if(!ReadLink(port, dirlock, link, buf, bufsiz))
+                    errno = __io2errno(_OSERR = IoErr());
 
-				dirlock=CurrentDir(olddir);
-				UnLock(dirlock);
-			}   
-			else errno=__io2errno(_OSERR=IoErr());
+                dirlock = CurrentDir(olddir);
+                UnLock(dirlock);
+                return strlen(buf);
+            }
+            else errno = __io2errno(_OSERR = IoErr());
 #ifdef S_ISLNK
-		}
-		else errno=EINVAL;
+        }
+        else errno = EINVAL;
 #endif
-	}
+    }
 
-	if(errno!=0) return -1;
-
-	if(buf[bufsiz-1]==0) return strlen(buf);
-	else return bufsiz;
+    return -1;
 }
 
-
-
-/** custom mkdir() implementation **/
-/** This version actually sets protection bits **/
-#ifndef INET225
+/************** mkdir(2): create a directory ***********/
 int my_mkdir(const char* path, int p)
 {
-#ifdef AMITCP
-	if(checkusergrouplib()) p &= ~getumask();
-	else PyErr_Clear();
-#endif
-
-	if(0==mkdir(path))
-	{
-		return chmod(path,p);
-	}
-	return -1;
+    BPTR lock;
+    
+    /* ignore the p (protection bits) parameter */
+    
+    if((lock = CreateDir(path)))
+    {
+        UnLock(lock);
+        return 0;
+    }
+    
+    errno = __io2errno(_OSERR = IoErr());
+    return -1;
 }
-#endif /* !INET225 */
 
+/************** uname(2): get system information ***********/
 int uname(struct utsname *u)
 {
-	int res;
-
-	strcpy(u->sysname,"AmigaDOS");
-	strcpy(u->machine,"m68k");
-#if defined(AMITCP) || defined(INET225)
-	if (!checksocketlib())
-#endif
-	{
-		char *v;
-		PyErr_Clear();
-		res=0; v=getenv("HOSTNAME");
-		if(v) strcpy(u->nodename, v);
-		else strcpy(u->nodename, "localhost");
-	}
-#if defined(AMITCP) || defined(INET225)
-	else res = gethostname(u->nodename, _UNAME_BUFLEN-1);
-#endif
-	if(res>=0)
-	{
-		LONG ver_major = SysBase->LibNode.lib_Version;
-		LONG ver_minor = SysBase->SoftVer;
-		sprintf (u->release, "%d.%d", ver_major,ver_minor);
-		if(ver_major<36)
-			strcpy(u->version,"1");
-		else if(ver_major<39)
-			strcpy(u->version,"2");
-		else 
-			strcpy(u->version,"3");
-	}
-	return 0;
+    strcpy(u->sysname, "AmigaOS");
+    
+    /* Get the processor type */
+    {
+        ULONG processor = 0;
+        struct Library *SysBase = *(struct Library **)4;
+        
+        if (SysBase)
+        {
+            processor = (SysBase->lib_Version >= 37) ? 
+                GetProcInfo(NULL) : PROCESSOR_68000;
+        }
+        
+        switch(processor)
+        {
+            case PROCESSOR_68000:
+                strcpy(u->machine, "m68k");
+                break;
+            case PROCESSOR_68010:
+                strcpy(u->machine, "m68010");
+                break;
+            case PROCESSOR_68020:
+                strcpy(u->machine, "m68020");
+                break;
+            case PROCESSOR_68030:
+                strcpy(u->machine, "m68030");
+                break;
+            case PROCESSOR_68040:
+                strcpy(u->machine, "m68040");
+                break;
+            case PROCESSOR_68060:
+                strcpy(u->machine, "m68060");
+                break;
+            default:
+                strcpy(u->machine, "unknown");
+        }
+    }
+    
+    /* Get the Amiga OS version */
+    {
+        struct Library *SysBase = *(struct Library **)4;
+        
+        if (SysBase)
+        {
+            char version[16];
+            sprintf(version, "%d.%d", SysBase->lib_Version, SysBase->lib_Revision);
+            strcpy(u->version, version);
+            
+            /* Determine the OS release */
+            if (SysBase->lib_Version >= 39)
+                strcpy(u->release, "3.5+");
+            else if (SysBase->lib_Version >= 37)
+                strcpy(u->release, "3.0");
+            else if (SysBase->lib_Version >= 36)
+                strcpy(u->release, "2.1");
+            else if (SysBase->lib_Version >= 34)
+                strcpy(u->release, "2.0");
+            else
+                strcpy(u->release, "1.3-");
+        }
+        else
+        {
+            strcpy(u->version, "Unknown");
+            strcpy(u->release, "Unknown");
+        }
+    }
+    
+    gethostname(u->nodename, _SYS_NMLN);
+    return 0;
 }
 
-
-#ifndef INET225
-FILE *popen(const char *command, const char *type)
-{
-	char file[50];
-
-	FILE *fh;
-
-	static int num = 1;
-
-	if((type[0]!='r') && (type[0]!='w'))
-	{
-		errno=EINVAL;
-		return 0;
-	}
-		
-	sprintf(file,"PIPE:Py_%ld_%ld",num++,FindTask(0));
-
-	if(fh=fopen(file,type))
-	{
-		BPTR fh2;
-		LONG mode=MODE_NEWFILE; /* 'r'-peer must write */
-
-		if(type[0]=='w') mode=MODE_OLDFILE; /* peer must read */
-
-		if(fh2=Open(file,mode))
-		{
-			BPTR fh3;
-			if(type[0]=='r')
-			{
-				/* execute command with output to fh */
-				fh3=Open("*",MODE_OLDFILE); /* should use CONSOLE: */
-				if(fh3 && (0==SystemTags(command,SYS_Asynch,TRUE,SYS_Output,fh2,
-									SYS_Input,fh3,TAG_DONE)))
-				{
-					return fh;
-				}
-			}
-			else /** if(type[0]=='w') **/
-			{
-				/* execute command with input from fh */
-				fh3=Open("*",MODE_NEWFILE); /* should use CONSOLE: */
-				if(fh3 && (0==SystemTags(command,SYS_Asynch,TRUE,SYS_Input,fh2,
-									SYS_Output,fh3,TAG_DONE)))
-				{
-					return fh;
-				}
-			}
-			fclose(fh); Close(fh2); if(fh3) Close(fh3);
-			errno=EAGAIN;
-			return 0;
-		}
-		fclose(fh);
-	}
-	errno=ENOENT;
-	return 0;
-}
-
+/************** pclose(3): close a process stream ***********/
 int pclose(FILE *stream)
 {
-	if(stream)
-	{
-		fclose(stream);
-		return 0;
-	}
-	errno=EINVAL;
-	return -1;  
-}
-
-#endif /* INET225 */
-
-
-/*************** ftruncate is not yet used because of bugs in the OS FileSystem :-( ***/
-
-#if 0
-
-int ftruncate(int fd, long newlength)
-{
-  struct UFB *ufb;
-
-  /*
-   * find the ufb *
-   */
-  if ((ufb = __chkufb(fd)) != NULL && !(ufb->ufbflg & UFB_SOCK))
-  {
-	if(-1==SetFileSize(ufb->ufbfh,newlength,OFFSET_BEGINNING))
+    int ret = -1;
+    
+    if (stream)
     {
-		set_errno(IoErr());
-		return -1;
-	}
-	return 0;
-  }
-  
-  errno = EINVAL;
-  return -1;
+        ret = fclose(stream);
+    }
+    
+    return ret;
 }
 
-#endif
-
-
-/********************* getpid ***********************/
-
+/************** getpid(2): get process ID ***********/
 pid_t getpid(void)
 {
-	return (pid_t)SysBase->ThisTask;
-}
+    struct Task *task = FindTask(NULL);
+    return (pid_t)task;   /* Use task pointer as "pid" */
+} 

@@ -1,3 +1,29 @@
+/*
+   CObjects are marked Pending Deprecation as of Python 2.7.
+   The full schedule for 2.x is as follows:
+     - CObjects are marked Pending Deprecation in Python 2.7.
+     - CObjects will be marked Deprecated in Python 2.8
+       (if there is one).
+     - CObjects will be removed in Python 2.9 (if there is one).
+
+   Additionally, for the Python 3.x series:
+     - CObjects were marked Deprecated in Python 3.1.
+     - CObjects will be removed in Python 3.2.
+
+   You should switch all use of CObjects to capsules.  Capsules
+   have a safer and more consistent API.  For more information,
+   see Include/pycapsule.h, or read the "Capsules" topic in
+   the "Python/C API Reference Manual".
+
+   Python 2.7 no longer uses CObjects itself; all objects which
+   were formerly CObjects are now capsules.  Note that this change
+   does not by itself break binary compatibility with extensions
+   built for previous versions of Python--PyCObject_AsVoidPtr()
+   has been changed to also understand capsules.
+
+*/
+
+/* original file header comment follows: */
 
 /* C objects to be exported from one extension module to another.
  
@@ -14,9 +40,9 @@
 extern "C" {
 #endif
 
-extern DL_IMPORT(PyTypeObject) PyCObject_Type;
+PyAPI_DATA(PyTypeObject) PyCObject_Type;
 
-#define PyCObject_Check(op) ((op)->ob_type == &PyCObject_Type)
+#define PyCObject_Check(op) (Py_TYPE(op) == &PyCObject_Type)
 
 /* Create a PyCObject from a pointer to a C object and an optional
    destructor function.  If the second argument is non-null, then it
@@ -24,8 +50,8 @@ extern DL_IMPORT(PyTypeObject) PyCObject_Type;
    destroyed.
 
 */
-extern DL_IMPORT(PyObject *)
-PyCObject_FromVoidPtr(void *cobj, void (*destruct)(void*));
+PyAPI_FUNC(PyObject *) PyCObject_FromVoidPtr(
+	void *cobj, void (*destruct)(void*));
 
 
 /* Create a PyCObject from a pointer to a C object, a description object,
@@ -33,21 +59,29 @@ PyCObject_FromVoidPtr(void *cobj, void (*destruct)(void*));
    then it will be called with the first and second arguments if and when 
    the PyCObject is destroyed.
 */
-extern DL_IMPORT(PyObject *)
-PyCObject_FromVoidPtrAndDesc(void *cobj, void *desc,
-                             void (*destruct)(void*,void*));
+PyAPI_FUNC(PyObject *) PyCObject_FromVoidPtrAndDesc(
+	void *cobj, void *desc, void (*destruct)(void*,void*));
 
 /* Retrieve a pointer to a C object from a PyCObject. */
-extern DL_IMPORT(void *)
-PyCObject_AsVoidPtr(PyObject *);
+PyAPI_FUNC(void *) PyCObject_AsVoidPtr(PyObject *);
 
 /* Retrieve a pointer to a description object from a PyCObject. */
-extern DL_IMPORT(void *)
-PyCObject_GetDesc(PyObject *);
+PyAPI_FUNC(void *) PyCObject_GetDesc(PyObject *);
 
 /* Import a pointer to a C object from a module using a PyCObject. */
-extern DL_IMPORT(void *)
-PyCObject_Import(char *module_name, char *cobject_name);
+PyAPI_FUNC(void *) PyCObject_Import(char *module_name, char *cobject_name);
+
+/* Modify a C object. Fails (==0) if object has a destructor. */
+PyAPI_FUNC(int) PyCObject_SetVoidPtr(PyObject *self, void *cobj);
+
+
+typedef struct {
+    PyObject_HEAD
+    void *cobject;
+    void *desc;
+    void (*destructor)(void *);
+} PyCObject;
+
 
 #ifdef __cplusplus
 }

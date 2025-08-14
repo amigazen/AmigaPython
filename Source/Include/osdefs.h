@@ -7,11 +7,26 @@ extern "C" {
 
 /* Operating system dependencies */
 
-#ifdef macintosh
-#define SEP ':'
+/* Mod by chrish: QNX has WATCOM, but isn't DOS */
+#if !defined(__QNX__)
+#if defined(MS_WINDOWS) || defined(__BORLANDC__) || defined(__WATCOMC__) || defined(__DJGPP__) || defined(PYOS_OS2)
+#if defined(PYOS_OS2) && defined(PYCC_GCC)
+#define MAXPATHLEN 260
+#define SEP '/'
+#define ALTSEP '\\'
+#else
+#define SEP '\\'
+#define ALTSEP '/'
 #define MAXPATHLEN 256
-/* Mod by Jack: newline is less likely to occur in filenames than space */
-#define DELIM '\n'
+#endif
+#define DELIM ';'
+#endif
+#endif
+
+#ifdef RISCOS
+#define SEP '.'
+#define MAXPATHLEN 256
+#define DELIM ','
 #endif
 
 #ifdef _AMIGA
@@ -20,15 +35,6 @@ extern "C" {
 #define DELIM ';'
 #endif
 
-/* Mod by chrish: QNX has WATCOM, but isn't DOS */
-#if !defined(__QNX__)
-#if defined(MS_WINDOWS) || defined(__BORLANDC__) || defined(__WATCOMC__) || defined(__DJGPP__) || defined(PYOS_OS2)
-#define SEP '\\'
-#define ALTSEP '/'
-#define MAXPATHLEN 256
-#define DELIM ';'
-#endif
-#endif
 
 /* Filename separator */
 #ifndef SEP
@@ -36,13 +42,35 @@ extern "C" {
 #endif
 
 /* Max pathname length */
+#ifdef __hpux
+#include <sys/param.h>
+#include <limits.h>
+#ifndef PATH_MAX
+#define PATH_MAX MAXPATHLEN
+#endif
+#endif
+
 #ifndef MAXPATHLEN
+#if defined(PATH_MAX) && PATH_MAX > 1024
+#define MAXPATHLEN PATH_MAX
+#else
 #define MAXPATHLEN 1024
+#endif
 #endif
 
 /* Search path entry delimiter */
 #ifndef DELIM
 #define DELIM ':'
+#endif
+
+/* Python installation configuration for AmigaOS */
+#ifdef _AMIGA
+#define PREFIX "Python:"
+#define EXEC_PREFIX "Python:"
+#define VERSION "2.7.18"
+#define VPATH "."
+/* Use Amiga-style paths for PYTHONPATH */
+#define PYTHONPATH "Python:Lib;Python:Lib/site-packages"
 #endif
 
 #ifdef __cplusplus

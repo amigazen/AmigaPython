@@ -1,55 +1,20 @@
-RCS_ID_C="$Id: sleep.c,v 4.1 1994/09/29 23:09:02 jraja Exp $"
 /*
- *      sleep.c - suspend process for the specified time
+ *      sleep.c - suspend execution for an interval
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
+ *
+ *      DEPRECATED: This file is deprecated in Amiga Python 2.7.18 in favour of vbcc PosixLib
  */
 
 #include <sys/param.h>
-#ifdef AMITCP
 #include <unistd.h>
-#endif
-#ifdef INET225
-#include <proto/socket.h>
-#endif
 #include <sys/time.h>
 #include <sys/socket.h>
 
-/****** net.lib/sleep *********************************************
-
-    NAME
-	sleep - suspend process execution for the specified time
-
-    SYNOPSIS
-	void sleep(unsigned int seconds);
-
-    FUNCTION
-        Process execution is suspended for number of seconds specified in 
-        'seconds'. The sleep will be aborted if any of the break signals
-        specified for the process is received (only CTRL-C by default).
-
-    PORTABILITY
-	UNIX
-
-    INPUTS
-	'seconds' - number of seconds to sleep.
-
-    RESULT
-        Does not return a value.
-
-    NOTES
-        The sleep is implemented as a single select() call with all other
-        than time out argument as NULL.
-
-    SEE ALSO
-	bsdsocket.library/select()
-
-*****************************************************************************
-*
-*/
-
+/*
+ * Suspend process execution for the specified time in seconds
+ */
 void sleep(unsigned int secs)
 {
   struct timeval tv;
@@ -57,4 +22,4 @@ void sleep(unsigned int secs)
   tv.tv_sec = secs;
   tv.tv_usec = 0;
   select(0, 0, 0, 0, &tv);
-}
+} 

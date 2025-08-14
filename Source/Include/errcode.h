@@ -13,7 +13,9 @@ extern "C" {
    the parser only returns E_EOF when it hits EOF immediately, and it
    never returns E_OK. */
 
+#ifndef E_OK
 #define E_OK		10	/* No error */
+#endif
 #define E_EOF		11	/* End Of File */
 #define E_INTR		12	/* Interrupted */
 #define E_TOKEN		13	/* Bad token */
@@ -25,6 +27,11 @@ extern "C" {
 #define E_OVERFLOW      19	/* Node had too many children */
 #define E_TOODEEP	20	/* Too many indentation levels */
 #define E_DEDENT	21	/* No matching outer block for dedent */
+#define E_DECODE	22	/* Error in decoding into Unicode */
+#define E_EOFS		23	/* EOF in triple-quoted string */
+#define E_EOLS		24	/* EOL in single-quoted string */
+#define E_LINECONT	25	/* Unexpected characters after a line continuation */
+#define E_IO    	26	/* I/O error */
 
 #ifdef __cplusplus
 }

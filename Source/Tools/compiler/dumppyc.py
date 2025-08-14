@@ -7,7 +7,9 @@ import types
 def dump(obj):
     print obj
     for attr in dir(obj):
-        print "\t", attr, repr(getattr(obj, attr))
+        if attr.startswith('co_'):
+            val = getattr(obj, attr)
+            print "\t", attr, repr(val)
 
 def loadCode(path):
     f = open(path)
@@ -25,7 +27,7 @@ def walk(co, match=None):
         if type(obj) == types.CodeType:
             walk(obj, match)
 
-def main(filename, codename=None):
+def load(filename, codename=None):
     co = loadCode(filename)
     walk(co, codename)
 
@@ -36,4 +38,9 @@ if __name__ == "__main__":
     else:
         filename = sys.argv[1]
         codename = None
-    main(filename, codename)
+    if filename.endswith('.py'):
+        buf = open(filename).read()
+        co = compile(buf, filename, "exec")
+        walk(co)
+    else:
+        load(filename, codename)

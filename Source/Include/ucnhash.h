@@ -1,20 +1,45 @@
+/* Unicode name database interface */
 
-#include "Python.h"
-#include <stdlib.h>
+#ifndef Py_UCNHASH_H
+#define Py_UCNHASH_H
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/* --- C API ----------------------------------------------------*/
-/* C API for usage by other Python modules */
-typedef struct _Py_UCNHashAPI
-{
-    unsigned long cKeys;
-    unsigned long cchMax;
-    unsigned long (*hash)(const char *key, unsigned int cch);
-    const void *(*getValue)(unsigned long iKey);
-} _Py_UCNHashAPI;
+/* revised ucnhash CAPI interface (exported through a "wrapper") */
 
-typedef struct 
-{
-    const char *pszUCN;
-    Py_UCS4 value;
-} _Py_UnicodeCharacterName;
+#define PyUnicodeData_CAPSULE_NAME "unicodedata.ucnhash_CAPI"
 
+typedef struct {
+
+    /* Size of this struct */
+    int size;
+
+#ifdef _AMIGA
+    /* Get name for a given character code.  Returns non-zero if
+       success, zero if not.  Does not set Python exceptions. 
+       If self is NULL, data come from the default version of the database.
+       If it is not NULL, it should be a unicodedata.ucd_X_Y_Z object */
+    int (*getname)(PyObject *self, unsigned int code, char* buffer, int buflen);
+
+    /* Get character code for a given name.  Same error handling
+       as for getname. */
+    int (*getcode)(PyObject *self, const char* name, int namelen, unsigned int* code);
+#else
+    /* Get name for a given character code.  Returns non-zero if
+       success, zero if not.  Does not set Python exceptions. 
+       If self is NULL, data come from the default version of the database.
+       If it is not NULL, it should be a unicodedata.ucd_X_Y_Z object */
+    int (*getname)(PyObject *self, Py_UCS4 code, char* buffer, int buflen);
+
+    /* Get character code for a given name.  Same error handling
+       as for getname. */
+    int (*getcode)(PyObject *self, const char* name, int namelen, Py_UCS4* code);
+#endif
+
+} _PyUnicode_Name_CAPI;
+
+#ifdef __cplusplus
+}
+#endif
+#endif /* !Py_UCNHASH_H */
