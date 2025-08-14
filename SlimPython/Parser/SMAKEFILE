@@ -1,0 +1,27 @@
+
+OBJECTS = acceler.o grammar1.o myreadline.o node.o parser.o parsetok.o \
+        tokenizer.o intrcheck.o 
+
+Parser.lib: $(OBJECTS)
+	-delete >NIL: Parser.lib
+	oml Parser.lib a <@<
+$(OBJECTS)
+<
+
+
+acceler.o : acceler.c parser.h /include/token.h /include/node.h /include/grammar.h /include/pgenheaders.h
+
+grammar1.o : grammar1.c /include/token.h /include/grammar.h assert.h /include/pgenheaders.h
+
+intrcheck.o : intrcheck.c /include/intrcheck.h /include/mymalloc.h /include/myproto.h /include/config.h
+
+myreadline.o : myreadline.c /include/pythonrun.h /include/intrcheck.h /include/mymalloc.h /include/myproto.h /include/config.h
+
+node.o : node.c /include/node.h /include/pgenheaders.h
+
+parser.o : parser.c /include/errcode.h parser.h /include/node.h /include/grammar.h /include/token.h assert.h /include/pgenheaders.h
+
+parsetok.o : parsetok.c /include/errcode.h /include/parsetok.h parser.h /include/grammar.h /include/node.h tokenizer.h /include/pgenheaders.h /include/token.h
+
+tokenizer.o : tokenizer.c /include/errcode.h tokenizer.h /include/pgenheaders.h /include/token.h
+

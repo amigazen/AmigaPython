@@ -1,0 +1,22 @@
+OBJ = envvars.o fmod.o getopt.o \
+	rexxvars.o crc32.o wbargs.o unixemul.o stackinit.o
+
+
+
+amigapython.lib: $(OBJ)
+	-delete >NIL: $@
+	oml $@ a <@<
+$(OBJ)
+<
+
+
+clean:
+	-delete \#?.lib \#?.o
+
+
+
+stackinit.o: stackinit.c
+	sc stackinit.c DATA=NEAR
+
+crc32.o: crc32.asm
+	sc CRC32.asm DEFINE=M68030	;; XXX change to M68000 if compiling for 68000!
