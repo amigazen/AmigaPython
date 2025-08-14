@@ -7,19 +7,13 @@
 	
                    by Irmen de Jong - irmen@bigfoot.com
 
-                          Last update: 27-Sep-98
+                          Last update: 1-Oct-2000
+                          (raw console functions)
 
-                               BETA VERSION
 
 ***************************************************************************
 
-As  this  document  describes  the  BETA VERSION of the dos.library support
-there  might come changes to what is described below.  This depends on bugs
-found  and  suggestions received.  So please:  test the dos.library support
-and let me hear any problems/bugs/suggestions (irmen@bigfoot.com).
 
-Check  the  entries  marked  ***  NEW *** for what's new since the previous
-version.
 
 ***************************************************************************
 
@@ -99,17 +93,17 @@ Fault(err [,header])
     header = error header string (optional, defaults to None which means
              no header)
 
-GetProgramDir()			*** NEW ***
+GetProgramDir()
     Returns the directory the program (the python interpreter) was launched
     from. Will usually be the directory where your Python: assign points to.
     Returns empy string when Python is launched as resident program (note
     that at the time of writing this is not possible).
 
-GetProgramName()		*** NEW ***
+GetProgramName()
     Returns the full CLI name of the program (the python interpreter).
     Will fail if Python is launched from the Workbench.
     
-Inhibit(drive, switch=1)	*** NEW ***
+Inhibit(drive, switch=1)
     Inhibits the specified drive (like 'HD0:') from access ("XXX: BUSY"
     appears on the Workbench). Use '1' as switch to inhibit, '0' to remove
     the restrictions (defaults to 1 when omitted).
@@ -139,10 +133,10 @@ SetComment(file,comment)
     file = filename
     comment = file comment string for this file
 
-SetFileDate(file, datestamp)		*** NEW ***
+SetFileDate(file, datestamp)
     Sets the file's datestamp to the given datestamp.
 
-SetOwner(file, uid, gid)		*** NEW ***
+SetOwner(file, uid, gid)
     Sets the file's owner UID and owner GID.
     Note that this call needs Kickstart 3.0 or higher.
     
@@ -153,7 +147,7 @@ Examine(file)
     The indexes of these members are defined in the Dos module;
     fib_FileName, fib_Size,....  See Dos.py.
 
-Info(drivename)				*** NEW ***
+Info(drivename)
     Returns information on the specified drive, as the following 7-tuple:
     (NumSoftErrors, UnitNumber, DiskState, NumBlocks, NumBlocksUsed,
      BytesPerBlock, DiskType, InUse).   (all 7 are integers).
@@ -166,7 +160,23 @@ DS2time(ds)
 time2DS
     Convert time() value (see time module) to DateStamp tuple
 
+SetMode(mode)		*** NEW ***
+    Sets the console mode, mode can be MODE_RAW (raw input mode) or MODE_CON
+    (normal line-buffered console mode).
 
+WaitForChar(timeout)	*** NEW ***
+    When console is in RAW mode, waits for a character to be available
+    for reading. 'timeout' is a timeout in microseconds.
+
+GetChar()		*** NEW ***
+    When console is in RAW mode, returns the next character available for
+    reading.
+    
+PutChar(char)		*** NEW ***
+    Writes a character to the output (unbuffered).
+
+PutString(string)	*** NEW ***
+    Writes a string to the output (unbuffered).
 
 
 
@@ -212,19 +222,19 @@ the Doslib module directly.
 
 There are some other functions implemented here as well:
 
-touch(file [,time])		*** NEW ***
+touch(file [,time])
     Changes the file's datestamp to the given time. Time is a Unix time value,
     see the time module for more details (time.time). If omitted, the current
     time is taken. If the specified file does not yet exist, it is created as
     a zero-size file.
 
-AddBuffers(drive, buffers)	*** NEW ***
+AddBuffers(drive, buffers)
     A simple wrapper for c:addbuffers.
 
-AssignAdd(name, target)		*** NEW ***
+AssignAdd(name, target)
     A simple wrapper for c:assign ADD.
 
-AssignRemove(name)		*** NEW ***
+AssignRemove(name)
     A simple wrapper for c:assign REMOVE.
 
 
@@ -235,9 +245,10 @@ AssignRemove(name)		*** NEW ***
 |                                            |
 +--------------------------------------------+
 
-- The break flags, SIGBREAKF_CTRL_C to SIGBREAKF_CTRL_F.
+- The break flags, SIGBREAKF_CTRL_C ..D..E.. SIGBREAKF_CTRL_F.
 - AmigaDOS file protection bits, including the `group' and `other' bits.
 - Flags and Format definitions for DateToStr and StrToDate.
+- Modes for SetConsoleMode(): MODE_CON and MODE_RAW.
 
 
 +--------------------------------------+

@@ -1,38 +1,6 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Thread and interpreter state structures and their interfaces */
 
 #include "Python.h"
-
 #include "protos/pystate.h"
 
 #define ZAP(x) { \
@@ -41,6 +9,18 @@ PERFORMANCE OF THIS SOFTWARE.
 	Py_XDECREF(tmp); \
 }
 
+
+#ifdef WITH_THREAD
+#include "pythread.h"
+static PyThread_type_lock head_mutex = NULL; /* Protects interp->tstate_head */
+#define HEAD_INIT() (head_mutex || (head_mutex = PyThread_allocate_lock()))
+#define HEAD_LOCK() PyThread_acquire_lock(head_mutex, WAIT_LOCK)
+#define HEAD_UNLOCK() PyThread_release_lock(head_mutex)
+#else
+#define HEAD_INIT() /* Nothing */
+#define HEAD_LOCK() /* Nothing */
+#define HEAD_UNLOCK() /* Nothing */
+#endif
 
 static PyInterpreterState *interp_head = NULL;
 
@@ -53,6 +33,7 @@ PyInterpreterState_New()
 	PyInterpreterState *interp = PyMem_NEW(PyInterpreterState, 1);
 
 	if (interp != NULL) {
+		HEAD_INIT();
 		interp->modules = NULL;
 		interp->sysdict = NULL;
 		interp->builtins = NULL;
@@ -72,8 +53,10 @@ PyInterpreterState_Clear(interp)
 	PyInterpreterState *interp;
 {
 	PyThreadState *p;
+	HEAD_LOCK();
 	for (p = interp->tstate_head; p != NULL; p = p->next)
 		PyThreadState_Clear(p);
+	HEAD_UNLOCK();
 	ZAP(interp->modules);
 	ZAP(interp->sysdict);
 	ZAP(interp->builtins);
@@ -84,12 +67,11 @@ static void
 zapthreads(interp)
 	PyInterpreterState *interp;
 {
-	PyThreadState *p, *q;
-	p = interp->tstate_head;
-	while (p != NULL) {
-		q = p->next;
+	PyThreadState *p;
+	/* No need to lock the mutex here because this should only happen
+	   when the threads are all really dead (XXX famous last words). */
+	while ((p = interp->tstate_head) != NULL) {
 		PyThreadState_Delete(p);
-		p = q;
 	}
 }
 
@@ -141,8 +123,10 @@ PyThreadState_New(interp)
 		tstate->sys_profilefunc = NULL;
 		tstate->sys_tracefunc = NULL;
 
+		HEAD_LOCK();
 		tstate->next = interp->tstate_head;
 		interp->tstate_head = tstate;
+		HEAD_UNLOCK();
 	}
 
 	return tstate;
@@ -187,6 +171,7 @@ PyThreadState_Delete(tstate)
 	interp = tstate->interp;
 	if (interp == NULL)
 		Py_FatalError("PyThreadState_Delete: NULL interp");
+	HEAD_LOCK();
 	for (p = &interp->tstate_head; ; p = &(*p)->next) {
 		if (*p == NULL)
 			Py_FatalError(
@@ -195,6 +180,7 @@ PyThreadState_Delete(tstate)
 			break;
 	}
 	*p = tstate->next;
+	HEAD_UNLOCK();
 	PyMem_DEL(tstate);
 }
 

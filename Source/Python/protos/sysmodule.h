@@ -14,3 +14,6 @@ static PyObject *list_builtin_module_names ( void );
 static PyObject *makepathobject ( char *path , int delim );
 static PyObject *makeargvobject ( int argc , char **argv );
 static void mywrite ( char *name , FILE *fp , const char *format , va_list va );
+
+static PyObject *sys_get_string_encoding ( PyObject *self , PyObject *args );
+static PyObject *sys_set_string_encoding ( PyObject *self , PyObject *args );

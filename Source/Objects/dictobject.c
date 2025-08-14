@@ -1,38 +1,6 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Dictionary object implementation using a hash table */
 
 #include "Python.h"
-
 
 /*
  * MINSIZE is the minimum size of a dictionary.
@@ -279,7 +247,7 @@ dictresize(mp, minused)
 			break;
 		}
 	}
-	newtable = (dictentry *) malloc(sizeof(dictentry) * newsize);
+	newtable = PyMem_NEW(dictentry, newsize);
 	if (newtable == NULL) {
 		PyErr_NoMemory();
 		return -1;
@@ -303,7 +271,8 @@ dictresize(mp, minused)
 		}
 	}
 
-	PyMem_XDEL(oldtable);
+	if (oldtable != NULL)
+		PyMem_DEL(oldtable);
 	return 0;
 }
 
@@ -481,6 +450,7 @@ dict_dealloc(mp)
 {
 	register int i;
 	register dictentry *ep;
+	Py_TRASHCAN_SAFE_BEGIN(mp)
 	for (i = 0, ep = mp->ma_table; i < mp->ma_size; i++, ep++) {
 		if (ep->me_key != NULL) {
 			Py_DECREF(ep->me_key);
@@ -489,8 +459,10 @@ dict_dealloc(mp)
 			Py_DECREF(ep->me_value);
 		}
 	}
-	PyMem_XDEL(mp->ma_table);
-	PyMem_DEL(mp);
+	if (mp->ma_table != NULL)
+		PyMem_DEL(mp->ma_table);
+	PyObject_DEL(mp);
+	Py_TRASHCAN_SAFE_END(mp)
 }
 
 static int
@@ -738,11 +710,25 @@ dict_copy(mp, args)
       register dictobject *mp;
       PyObject *args;
 {
+	if (!PyArg_Parse(args, ""))
+		return NULL;
+	return PyDict_Copy((PyObject*)mp);
+}
+
+PyObject *
+PyDict_Copy(o)
+	PyObject *o;
+{
+	register dictobject *mp;
 	register int i;
 	dictobject *copy;
         dictentry *entry;
-	if (!PyArg_Parse(args, ""))
+
+	if (o == NULL || !PyDict_Check(o)) {
+		PyErr_BadInternalCall();
 		return NULL;
+	}
+	mp = (dictobject *)o;
 	copy = (dictobject *)PyDict_New();
 	if (copy == NULL)
 		return NULL;
@@ -961,7 +947,7 @@ dict_has_key(mp, args)
 	PyObject *key;
 	long hash;
 	register long ok;
-	if (!PyArg_Parse(args, "O", &key))
+	if (!PyArg_ParseTuple(args, "O:has_key", &key))
 		return NULL;
 #ifdef CACHE_HASH
 	if (!PyString_Check(key) ||
@@ -986,7 +972,7 @@ dict_get(mp, args)
 	PyObject *val = NULL;
 	long hash;
 
-	if (!PyArg_ParseTuple(args, "O|O", &key, &failobj))
+	if (!PyArg_ParseTuple(args, "O|O:get", &key, &failobj))
 		return NULL;
 	if (mp->ma_table == NULL)
 		goto finally;
@@ -1023,14 +1009,14 @@ dict_clear(mp, args)
 }
 
 static PyMethodDef mapp_methods[] = {
-	{"has_key",	(PyCFunction)dict_has_key},
+	{"has_key",	(PyCFunction)dict_has_key,      METH_VARARGS},
 	{"keys",	(PyCFunction)dict_keys},
 	{"items",	(PyCFunction)dict_items},
 	{"values",	(PyCFunction)dict_values},
 	{"update",	(PyCFunction)dict_update},
 	{"clear",	(PyCFunction)dict_clear},
 	{"copy",	(PyCFunction)dict_copy},
-	{"get",         (PyCFunction)dict_get, 1},
+	{"get",         (PyCFunction)dict_get,          METH_VARARGS},
 	{NULL,		NULL}		/* sentinel */
 };
 

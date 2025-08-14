@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Use this file as a template to start implementing a module that
    also declares objects types. All occurrences of 'Xxo' should be changed
    to something reasonable for your objects. After that, all other
@@ -62,7 +31,7 @@ newXxoObject(arg)
 	PyObject *arg;
 {
 	XxoObject *self;
-	self = PyObject_NEW(XxoObject, &Xxo_Type);
+	self = PyObject_New(XxoObject, &Xxo_Type);
 	if (self == NULL)
 		return NULL;
 	self->x_attr = NULL;
@@ -76,7 +45,7 @@ Xxo_dealloc(self)
 	XxoObject *self;
 {
 	Py_XDECREF(self->x_attr);
-	PyMem_DEL(self);
+	PyObject_Del(self);
 }
 
 static PyObject *
@@ -84,7 +53,7 @@ Xxo_demo(self, args)
 	XxoObject *self;
 	PyObject *args;
 {
-	if (!PyArg_ParseTuple(args, ""))
+	if (!PyArg_ParseTuple(args, ":demo"))
 		return NULL;
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -163,7 +132,7 @@ xx_foo(self, args)
 {
 	long i, j;
 	long res;
-	if (!PyArg_ParseTuple(args, "ll", &i, &j))
+	if (!PyArg_ParseTuple(args, "ll:foo", &i, &j))
 		return NULL;
 	res = i+j; /* XXX Do something here */
 	return PyInt_FromLong(res);
@@ -179,7 +148,7 @@ xx_new(self, args)
 {
 	XxoObject *rv;
 	
-	if (!PyArg_ParseTuple(args, ""))
+	if (!PyArg_ParseTuple(args, ":new"))
 		return NULL;
 	rv = newXxoObject(args);
 	if ( rv == NULL )
@@ -196,7 +165,7 @@ xx_bug(self, args)
 {
 	PyObject *list, *item;
 	
-	if (!PyArg_ParseTuple(args, "O", &list))
+	if (!PyArg_ParseTuple(args, "O:bug", &list))
 		return NULL;
 	
 	item = PyList_GetItem(list, 0);
@@ -219,7 +188,7 @@ xx_roj(self, args)
 {
 	PyObject *a;
 	long b;
-	if (!PyArg_ParseTuple(args, "O#", &a, &b))
+	if (!PyArg_ParseTuple(args, "O#:roj", &a, &b))
 		return NULL;
 	Py_INCREF(Py_None);
 	return Py_None;

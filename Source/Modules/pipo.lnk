@@ -1,0 +1,8 @@
+FROM LIB:c.o "main.o"
+TO "pipo"
+LIB Modules.lib LIB:scm881nb.lib
+    LIB:scnb.lib LIB:amiga.lib
+ADDSYM
+QUIET
+NOICONS
+

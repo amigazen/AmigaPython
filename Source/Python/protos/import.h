@@ -15,7 +15,6 @@ static struct filedescr *find_module ( char *realname , PyObject *path , char *b
 #ifdef MS_WIN32
 static int allcaps8x3 ( char *s );
 #endif
-static int check_case ( char *buf , int len , int namelen , char *name );
 static int find_init_module ( char *buf );
 static PyObject *load_module ( char *name , FILE *fp , char *buf , int type );
 static int init_builtin ( char *name );
@@ -38,7 +37,6 @@ static PyObject *imp_is_builtin ( PyObject *self , PyObject *args );
 static PyObject *imp_is_frozen ( PyObject *self , PyObject *args );
 static FILE *get_file ( char *pathname , PyObject *fob , char *mode );
 static PyObject *imp_load_compiled ( PyObject *self , PyObject *args );
-static PyObject *imp_load_dynamic ( PyObject *self , PyObject *args );
 static PyObject *imp_load_source ( PyObject *self , PyObject *args );
 #ifdef macintosh
 static PyObject *imp_load_resource ( PyObject *self , PyObject *args );

@@ -1,42 +1,15 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Generic object operations; and implementation of None (NoObject) */
 
 #include "Python.h"
 
+/* just for trashcan: */
+#include "compile.h"
+#include "frameobject.h"
+#include "traceback.h"
 #include "protos/object.h"
 
 #if defined( Py_TRACE_REFS ) || defined( Py_REF_DEBUG )
-long _Py_RefTotal;
+DL_IMPORT(long) _Py_RefTotal;
 #endif
 
 /* Object allocation routines used by NEWOBJ and NEWVAROBJ macros.
@@ -109,50 +82,68 @@ inc_count(tp)
 }
 #endif
 
-#ifndef MS_COREDLL
 PyObject *
-_PyObject_New(tp)
-	PyTypeObject *tp;
-#else
-PyObject *
-_PyObject_New(tp,op)
-	PyTypeObject *tp;
+PyObject_Init(op, tp)
 	PyObject *op;
-#endif
+	PyTypeObject *tp;
 {
-#ifndef MS_COREDLL
-	PyObject *op = (PyObject *) malloc(tp->tp_basicsize);
-#endif
-	if (op == NULL)
-		return PyErr_NoMemory();
+	if (op == NULL) {
+		PyErr_SetString(PyExc_SystemError,
+				"NULL object passed to PyObject_Init");
+		return op;
+  	}
+	/* Any changes should be reflected in PyObject_INIT (objimpl.h) */
 	op->ob_type = tp;
 	_Py_NewReference(op);
 	return op;
 }
 
-#ifndef MS_COREDLL
+PyVarObject *
+PyObject_InitVar(op, tp, size)
+	PyVarObject *op;
+	PyTypeObject *tp;
+	int size;
+{
+	if (op == NULL) {
+		PyErr_SetString(PyExc_SystemError,
+				"NULL object passed to PyObject_InitVar");
+		return op;
+	}
+	/* Any changes should be reflected in PyObject_INIT_VAR */
+	op->ob_size = size;
+	op->ob_type = tp;
+	_Py_NewReference((PyObject *)op);
+	return op;
+}
+
+PyObject *
+_PyObject_New(tp)
+	PyTypeObject *tp;
+{
+	PyObject *op;
+	op = (PyObject *) PyObject_MALLOC(_PyObject_SIZE(tp));
+	if (op == NULL)
+		return PyErr_NoMemory();
+	return PyObject_INIT(op, tp);
+}
+
 PyVarObject *
 _PyObject_NewVar(tp, size)
 	PyTypeObject *tp;
 	int size;
-#else
-PyVarObject *
-_PyObject_NewVar(tp, size, op)
-	PyTypeObject *tp;
-	int size;
-	PyVarObject *op;
-#endif
 {
-#ifndef MS_COREDLL
-	PyVarObject *op = (PyVarObject *)
-		malloc(tp->tp_basicsize + size * tp->tp_itemsize);
-#endif
+	PyVarObject *op;
+	op = (PyVarObject *) PyObject_MALLOC(_PyObject_VAR_SIZE(tp, size));
 	if (op == NULL)
 		return (PyVarObject *)PyErr_NoMemory();
-	op->ob_type = tp;
-	op->ob_size = size;
-	_Py_NewReference(op);
-	return op;
+	return PyObject_INIT_VAR(op, tp, size);
+}
+
+void
+_PyObject_Del(op)
+	PyObject *op;
+{
+	PyObject_FREE(op);
 }
 
 int
@@ -170,6 +161,7 @@ PyObject_Print(op, fp, flags)
 		return -1;
 	}
 #endif
+	clearerr(fp); /* Clear any previous error condition */
 	if (op == NULL) {
 		fprintf(fp, "<nil>");
 	}
@@ -190,11 +182,6 @@ PyObject_Print(op, fp, flags)
 					s = PyObject_Repr(op);
 				if (s == NULL)
 					ret = -1;
-				else if (!PyString_Check(s)) {
-					PyErr_SetString(PyExc_TypeError,
-						   "repr not string");
-					ret = -1;
-				}
 				else {
 					ret = PyObject_Print(s, fp,
 							     Py_PRINT_RAW);
@@ -235,14 +222,36 @@ PyObject_Repr(v)
 			v->ob_type->tp_name, (long)v);
 		return PyString_FromString(buf);
 	}
-	else
-		return (*v->ob_type->tp_repr)(v);
+	else {
+		PyObject *res;
+		res = (*v->ob_type->tp_repr)(v);
+		if (res == NULL)
+			return NULL;
+		if (PyUnicode_Check(res)) {
+			PyObject* str;
+			str = PyUnicode_AsEncodedString(res, NULL, NULL);
+			if (str) {
+				Py_DECREF(res);
+				res = str;
+			}
+		}
+		if (!PyString_Check(res)) {
+			PyErr_Format(PyExc_TypeError,
+				     "__repr__ returned non-string (type %.200s)",
+				     res->ob_type->tp_name);
+			Py_DECREF(res);
+			return NULL;
+		}
+		return res;
+	}
 }
 
 PyObject *
 PyObject_Str(v)
 	PyObject *v;
 {
+	PyObject *res;
+	
 	if (v == NULL)
 		return PyString_FromString("<NULL>");
 	else if (PyString_Check(v)) {
@@ -250,10 +259,9 @@ PyObject_Str(v)
 		return v;
 	}
 	else if (v->ob_type->tp_str != NULL)
-		return (*v->ob_type->tp_str)(v);
+		res = (*v->ob_type->tp_str)(v);
 	else {
 		PyObject *func;
-		PyObject *res;
 		if (!PyInstance_Check(v) ||
 		    (func = PyObject_GetAttrString(v, "__str__")) == NULL) {
 			PyErr_Clear();
@@ -261,8 +269,25 @@ PyObject_Str(v)
 		}
 		res = PyEval_CallObject(func, (PyObject *)NULL);
 		Py_DECREF(func);
-		return res;
 	}
+	if (res == NULL)
+		return NULL;
+    if (PyUnicode_Check(res)) {
+        PyObject* str;
+        str = PyUnicode_AsEncodedString(res, NULL, NULL);
+        if (str) {
+            Py_DECREF(res);
+            res = str;
+        }
+    }
+	if (!PyString_Check(res)) {
+		PyErr_Format(PyExc_TypeError,
+			     "__str__ returned non-string (type %.200s)",
+			     res->ob_type->tp_name);
+		Py_DECREF(res);
+		return NULL;
+	}
+	return res;
 }
 
 static PyObject *
@@ -282,11 +307,67 @@ do_cmp(v, w)
 	return PyInt_FromLong(c);
 }
 
+PyObject *_PyCompareState_Key;
+
+/* _PyCompareState_nesting is incremented beforing call compare (for
+   some types) and decremented on exit.  If the count exceeds the
+   nesting limit, enable code to detect circular data structures.
+*/
+#define NESTING_LIMIT 500
+int _PyCompareState_nesting = 0;
+
+static PyObject*
+get_inprogress_dict()
+{
+	PyObject *tstate_dict, *inprogress;
+
+	tstate_dict = PyThreadState_GetDict();
+	if (tstate_dict == NULL) {
+		PyErr_BadInternalCall();
+		return NULL;
+	} 
+	inprogress = PyDict_GetItem(tstate_dict, _PyCompareState_Key); 
+	if (inprogress == NULL) {
+		inprogress = PyDict_New();
+		if (inprogress == NULL)
+			return NULL;
+		if (PyDict_SetItem(tstate_dict, _PyCompareState_Key,
+				   inprogress) == -1) {
+		    Py_DECREF(inprogress);
+		    return NULL;
+		}
+		Py_DECREF(inprogress);
+	}
+	return inprogress;
+}
+
+static PyObject *
+make_pair(v, w)
+	PyObject *v, *w;
+{
+	PyObject *pair;
+
+	pair = PyTuple_New(2);
+	if (pair == NULL) {
+		return NULL;
+	}
+	if ((long)v <= (long)w) {
+		PyTuple_SET_ITEM(pair, 0, PyLong_FromVoidPtr((void *)v));
+		PyTuple_SET_ITEM(pair, 1, PyLong_FromVoidPtr((void *)w));
+	} else {
+		PyTuple_SET_ITEM(pair, 0, PyLong_FromVoidPtr((void *)w));
+		PyTuple_SET_ITEM(pair, 1, PyLong_FromVoidPtr((void *)v));
+	}
+	return pair;
+}
+
 int
 PyObject_Compare(v, w)
 	PyObject *v, *w;
 {
 	PyTypeObject *vtp, *wtp;
+	int result;
+
 	if (v == NULL || w == NULL) {
 		PyErr_BadInternalCall();
 		return -1;
@@ -298,7 +379,32 @@ PyObject_Compare(v, w)
 		int c;
 		if (!PyInstance_Check(v))
 			return -PyObject_Compare(w, v);
-		res = do_cmp(v, w);
+		if (++_PyCompareState_nesting > NESTING_LIMIT) {
+			PyObject *inprogress, *pair;
+
+			inprogress = get_inprogress_dict();
+			if (inprogress == NULL) {
+				return -1;
+			}
+			pair = make_pair(v, w);
+			if (PyDict_GetItem(inprogress, pair)) {
+				/* already comparing these objects.  assume
+				   they're equal until shown otherwise */
+				Py_DECREF(pair);
+				--_PyCompareState_nesting;
+				return 0;
+			}
+			if (PyDict_SetItem(inprogress, pair, pair) == -1) {
+				return -1;
+			}
+			res = do_cmp(v, w);
+			_PyCompareState_nesting--;
+			/* XXX DelItem shouldn't fail */
+			PyDict_DelItem(inprogress, pair);
+			Py_DECREF(pair);
+		} else {
+			res = do_cmp(v, w);
+		}
 		if (res == NULL)
 			return -1;
 		if (!PyInt_Check(res)) {
@@ -331,6 +437,21 @@ PyObject_Compare(v, w)
 				return cmp;
 			}
 		}
+		else if (PyUnicode_Check(v) || PyUnicode_Check(w)) {
+			int result = PyUnicode_Compare(v, w);
+			if (result == -1 && PyErr_Occurred() && 
+			    PyErr_ExceptionMatches(PyExc_TypeError))
+				/* TypeErrors are ignored: if Unicode coercion
+				fails due to one of the arguments not
+			 	having the right type, we continue as
+				defined by the coercion protocol (see
+				above). Luckily, decoding errors are
+				reported as ValueErrors and are not masked
+				by this technique. */
+				PyErr_Clear();
+			else
+				return result;
+		}
 		else if (vtp->tp_as_number != NULL)
 			vname = "";
 		else if (wtp->tp_as_number != NULL)
@@ -338,9 +459,37 @@ PyObject_Compare(v, w)
 		/* Numerical types compare smaller than all other types */
 		return strcmp(vname, wname);
 	}
-	if (vtp->tp_compare == NULL)
+	if (vtp->tp_compare == NULL) {
 		return (v < w) ? -1 : 1;
-	return (*vtp->tp_compare)(v, w);
+	}
+	if (++_PyCompareState_nesting > NESTING_LIMIT
+	    && (vtp->tp_as_mapping 
+		|| (vtp->tp_as_sequence && !PyString_Check(v)))) {
+		PyObject *inprogress, *pair;
+
+		inprogress = get_inprogress_dict();
+		if (inprogress == NULL) {
+			return -1;
+		}
+		pair = make_pair(v, w);
+		if (PyDict_GetItem(inprogress, pair)) {
+			/* already comparing these objects.  assume
+			   they're equal until shown otherwise */
+			_PyCompareState_nesting--;
+			Py_DECREF(pair);
+			return 0;
+		}
+		if (PyDict_SetItem(inprogress, pair, pair) == -1) {
+			return -1;
+		}
+		result = (*vtp->tp_compare)(v, w);
+		_PyCompareState_nesting--;
+		PyDict_DelItem(inprogress, pair); /* XXX shouldn't fail */
+		Py_DECREF(pair);
+	} else {
+		result = (*vtp->tp_compare)(v, w);
+	}
+	return result;
 }
 
 long
@@ -652,7 +801,9 @@ void
 _Py_ForgetReference(op)
 	register PyObject *op;
 {
-	register PyObject *p;
+#ifdef SLOW_UNREF_CHECK
+        register PyObject *p;
+#endif
 	if (op->ob_refcnt < 0)
 		Py_FatalError("UNREF negative refcnt");
 	if (op == &refchain ||
@@ -680,7 +831,8 @@ _Py_Dealloc(op)
 {
 	destructor dealloc = op->ob_type->tp_dealloc;
 	_Py_ForgetReference(op);
-	op->ob_type = NULL;
+	if (_PyTrash_delete_nesting < PyTrash_UNWIND_LEVEL-1)
+		op->ob_type = NULL;
 	(*dealloc)(op);
 }
 
@@ -740,54 +892,7 @@ PyTypeObject *_Py_cobject_hack = &PyCObject_Type;
 int (*_Py_abstract_hack) Py_FPROTO((PyObject *)) = &PyObject_Length;
 
 
-/* Malloc wrappers (see mymalloc.h) */
-
-/* The Py_{Malloc,Realloc} wrappers call PyErr_NoMemory() on failure */
-
-ANY *
-Py_Malloc(nbytes)
-	size_t nbytes;
-{
-	ANY *p;
-#if _PyMem_EXTRA > 0
-	if (nbytes == 0)
-		nbytes = _PyMem_EXTRA;
-#endif
-	p = malloc(nbytes);
-	if (p != NULL)
-		return p;
-	else {
-		PyErr_NoMemory();
-		return NULL;
-	}
-}
-
-ANY *
-Py_Realloc(p, nbytes)
-	ANY *p;
-	size_t nbytes;
-{
-#if _PyMem_EXTRA > 0
-	if (nbytes == 0)
-		nbytes = _PyMem_EXTRA;
-#endif
-	p = realloc(p, nbytes);
-	if (p != NULL)
-		return p;
-	else {
-		PyErr_NoMemory();
-		return NULL;
-	}
-}
-
-void
-Py_Free(p)
-	ANY *p;
-{
-	free(p);
-}
-
-/* The PyMem_{Malloc,Realloc} wrappers don't call anything on failure */
+/* Python's malloc wrappers (see mymalloc.h) */
 
 ANY *
 PyMem_Malloc(nbytes)
@@ -797,7 +902,7 @@ PyMem_Malloc(nbytes)
 	if (nbytes == 0)
 		nbytes = _PyMem_EXTRA;
 #endif
-	return malloc(nbytes);
+	return PyMem_MALLOC(nbytes);
 }
 
 ANY *
@@ -809,14 +914,39 @@ PyMem_Realloc(p, nbytes)
 	if (nbytes == 0)
 		nbytes = _PyMem_EXTRA;
 #endif
-	return realloc(p, nbytes);
+	return PyMem_REALLOC(p, nbytes);
 }
 
 void
 PyMem_Free(p)
 	ANY *p;
 {
-	free(p);
+	PyMem_FREE(p);
+}
+
+
+/* Python's object malloc wrappers (see objimpl.h) */
+
+ANY *
+PyObject_Malloc(nbytes)
+	size_t nbytes;
+{
+	return PyObject_MALLOC(nbytes);
+}
+
+ANY *
+PyObject_Realloc(p, nbytes)
+	ANY *p;
+	size_t nbytes;
+{
+	return PyObject_REALLOC(p, nbytes);
+}
+
+void
+PyObject_Free(p)
+	ANY *p;
+{
+	PyObject_FREE(p);
 }
 
 
@@ -886,3 +1016,94 @@ Py_ReprLeave(obj)
 		}
 	}
 }
+
+/*
+  trashcan
+  CT 2k0130
+  non-recursively destroy nested objects
+
+  CT 2k0223
+  everything is now done in a macro.
+
+  CT 2k0305
+  modified to use functions, after Tim Peter's suggestion.
+
+  CT 2k0309
+  modified to restore a possible error.
+
+  CT 2k0325
+  added better safe than sorry check for threadstate
+
+  CT 2k0422
+  complete rewrite. We now build a chain via ob_type
+  and save the limited number of types in ob_refcnt.
+  This is perfect since we don't need any memory.
+  A patch for free-threading would need just a lock.
+*/
+
+#define Py_TRASHCAN_TUPLE       1
+#define Py_TRASHCAN_LIST        2
+#define Py_TRASHCAN_DICT        3
+#define Py_TRASHCAN_FRAME       4
+#define Py_TRASHCAN_TRACEBACK   5
+/* extend here if other objects want protection */
+
+int _PyTrash_delete_nesting = 0;
+
+PyObject * _PyTrash_delete_later = NULL;
+
+void
+_PyTrash_deposit_object(op)
+	PyObject *op;
+{
+	int typecode;
+	PyObject *hold = _PyTrash_delete_later;
+
+	if (PyTuple_Check(op))
+		typecode = Py_TRASHCAN_TUPLE;
+	else if (PyList_Check(op))
+		typecode = Py_TRASHCAN_LIST;
+	else if (PyDict_Check(op))
+		typecode = Py_TRASHCAN_DICT;
+	else if (PyFrame_Check(op))
+		typecode = Py_TRASHCAN_FRAME;
+	else if (PyTraceBack_Check(op))
+		typecode = Py_TRASHCAN_TRACEBACK;
+	op->ob_refcnt = typecode;
+
+	op->ob_type = (PyTypeObject*)_PyTrash_delete_later;
+	_PyTrash_delete_later = op;
+}
+
+void
+_PyTrash_destroy_chain()
+{
+	while (_PyTrash_delete_later) {
+		PyObject *shredder = _PyTrash_delete_later;
+		_PyTrash_delete_later = (PyObject*) shredder->ob_type;
+
+		switch (shredder->ob_refcnt) {
+		case Py_TRASHCAN_TUPLE:
+			shredder->ob_type = &PyTuple_Type;
+			break;
+		case Py_TRASHCAN_LIST:
+			shredder->ob_type = &PyList_Type;
+			break;
+		case Py_TRASHCAN_DICT:
+			shredder->ob_type = &PyDict_Type;
+			break;
+		case Py_TRASHCAN_FRAME:
+			shredder->ob_type = &PyFrame_Type;
+			break;
+		case Py_TRASHCAN_TRACEBACK:
+			shredder->ob_type = &PyTraceBack_Type;
+			break;
+		}
+		_Py_NewReference(shredder);
+
+		++_PyTrash_delete_nesting;
+		Py_DECREF(shredder);
+		--_PyTrash_delete_nesting;
+	}
+}
+

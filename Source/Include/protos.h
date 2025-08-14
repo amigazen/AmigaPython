@@ -99,6 +99,11 @@ extern void initsimplegfx Py_PROTO((void));
 extern void initcStringIO Py_PROTO((void));
 extern void initcPickle Py_PROTO((void));
 extern void initpcre Py_PROTO((void));
-extern void PyInit_zlib Py_PROTO((void));
+extern void init_codecs Py_PROTO((void));
+extern void init_sre Py_PROTO((void));
+extern void initzlib Py_PROTO((void));
+extern void initunicodedata Py_PROTO((void));
+
+int PyOS_CheckStack Py_PROTO((void));
 
 #endif

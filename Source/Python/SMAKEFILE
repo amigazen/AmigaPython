@@ -7,7 +7,8 @@ OBJECTS = modsupport.o pythonrun.o errors.o bltinmodule.o \
 	getcompiler.o getcopyright.o getmtime.o \
 	getversion.o getplatform.o graminit.o import.o \
 	importdl.o marshal.o structmember.o sysmodule.o \
-	traceback.o sigcheck.o hypot.o mystrtoul.o pystate.o
+	traceback.o sigcheck.o hypot.o mystrtoul.o pystate.o \
+	codecs.o dynload_stub.o
 
 Python.lib: $(OBJECTS)
 	-delete >NIL: Python.lib
@@ -22,7 +23,7 @@ $(OBJECTS)
 
 bltinmodule.o : bltinmodule.c /include/mymath.h /include/eval.h /include/compile.h /include/node.h /include/Python.h
 
-ceval.o : ceval.c /include/thread.h /include/opcode.h /include/eval.h /include/frameobject.h /include/compile.h /include/Python.h
+ceval.o : ceval.c /include/pythread.h /include/opcode.h /include/eval.h /include/frameobject.h /include/compile.h /include/Python.h
 	SC ceval.c DEFINE=MAX_RECURSION_DEPTH=1000 NOOPTGLOBAL
 
 compile.o : compile.c /include/structmember.h /include/opcode.h /include/compile.h /include/graminit.h /include/token.h /include/node.h /include/Python.h
@@ -65,7 +66,7 @@ pyfpe.o : pyfpe.c /include/pyfpe.h /include/config.h
 
 pystate.o : pystate.c /include/Python.h
 
-pythonrun.o : pythonrun.c /include/thread.h /include/marshal.h /include/eval.h /include/compile.h /include/errcode.h /include/parsetok.h /include/node.h /include/grammar.h /include/Python.h
+pythonrun.o : pythonrun.c /include/pythread.h /include/marshal.h /include/eval.h /include/compile.h /include/errcode.h /include/parsetok.h /include/node.h /include/grammar.h /include/Python.h
 
 sigcheck.o : sigcheck.c /include/Python.h
 
@@ -74,3 +75,7 @@ structmember.o : structmember.c /include/structmember.h /include/Python.h
 sysmodule.o : sysmodule.c /include/osdefs.h /include/Python.h
 
 traceback.o : traceback.c /include/osdefs.h /include/structmember.h /include/frameobject.h /include/compile.h /include/Python.h
+
+codecs.o : codecs.c
+
+dynload_stub.o: dynload_stub.c

@@ -4,37 +4,6 @@
 extern "C" {
 #endif
 
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Instruction opcodes for compiled code */
 
 #define STOP_CODE	0
@@ -138,9 +107,16 @@ PERFORMANCE OF THIS SOFTWARE.
    for new opcodes. */
 
 #define RAISE_VARARGS	130	/* Number of raise arguments (1, 2 or 3) */
+/* CALL_FUNCTION_XXX opcodes defined below depend on this definition */
 #define CALL_FUNCTION	131	/* #args + (#kwargs<<8) */
 #define MAKE_FUNCTION	132	/* #defaults */
 #define BUILD_SLICE 	133	/* Number of items */
+
+/* The next 3 opcodes must be contiguous and satisfy
+   (CALL_FUNCTION_VAR - CALL_FUNCTION) & 3 == 1  */
+#define CALL_FUNCTION_VAR          140	/* #args + (#kwargs<<8) */
+#define CALL_FUNCTION_KW           141	/* #args + (#kwargs<<8) */
+#define CALL_FUNCTION_VAR_KW       142	/* #args + (#kwargs<<8) */
 
 /* Comparison operator codes (argument to COMPARE_OP) */
 enum cmp_op {LT, LE, EQ, NE, GT, GE, IN, NOT_IN, IS, IS_NOT, EXC_MATCH, BAD};

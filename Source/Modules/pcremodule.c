@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1997 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Pcre objects */
 
 #include "Python.h"
@@ -81,7 +50,7 @@ newPcreObject(arg)
 	PyObject *arg;
 {
 	PcreObject *self;
-	self = PyObject_NEW(PcreObject, &Pcre_Type);
+	self = PyObject_New(PcreObject, &Pcre_Type);
 	if (self == NULL)
 		return NULL;
 	self->regex = NULL;
@@ -95,11 +64,9 @@ static void
 PyPcre_dealloc(self)
 	PcreObject *self;
 {
-	if (self->regex) free(self->regex);
-	if (self->regex_extra) free(self->regex_extra);
-	self->regex=NULL;
-	self->regex_extra=NULL;
-	PyMem_DEL(self);
+	if (self->regex) (pcre_free)(self->regex);
+	if (self->regex_extra) (pcre_free)(self->regex_extra);
+	PyObject_Del(self);
 }
 
 
@@ -113,7 +80,7 @@ PyPcre_exec(self, args)
 	int offsets[100*2]; 
 	PyObject *list;
 
-	if (!PyArg_ParseTuple(args, "t#|iiii", &string, &stringlen, &pos, &endpos, &options))
+	if (!PyArg_ParseTuple(args, "t#|iiii:match", &string, &stringlen, &pos, &endpos, &options))
 		return NULL;
 	if (endpos == -1) {endpos = stringlen;}
 	count = pcre_exec(self->regex, self->regex_extra, 
@@ -167,7 +134,7 @@ PyPcre_getattr(self, name)
 
 
 staticforward PyTypeObject Pcre_Type = {
-	PyObject_HEAD_INIT(&PyType_Type)
+	PyObject_HEAD_INIT(NULL)
 	0,			/*ob_size*/
 	"Pcre",			/*tp_name*/
 	sizeof(PcreObject),	/*tp_basicsize*/
@@ -197,7 +164,7 @@ PyPcre_compile(self, args)
 	const char *error;
 	
 	int options, erroroffset;
-	if (!PyArg_ParseTuple(args, "siO!", &pattern, &options,
+	if (!PyArg_ParseTuple(args, "siO!:pcre_compile", &pattern, &options,
 			      &PyDict_Type, &dictionary))
 		return NULL;
 	rv = newPcreObject(args);
@@ -208,7 +175,7 @@ PyPcre_compile(self, args)
 				 &error, &erroroffset, dictionary);
 	if (rv->regex==NULL) 
 	{
-		PyMem_DEL(rv);
+		Py_DECREF(rv);
 		if (!PyErr_Occurred())
 		{
 			PyObject *errval = Py_BuildValue("si", error, erroroffset);
@@ -221,7 +188,7 @@ PyPcre_compile(self, args)
 	if (rv->regex_extra==NULL && error!=NULL) 
 	{
 		PyObject *errval = Py_BuildValue("si", error, 0);
-		PyMem_DEL(rv);
+		Py_DECREF(rv);
 		PyErr_SetObject(ErrorObject, errval);
 		Py_XDECREF(errval);
 		return NULL;
@@ -232,7 +199,7 @@ PyPcre_compile(self, args)
 		PyObject *errval = Py_BuildValue("si", error, rv->num_groups);
 		PyErr_SetObject(ErrorObject, errval);
 		Py_XDECREF(errval);
-		PyMem_DEL(rv);
+		Py_DECREF(rv);
 		return NULL;
 	}
 	return (PyObject *)rv;
@@ -475,7 +442,7 @@ PyPcre_expand(self, args)
 	unsigned char *repl;
 	int size, total_len, i, start, pos;
 
-	if (!PyArg_ParseTuple(args, "OS", &match_obj, &repl_obj)) 
+	if (!PyArg_ParseTuple(args, "OS:pcre_expand", &match_obj, &repl_obj)) 
 		return NULL;
 
 	repl=(unsigned char *)PyString_AsString(repl_obj);
@@ -665,6 +632,8 @@ DL_EXPORT(void)
 initpcre()
 {
 	PyObject *m, *d;
+
+        Pcre_Type.ob_type = &PyType_Type;
 
 	/* Create the module and add the functions */
 	m = Py_InitModule("pcre", pcre_methods);

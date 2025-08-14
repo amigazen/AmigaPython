@@ -3,8 +3,9 @@ OBJECTS = abstract.o fileobject.o floatobject.o bufferobject.o \
         funcobject.o intobject.o listobject.o longobject.o \
         dictobject.o methodobject.o moduleobject.o object.o \
         rangeobject.o stringobject.o tupleobject.o typeobject.o \
-        classobject.o frameobject.o sliceobject.o complexobject.o \
-	cobject.o
+        classobject.o frameobject.o sliceobject.o complexobject.o cobject.o \
+	unicodeobject.o unicodectype.o
+
 
 Objects.lib: $(OBJECTS)
 	-delete >NIL: Objects.lib
@@ -55,3 +56,9 @@ tupleobject.o : tupleobject.c /include/Python.h
 
 typeobject.o : typeobject.c /include/Python.h
 
+unicodectype.o: unicodectype.c
+	SC $< NOOPTGLOBAL
+
+unicodeobject.o: unicodeobject.c
+
+dummyunicodectype.o: dummyunicodectype.c

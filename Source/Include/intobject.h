@@ -4,42 +4,9 @@
 extern "C" {
 #endif
 
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Integer object interface */
 
 /*
-123456789-123456789-123456789-123456789-123456789-123456789-123456789-12
-
 PyIntObject represents a (long) integer.  This is an immutable object;
 an integer cannot change its value after creation.
 
@@ -61,14 +28,14 @@ extern DL_IMPORT(PyTypeObject) PyInt_Type;
 
 #define PyInt_Check(op) ((op)->ob_type == &PyInt_Type)
 
+extern DL_IMPORT(PyObject *) PyInt_FromString Py_PROTO((char*, char**, int));
+extern DL_IMPORT(PyObject *) PyInt_FromUnicode Py_PROTO((Py_UNICODE*, int, int));
 extern DL_IMPORT(PyObject *) PyInt_FromLong Py_PROTO((long));
 extern DL_IMPORT(long) PyInt_AsLong Py_PROTO((PyObject *));
 extern DL_IMPORT(long) PyInt_GetMax Py_PROTO((void));
 
 
 /*
-123456789-123456789-123456789-123456789-123456789-123456789-123456789-12
-
 False and True are special intobjects used by Boolean expressions.
 All values of type Boolean must point to either of these; but in
 contexts where integers are required they are integers (valued 0 and 1).

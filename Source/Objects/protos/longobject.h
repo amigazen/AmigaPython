@@ -1,8 +1,3 @@
-static PyLongObject *long_normalize ( PyLongObject *v );
-static PyLongObject *mul1 ( PyLongObject *a , wdigit n );
-static PyLongObject *muladd1 ( PyLongObject *a , wdigit n , wdigit extra );
-static PyLongObject *divrem1 ( PyLongObject *a , wdigit n , digit *prem );
-static PyObject *long_format ( PyObject *aa , int base );
 static int long_divrem ( PyLongObject *a , PyLongObject *b , PyLongObject **pdiv , PyLongObject **prem );
 static PyLongObject *x_divrem ( PyLongObject *v1 , PyLongObject *w1 , PyLongObject **prem );
 static void long_dealloc ( PyObject *v );
@@ -23,6 +18,7 @@ static PyObject *long_invert ( PyLongObject *v );
 static PyObject *long_pos ( PyLongObject *v );
 static PyObject *long_neg ( PyLongObject *v );
 static PyObject *long_abs ( PyLongObject *v );
+static PyObject *long_str ( PyObject *v );
 static int long_nonzero ( PyLongObject *v );
 static PyObject *long_rshift ( PyLongObject *a , PyLongObject *b );
 static PyObject *long_lshift ( PyLongObject *a , PyLongObject *b );

@@ -4,7 +4,7 @@
 	Lowlevel Amiga dos.library module.
 
 -----------------------------------------------
-	©1996,1997,1998 by Irmen de Jong.
+	©Irmen de Jong.
 
 	History:
 
@@ -15,6 +15,7 @@
 	18-jan-98   Updated for Python 1.5
 	27-sep-98	Added some extra functions.
 	12-nov-98	Renamed `doslib' to `Doslib'
+	1-oct-2000	Added raw console functions
 
 Module members:
 
@@ -763,6 +764,100 @@ Doslib_time2DS(PyObject *self, PyObject *args)
 }
 
 
+static PyObject *
+Doslib_SetMode( PyObject *self, PyObject *args )
+{
+        LONG mode;
+        BOOL result;
+
+        if( !PyArg_ParseTuple( args , "l" , &mode ) ) return NULL;
+
+        result = SetMode( Input() , mode );
+
+        return Py_BuildValue( "l" , result );
+}
+
+static PyObject *
+Doslib_WaitForChar( PyObject *self, PyObject *args )
+{
+        LONG timeout;
+        BOOL result;
+
+        if( !PyArg_ParseTuple( args , "l" , &timeout ) ) return NULL;
+
+        result = WaitForChar( Input() , timeout );
+
+        if( result == -1 )      /* Just to be safe, as I don't know if Python           */
+        {                       /* considers -1 as true (like AmigaOS does apparently). */
+                result = 1;
+        }
+
+        return Py_BuildValue( "l" , result );
+}
+
+static PyObject *
+Doslib_GetChar( PyObject *self, PyObject *args )
+{
+        char buffer;
+        LONG result;
+
+        if( !PyArg_ParseTuple( args , "" ) ) return NULL;
+
+        result = Read( Input() , &buffer , 1L );
+
+        if( result == 0 )                       /* Did we get an EOF?      */
+        {
+            return Py_BuildValue( "s" , "" );
+        }
+        else if( result == -1 )                 /* Or maybe even an error? */
+        {
+            return NULL;
+        }
+        else
+        {
+            return Py_BuildValue( "c" , buffer );
+        }
+}
+
+
+static PyObject *
+Doslib_PutChar( PyObject *self, PyObject *args )
+{
+    char buffer;
+
+    if( !PyArg_ParseTuple( args , "c" , &buffer ) ) return NULL;
+
+    if( Write( Output() , &buffer , 1L ) == 1 )
+    {
+        return Py_BuildValue( "i" , 1 );
+    }
+    else                                        /* An error occurred. */
+    {
+        return NULL;
+    }
+}
+
+static PyObject *
+Doslib_PutString( PyObject *self, PyObject *args )
+{
+    char *buffer;
+    LONG bufferlen;
+
+    if( !PyArg_ParseTuple( args , "s" , &buffer ) ) return NULL;
+
+    bufferlen = strlen( buffer );
+
+
+    if( Write( Output() , buffer , bufferlen ) == bufferlen )
+    {
+        return Py_BuildValue( "i" , 1 );
+    }
+    else                                        /* An error occurred. */
+    {
+        return NULL;
+    }
+}
+
 
 /*** FUNCTIONS FROM THE MODULE ***/
 
@@ -790,6 +885,11 @@ static struct PyMethodDef Doslib_global_methods[] = {
 	{"Examine", Doslib_Examine, 1},
 	{"DS2time", Doslib_DS2time, 1},
 	{"time2DS", Doslib_time2DS, 1},
+	{"SetMode", Doslib_SetMode, 1},
+	{"WaitForChar", Doslib_WaitForChar, 1},
+	{"GetChar", Doslib_GetChar, 1},
+	{"PutChar", Doslib_PutChar, 1},
+	{"PutString", Doslib_PutString, 1},
 	{NULL,      NULL}       /* sentinel */
 };
 

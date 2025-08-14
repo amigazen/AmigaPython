@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Error handling */
 
 #include "Python.h"
@@ -47,6 +16,11 @@ extern char *PyMac_StrError Py_PROTO((int));
 #ifndef MS_WINDOWS
 extern char *strerror Py_PROTO((int));
 #endif
+#endif
+
+#ifdef MS_WIN32
+#include "windows.h"
+#include "winbase.h"
 #endif
 
 void
@@ -120,6 +94,10 @@ int
 PyErr_GivenExceptionMatches(err, exc)
      PyObject *err, *exc;
 {
+	if (err == NULL || exc == NULL) {
+		/* maybe caused by "import exceptions" that failed early on */
+		return 0;
+	}
 	if (PyTuple_Check(exc)) {
 		int i, n;
 		n = PyTuple_Size(exc);
@@ -142,7 +120,7 @@ PyErr_GivenExceptionMatches(err, exc)
 
 	return err == exc;
 }
-	
+
 
 int
 PyErr_ExceptionMatches(exc)
@@ -284,6 +262,9 @@ PyErr_SetFromErrnoWithFilename(exc, filename)
 	PyObject *v;
 	char *s;
 	int i = errno;
+#ifdef MS_WIN32
+	char *s_buf = NULL;
+#endif
 #ifdef EINTR
 	if (i == EINTR && PyErr_CheckSignals())
 		return NULL;
@@ -291,8 +272,39 @@ PyErr_SetFromErrnoWithFilename(exc, filename)
 	if (i == 0)
 		s = "Error"; /* Sometimes errno didn't get set */
 	else
+#ifndef MS_WIN32
 		s = strerror(i);
-	if (filename != NULL && Py_UseClassExceptionsFlag)
+#else
+	{
+		/* Note that the Win32 errors do not lineup with the
+		   errno error.  So if the error is in the MSVC error
+		   table, we use it, otherwise we assume it really _is_ 
+		   a Win32 error code
+		*/
+		if (i > 0 && i < _sys_nerr) {
+			s = _sys_errlist[i];
+		}
+		else {
+			int len = FormatMessage(
+				FORMAT_MESSAGE_ALLOCATE_BUFFER |
+				FORMAT_MESSAGE_FROM_SYSTEM |
+				FORMAT_MESSAGE_IGNORE_INSERTS,
+				NULL,	/* no message source */
+				i,
+				MAKELANGID(LANG_NEUTRAL,
+					   SUBLANG_DEFAULT),
+				           /* Default language */
+				(LPTSTR) &s_buf,
+				0,	/* size not used */
+				NULL);	/* no args */
+			s = s_buf;
+			/* remove trailing cr/lf and dots */
+			while (len > 0 && (s[len-1] <= ' ' || s[len-1] == '.'))
+				s[--len] = '\0';
+		}
+	}
+#endif
+	if (filename != NULL)
 		v = Py_BuildValue("(iss)", i, s, filename);
 	else
 		v = Py_BuildValue("(is)", i, s);
@@ -300,9 +312,12 @@ PyErr_SetFromErrnoWithFilename(exc, filename)
 		PyErr_SetObject(exc, v);
 		Py_DECREF(v);
 	}
+#ifdef MS_WIN32
+	LocalFree(s_buf);
+#endif
 	return NULL;
 }
-	
+
 
 PyObject *
 PyErr_SetFromErrno(exc)
@@ -310,6 +325,51 @@ PyErr_SetFromErrno(exc)
 {
 	return PyErr_SetFromErrnoWithFilename(exc, NULL);
 }
+
+#ifdef MS_WINDOWS 
+/* Windows specific error code handling */
+PyObject *PyErr_SetFromWindowsErrWithFilename(
+	int ierr, 
+	const char *filename)
+{
+	int len;
+	char *s;
+	PyObject *v;
+	DWORD err = (DWORD)ierr;
+	if (err==0) err = GetLastError();
+	len = FormatMessage(
+		/* Error API error */
+		FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		FORMAT_MESSAGE_FROM_SYSTEM |
+		FORMAT_MESSAGE_IGNORE_INSERTS,
+		NULL,	/* no message source */
+		err,
+		MAKELANGID(LANG_NEUTRAL,
+		SUBLANG_DEFAULT), /* Default language */
+		(LPTSTR) &s,
+		0,	/* size not used */
+		NULL);	/* no args */
+	/* remove trailing cr/lf and dots */
+	while (len > 0 && (s[len-1] <= ' ' || s[len-1] == '.'))
+		s[--len] = '\0';
+	if (filename != NULL)
+		v = Py_BuildValue("(iss)", err, s, filename);
+	else
+		v = Py_BuildValue("(is)", err, s);
+	if (v != NULL) {
+		PyErr_SetObject(PyExc_WindowsError, v);
+		Py_DECREF(v);
+	}
+	LocalFree(s);
+	return NULL;
+}
+
+PyObject *PyErr_SetFromWindowsErr(int ierr)
+{
+	return PyErr_SetFromWindowsErrWithFilename(ierr, NULL);
+
+}
+#endif /* MS_WINDOWS */
 
 void
 PyErr_BadInternalCall()

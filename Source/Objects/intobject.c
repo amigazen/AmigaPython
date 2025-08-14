@@ -1,43 +1,12 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Integer object implementation */
 
 #include "Python.h"
+#include <ctype.h>
+#include "protos/intobject.h"
 
 #ifdef HAVE_LIMITS_H
 #include <limits.h>
 #endif
-
-#include "protos/intobject.h"
 
 #ifndef LONG_MAX
 #define LONG_MAX 0X7FFFFFFFL
@@ -95,9 +64,6 @@ err_ovf(msg)
 #define BHEAD_SIZE	8	/* Enough for a 64-bit pointer */
 #define N_INTOBJECTS	((BLOCK_SIZE - BHEAD_SIZE) / sizeof(PyIntObject))
 
-#define PyMem_MALLOC	malloc
-#define PyMem_FREE	free
-
 struct _intblock {
 	struct _intblock *next;
 	PyIntObject objects[N_INTOBJECTS];
@@ -112,9 +78,10 @@ static PyIntObject *
 fill_free_list()
 {
 	PyIntObject *p, *q;
-	p = (PyIntObject *)PyMem_MALLOC(sizeof(PyIntBlock));
+	/* XXX Int blocks escape the object heap. Use PyObject_MALLOC ??? */
+	p = (PyIntObject *) PyMem_MALLOC(sizeof(PyIntBlock));
 	if (p == NULL)
-		return (PyIntObject *)PyErr_NoMemory();
+		return (PyIntObject *) PyErr_NoMemory();
 	((PyIntBlock *)p)->next = block_list;
 	block_list = (PyIntBlock *)p;
 	p = &((PyIntBlock *)p)->objects[0];
@@ -165,11 +132,11 @@ PyInt_FromLong(ival)
 		if ((free_list = fill_free_list()) == NULL)
 			return NULL;
 	}
+	/* PyObject_New is inlined */
 	v = free_list;
 	free_list = (PyIntObject *)v->ob_type;
-	v->ob_type = &PyInt_Type;
+	PyObject_INIT(v, &PyInt_Type);
 	v->ob_ival = ival;
-	_Py_NewReference(v);
 #if NSMALLNEGINTS + NSMALLPOSINTS > 0
 	if (-NSMALLNEGINTS <= ival && ival < NSMALLPOSINTS) {
 		/* save this one for a following allocation */
@@ -201,7 +168,7 @@ PyInt_AsLong(op)
 	
 	if (op == NULL || (nb = op->ob_type->tp_as_number) == NULL ||
 	    nb->nb_int == NULL) {
-		PyErr_BadArgument();
+		PyErr_SetString(PyExc_TypeError, "an integer is required");
 		return -1;
 	}
 	
@@ -218,6 +185,66 @@ PyInt_AsLong(op)
 	Py_DECREF(io);
 	
 	return val;
+}
+
+PyObject *
+PyInt_FromString(s, pend, base)
+	char *s;
+	char **pend;
+	int base;
+{
+	char *end;
+	long x;
+	char buffer[256]; /* For errors */
+
+	if ((base != 0 && base < 2) || base > 36) {
+		PyErr_SetString(PyExc_ValueError, "invalid base for int()");
+		return NULL;
+	}
+
+	while (*s && isspace(Py_CHARMASK(*s)))
+		s++;
+	errno = 0;
+	if (base == 0 && s[0] == '0')
+		x = (long) PyOS_strtoul(s, &end, base);
+	else
+		x = PyOS_strtol(s, &end, base);
+	if (end == s || !isalnum(end[-1]))
+		goto bad;
+	while (*end && isspace(Py_CHARMASK(*end)))
+		end++;
+	if (*end != '\0') {
+  bad:
+		sprintf(buffer, "invalid literal for int(): %.200s", s);
+		PyErr_SetString(PyExc_ValueError, buffer);
+		return NULL;
+	}
+	else if (errno != 0) {
+		sprintf(buffer, "int() literal too large: %.200s", s);
+		PyErr_SetString(PyExc_ValueError, buffer);
+		return NULL;
+	}
+	if (pend)
+		*pend = end;
+	return PyInt_FromLong(x);
+}
+
+PyObject *
+PyInt_FromUnicode(s, length, base)
+	Py_UNICODE *s;
+	int length;
+	int base;
+{
+	char buffer[256];
+	
+	if (length >= sizeof(buffer)) {
+		PyErr_SetString(PyExc_ValueError,
+				"int() literal too large to convert");
+		return NULL;
+	}
+	if (PyUnicode_EncodeDecimal(s, length, buffer, NULL))
+		return NULL;
+	return PyInt_FromString(buffer, NULL, base);
 }
 
 /* Methods */
@@ -436,8 +463,14 @@ i_divmod(x, y, p_xdivy, p_xmody)
 		return -1;
 	}
 	if (yi < 0) {
-		if (xi < 0)
+		if (xi < 0) {
+			if (yi == -1 && -xi < 0) {
+				/* most negative / -1 */
+				err_ovf("integer division");
+				return -1;
+			}
 			xdivy = -xi / -yi;
+		}
 		else
 			xdivy = - (xi / -yi);
 	}
@@ -530,14 +563,14 @@ int_pow(v, w, z)
 			if (temp == 0)
 				break; /* Avoid ix / 0 */
 			if (ix / temp != prev)
-				return err_ovf("integer pow()");
+				return err_ovf("integer exponentiation");
 		}
 	 	iw >>= 1;	/* Shift exponent down by 1 bit */
 	        if (iw==0) break;
 	 	prev = temp;
 	 	temp *= temp;	/* Square the value of temp */
 	 	if (prev!=0 && temp/prev!=prev)
-			return err_ovf("integer pow()");
+			return err_ovf("integer exponentiation");
 	 	if (iz) {
 			/* If we did a multiplication, perform a modulo */
 		 	ix = ix % iz;
@@ -583,7 +616,7 @@ int_pow(v, w, z)
 		if (iv == 0)
 			break; /* 0 to some power -- avoid ix / 0 */
 		if (ix / iv != prev)
-			return err_ovf("integer pow()");
+			return err_ovf("integer exponentiation");
 	}
 	return PyInt_FromLong(ix);
 #endif
@@ -868,7 +901,7 @@ PyInt_Fini()
 			}
 		}
 		else {
-			PyMem_FREE(list);
+			PyMem_FREE(list); /* XXX PyObject_FREE ??? */
 			bf++;
 		}
 		isum += irem;
@@ -895,7 +928,7 @@ PyInt_Fini()
 				if (PyInt_Check(p) && p->ob_refcnt != 0)
 					fprintf(stderr,
 				"#   <int at %lx, refcnt=%d, val=%ld>\n",
-						p, p->ob_refcnt, p->ob_ival);
+					  (long)p, p->ob_refcnt, p->ob_ival);
 			}
 			list = list->next;
 		}

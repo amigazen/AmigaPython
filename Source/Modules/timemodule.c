@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Time module */
 
 #include "Python.h"
@@ -41,6 +10,14 @@ PERFORMANCE OF THIS SOFTWARE.
 
 #ifdef macintosh
 #include <time.h>
+#include <OSUtils.h>
+#ifdef USE_GUSI2
+/* GUSI, the I/O library which has the time() function and such uses the
+** Mac epoch of 1904. MSL, the C library which has localtime() and so uses
+** the ANSI epoch of 1900.
+*/
+#define GUSI_TO_MSL_EPOCH (4*365*24*60*60)
+#endif /* USE_GUSI2 */
 #else
 #include <sys/types.h>
 #endif
@@ -276,6 +253,9 @@ time_convert(when, function)
 {
 	struct tm *p;
 	errno = 0;
+#if defined(macintosh) && defined(USE_GUSI2)
+	when = when + GUSI_TO_MSL_EPOCH;
+#endif
 	p = function(&when);
 	if (p == NULL) {
 #ifdef EINVAL
@@ -378,7 +358,8 @@ time_strftime(self, args)
 
 	memset((ANY *) &buf, '\0', sizeof(buf));
 
-	if (!PyArg_ParseTuple(args, "sO", &fmt, &tup) || !gettmarg(tup, &buf))
+	if (!PyArg_ParseTuple(args, "sO:strftime", &fmt, &tup) 
+	    || !gettmarg(tup, &buf))
 		return NULL;
 	fmtlen = strlen(fmt);
 
@@ -414,7 +395,10 @@ See the library reference manual for formatting codes.";
 #endif /* HAVE_STRFTIME */
 
 #ifdef HAVE_STRPTIME
-/* extern char *strptime(); /* Enable this if it's not declared in <time.h> */
+
+#if 0
+extern char *strptime(); /* Enable this if it's not declared in <time.h> */
+#endif
 
 static PyObject *
 time_strptime(self, args)
@@ -426,10 +410,8 @@ time_strptime(self, args)
 	char *buf;
 	char *s;
 
-	if (!PyArg_ParseTuple(args, "s|s", &buf, &fmt)) {
-		PyErr_SetString(PyExc_ValueError, "invalid argument");
-		return NULL;
-	}
+	if (!PyArg_ParseTuple(args, "s|s:strptime", &buf, &fmt))
+	        return NULL;
 	memset((ANY *) &tm, '\0', sizeof(tm));
 	s = strptime(buf, fmt, &tm);
 	if (s == NULL) {
@@ -457,9 +439,12 @@ time_asctime(self, args)
 	PyObject *self;
 	PyObject *args;
 {
+	PyObject *tup;
 	struct tm buf;
 	char *p;
-	if (!gettmarg(args, &buf))
+	if (!PyArg_ParseTuple(args, "O:asctime", &tup))
+		return NULL;
+	if (!gettmarg(tup, &buf))
 		return NULL;
 	p = asctime(&buf);
 	if (p[24] == '\n')
@@ -483,6 +468,9 @@ time_ctime(self, args)
 	if (!PyArg_Parse(args, "d", &dt))
 		return NULL;
 	tt = (time_t)dt;
+#if defined(macintosh) && defined(USE_GUSI2)
+	tt = tt + GUSI_TO_MSL_EPOCH;
+#endif
 	p = ctime(&tt);
 	if (p == NULL) {
 		PyErr_SetString(PyExc_ValueError, "unconvertible time");
@@ -505,11 +493,14 @@ time_mktime(self, args)
 	PyObject *self;
 	PyObject *args;
 {
+	PyObject *tup;
 	struct tm buf;
 	time_t tt;
+	if (!PyArg_ParseTuple(args, "O:mktime", &tup))
+		return NULL;
 	tt = time(&tt);
 	buf = *localtime(&tt);
-	if (!gettmarg(args, &buf))
+	if (!gettmarg(tup, &buf))
 		return NULL;
 	tt = mktime(&buf);
 	if (tt == (time_t)(-1)) {
@@ -517,6 +508,9 @@ time_mktime(self, args)
                                 "mktime argument out of range");
 		return NULL;
 	}
+#if defined(macintosh) && defined(USE_GUSI2)
+	tt = tt - GUSI_TO_MSL_EPOCH;
+#endif
 	return PyFloat_FromDouble((double)tt);
 }
 
@@ -534,10 +528,10 @@ static PyMethodDef time_methods[] = {
 	{"sleep",	time_sleep, 0, sleep_doc},
 	{"gmtime",	time_gmtime, 0, gmtime_doc},
 	{"localtime",	time_localtime, 0, localtime_doc},
-	{"asctime",	time_asctime, 0, asctime_doc},
+	{"asctime",	time_asctime, 1, asctime_doc},
 	{"ctime",	time_ctime, 0, ctime_doc},
 #ifdef HAVE_MKTIME
-	{"mktime",	time_mktime, 0, mktime_doc},
+	{"mktime",	time_mktime, 1, mktime_doc},
 #endif
 #ifdef HAVE_STRFTIME
 	{"strftime",	time_strftime, 1, strftime_doc},
@@ -621,7 +615,7 @@ inittime()
 	/* Squirrel away the module's dictionary for the y2k check */
 	Py_INCREF(d);
 	moddict = d;
-#if defined(HAVE_TZNAME) && !defined(__GNU_LIBRARY__)
+#if defined(HAVE_TZNAME) && !defined(__GLIBC__)
 	tzset();
 #ifdef PYOS_OS2
 	ins(d, "timezone", PyInt_FromLong((long)_timezone));
@@ -639,7 +633,7 @@ inittime()
 #endif
 	ins(d, "daylight", PyInt_FromLong((long)daylight));
 	ins(d, "tzname", Py_BuildValue("(zz)", tzname[0], tzname[1]));
-#else /* !HAVE_TZNAME || __GNU_LIBRARY__ */
+#else /* !HAVE_TZNAME || __GLIBC__ */
 #ifdef HAVE_TM_ZONE
 	{
 #define YEAR ((time_t)((365 * 24 + 6) * 3600))
@@ -688,7 +682,7 @@ inittime()
 	ins(d, "tzname", Py_BuildValue("(zz)", "", ""));
 #endif /* macintosh */
 #endif /* HAVE_TM_ZONE */
-#endif /* !HAVE_TZNAME || __GNU_LIBRARY__ */
+#endif /* !HAVE_TZNAME || __GLIBC__ */
 	if (PyErr_Occurred())
 		Py_FatalError("Can't initialize time module");
 }
@@ -765,9 +759,15 @@ floatsleep(double secs)
 	t.tv_usec = (long)(frac*1000000.0);
 	Py_BEGIN_ALLOW_THREADS
 	if (select(0, (fd_set *)0, (fd_set *)0, (fd_set *)0, &t) != 0) {
-		Py_BLOCK_THREADS
-		PyErr_SetFromErrno(PyExc_IOError);
-		return -1;
+#ifdef EINTR
+		if (errno != EINTR) {
+#else
+		if (1) {
+#endif
+			Py_BLOCK_THREADS
+			PyErr_SetFromErrno(PyExc_IOError);
+			return -1;
+		}
 	}
 	Py_END_ALLOW_THREADS
 #else /* !HAVE_SELECT || __BEOS__ */

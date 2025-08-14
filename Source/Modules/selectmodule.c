@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* select - Module containing unix select(2) call.
    Under Unix, the file descriptors are small integers.
    Under Win32, select only exists for sockets, and sockets may
@@ -48,7 +17,9 @@ PERFORMANCE OF THIS SOFTWARE.
 extern void bzero();
 #endif
 
+#ifndef DONT_HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
 
 #if defined(PYOS_OS2)
 #include <sys/time.h>
@@ -143,7 +114,7 @@ list2set(list, set, fd2obj)
 			"argument must be an int, or have a fileno() method.");
 			goto finally;
 		}
-#if defined(_MSC_VER) || defined(__BEOS__)
+#if defined(_MSC_VER)
 		max = 0;		     /* not used for Win32 */
 #else  /* !_MSC_VER */
 		if (v < 0 || v >= FD_SETSIZE) {
@@ -218,6 +189,7 @@ set2list(set, fd2obj)
 	return NULL;
 }
 
+    
 #if defined(AMITCP) || defined(INET225)
 /* Amiga's version of select: WaitSelect()/selectwait() support */
 /* (additional 5th parameter: signal waitmask) */
@@ -284,9 +256,9 @@ select_select(self, args)
 	wfd2obj = PyMem_NEW(pylist, FD_SETSIZE + 3);
 	efd2obj = PyMem_NEW(pylist, FD_SETSIZE + 3);
 	if (rfd2obj == NULL || wfd2obj == NULL || efd2obj == NULL) {
-		PyMem_XDEL(rfd2obj);
-		PyMem_XDEL(wfd2obj);
-		PyMem_XDEL(efd2obj);
+		if (rfd2obj) PyMem_DEL(rfd2obj);
+		if (wfd2obj) PyMem_DEL(wfd2obj);
+		if (efd2obj) PyMem_DEL(efd2obj);
 		return NULL;
 	}
 #endif
@@ -361,7 +333,6 @@ select_select(self, args)
 
 #else /* ! AMITCP || INET225 */
 /* This is the select function for all other platforms */
-    
 static PyObject *
 select_select(self, args)
 	PyObject *self;
@@ -386,7 +357,7 @@ select_select(self, args)
 	int n;
 
 	/* convert arguments */
-	if (!PyArg_ParseTuple(args, "OOO|O",
+	if (!PyArg_ParseTuple(args, "OOO|O:select",
 			      &ifdlist, &ofdlist, &efdlist, &tout))
 		return NULL;
 
@@ -421,9 +392,9 @@ select_select(self, args)
 	wfd2obj = PyMem_NEW(pylist, FD_SETSIZE + 3);
 	efd2obj = PyMem_NEW(pylist, FD_SETSIZE + 3);
 	if (rfd2obj == NULL || wfd2obj == NULL || efd2obj == NULL) {
-		PyMem_XDEL(rfd2obj);
-		PyMem_XDEL(wfd2obj);
-		PyMem_XDEL(efd2obj);
+		if (rfd2obj) PyMem_DEL(rfd2obj);
+		if (wfd2obj) PyMem_DEL(wfd2obj);
+		if (efd2obj) PyMem_DEL(efd2obj);
 		return NULL;
 	}
 #endif

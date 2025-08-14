@@ -1,5 +1,6 @@
 
 void PyFloat_AsString(char *buf, PyFloatObject *v);
+void PyFloat_AsStringEx(char *buf, PyFloatObject *v, int precision);
 
 static PyFloatObject *fill_free_list ( void );
 static void float_dealloc ( PyFloatObject *op );
@@ -18,6 +19,7 @@ static PyObject *float_pow ( PyFloatObject *v , PyObject *w , PyFloatObject *z )
 static PyObject *float_neg ( PyFloatObject *v );
 static PyObject *float_pos ( PyFloatObject *v );
 static PyObject *float_abs ( PyFloatObject *v );
+static PyObject *float_str ( PyFloatObject *v );
 static int float_nonzero ( PyFloatObject *v );
 static int float_coerce ( PyObject **pv , PyObject **pw );
 static PyObject *float_int ( PyObject *v );

@@ -68,7 +68,6 @@ used for special class methods; variants without leading and trailing\n\
 */
 
 #include "Python.h"
-
 #include "protos/operator.h"
 
 #ifdef HAVE_PROTOTYPES

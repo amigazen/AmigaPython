@@ -1,44 +1,14 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Class object implementation */
 
 #include "Python.h"
 #include "structmember.h"
+#include "protos/classobject.h"
 
 /* Forward */
-#include "protos/classobject.h"
 static PyObject *class_lookup
 	Py_PROTO((PyClassObject *, PyObject *, PyClassObject **));
 static PyObject *instance_getattr1 Py_PROTO((PyInstanceObject *, PyObject *));
+static PyObject *instance_getattr2 Py_PROTO((PyInstanceObject *, PyObject *));
 
 static PyObject *getattrstr, *setattrstr, *delattrstr;
 
@@ -147,7 +117,7 @@ class_dealloc(op)
 	Py_XDECREF(op->cl_getattr);
 	Py_XDECREF(op->cl_setattr);
 	Py_XDECREF(op->cl_delattr);
-	free((ANY *)op);
+	PyObject_DEL(op);
 }
 
 static PyObject *
@@ -457,9 +427,8 @@ PyInstance_New(class, arg, kw)
 	}
 	if (initstr == NULL)
 		initstr = PyString_InternFromString("__init__");
-	init = instance_getattr1(inst, initstr);
+	init = instance_getattr2(inst, initstr);
 	if (init == NULL) {
-		PyErr_Clear();
 		if ((arg != NULL && (!PyTuple_Check(arg) ||
 				     PyTuple_Size(arg) != 0))
 		    || (kw != NULL && (!PyDict_Check(kw) ||
@@ -505,7 +474,7 @@ instance_dealloc(inst)
 	/* much too complicated if Py_TRACE_REFS defined */
 	extern long _Py_RefTotal;
 	inst->ob_type = &PyInstance_Type;
-	_Py_NewReference(inst);
+	_Py_NewReference((PyObject *)inst);
 	_Py_RefTotal--;		/* compensate for increment in NEWREF */
 #ifdef COUNT_ALLOCS
 	inst->ob_type->tp_alloc--; /* ditto */
@@ -516,7 +485,7 @@ instance_dealloc(inst)
 	PyErr_Fetch(&error_type, &error_value, &error_traceback);
 	if (delstr == NULL)
 		delstr = PyString_InternFromString("__del__");
-	if ((del = instance_getattr1(inst, delstr)) != NULL) {
+	if ((del = instance_getattr2(inst, delstr)) != NULL) {
 		PyObject *res = PyEval_CallObject(del, (PyObject *)NULL);
 		if (res == NULL) {
 			PyObject *f, *t, *v, *tb;
@@ -557,12 +526,12 @@ instance_dealloc(inst)
 #ifdef COUNT_ALLOCS
 	inst->ob_type->tp_free--;	/* compensate for increment in UNREF */
 #endif
-	_Py_ForgetReference(inst);
+	_Py_ForgetReference((PyObject *)inst);
 	inst->ob_type = NULL;
 #endif /* Py_TRACE_REFS */
 	Py_DECREF(inst->in_class);
 	Py_XDECREF(inst->in_dict);
-	free((ANY *)inst);
+	PyObject_DEL(inst);
 }
 
 static PyObject *
@@ -572,7 +541,6 @@ instance_getattr1(inst, name)
 {
 	register PyObject *v;
 	register char *sname = PyString_AsString(name);
-	PyClassObject *class;
 	if (sname[0] == '_' && sname[1] == '_') {
 		if (strcmp(sname, "__dict__") == 0) {
 			if (PyEval_GetRestricted()) {
@@ -588,14 +556,27 @@ instance_getattr1(inst, name)
 			return (PyObject *)inst->in_class;
 		}
 	}
+	v = instance_getattr2(inst, name);
+	if (v == NULL) {
+		PyErr_Format(PyExc_AttributeError,"'%.50s' instance has no attribute '%.400s'",
+			     PyString_AS_STRING(inst->in_class->cl_name), sname);
+	}
+	return v;
+}
+
+static PyObject *
+instance_getattr2(inst, name)
+	register PyInstanceObject *inst;
+	PyObject *name;
+{
+	register PyObject *v;
+	PyClassObject *class;
 	class = NULL;
 	v = PyDict_GetItem(inst->in_dict, name);
 	if (v == NULL) {
 		v = class_lookup(inst->in_class, name, &class);
-		if (v == NULL) {
-			PyErr_SetObject(PyExc_AttributeError, name);
-			return NULL;
-		}
+		if (v == NULL)
+			return v;
 	}
 	Py_INCREF(v);
 	if (class != NULL) {
@@ -1066,6 +1047,59 @@ instance_ass_slice(inst, i, j, value)
 	return 0;
 }
 
+static int instance_contains(PyInstanceObject *inst, PyObject *member)
+{
+	static PyObject *__contains__;
+	PyObject *func, *arg, *res;
+	int ret;
+
+	if(__contains__ == NULL) {
+		__contains__ = PyString_InternFromString("__contains__");
+		if(__contains__ == NULL)
+			return -1;
+	}
+	func = instance_getattr(inst, __contains__);
+	if(func == NULL) {
+		/* fall back to previous behaviour */
+		int i, cmp_res;
+
+		if(!PyErr_ExceptionMatches(PyExc_AttributeError))
+			return -1;
+		PyErr_Clear();
+		for(i=0;;i++) {
+			PyObject *obj = instance_item(inst, i);
+			int ret = 0;
+
+			if(obj == NULL) {
+				if(!PyErr_ExceptionMatches(PyExc_IndexError))
+					return -1;
+				PyErr_Clear();
+				return 0;
+			}
+			if(PyObject_Cmp(obj, member, &cmp_res) == -1)
+				ret = -1;
+			if(cmp_res == 0) 
+				ret = 1;
+			Py_DECREF(obj);
+			if(ret)
+				return ret;
+		}
+	}
+	arg = Py_BuildValue("(O)", member);
+	if(arg == NULL) {
+		Py_DECREF(func);
+		return -1;
+	}
+	res = PyEval_CallObject(func, arg);
+	Py_DECREF(func);
+	Py_DECREF(arg);
+	if(res == NULL) 
+		return -1;
+	ret = PyObject_IsTrue(res);
+	Py_DECREF(res);
+	return ret;
+}
+
 static PySequenceMethods instance_as_sequence = {
 	(inquiry)instance_length, /*sq_length*/
 	0, /*sq_concat*/
@@ -1074,6 +1108,7 @@ static PySequenceMethods instance_as_sequence = {
 	(intintargfunc)instance_slice, /*sq_slice*/
 	(intobjargproc)instance_ass_item, /*sq_ass_item*/
 	(intintobjargproc)instance_ass_slice, /*sq_ass_slice*/
+	(objobjproc)instance_contains, /* sq_contains */
 };
 
 static PyObject *
@@ -1415,6 +1450,8 @@ PyTypeObject PyInstance_Type = {
 	0,			/*tp_str*/
 	(getattrofunc)instance_getattr, /*tp_getattro*/
 	(setattrofunc)instance_setattr, /*tp_setattro*/
+        0, /* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT, /*tp_flags */
 };
 
 
@@ -1440,8 +1477,7 @@ PyMethod_New(func, self, class)
 	im = free_list;
 	if (im != NULL) {
 		free_list = (PyMethodObject *)(im->im_self);
-		im->ob_type = &PyMethod_Type;
-		_Py_NewReference(im);
+		PyObject_INIT(im, &PyMethod_Type);
 	}
 	else {
 		im = PyObject_NEW(PyMethodObject, &PyMethod_Type);
@@ -1569,7 +1605,6 @@ instancemethod_repr(a)
 		fname = PyString_AS_STRING(funcname);
 	else
 		fname = "?";
-	Py_XDECREF(funcname);
 	if (fclassname != NULL && PyString_Check(fclassname))
 		fcname = PyString_AsString(fclassname);
 	else
@@ -1585,6 +1620,7 @@ instancemethod_repr(a)
 		sprintf(buf, "<method %.60s.%.60s of %.60s instance at %lx>",
 			fcname, fname, icname, (long)self);
 	}
+	Py_XDECREF(funcname);
 	return PyString_FromString(buf);
 }
 
@@ -1633,8 +1669,8 @@ void
 PyMethod_Fini()
 {
 	while (free_list) {
-		PyMethodObject *v = free_list;
-		free_list = (PyMethodObject *)(v->im_self);
-		PyMem_DEL(v);
+		PyMethodObject *im = free_list;
+		free_list = (PyMethodObject *)(im->im_self);
+		PyObject_DEL(im);
 	}
 }

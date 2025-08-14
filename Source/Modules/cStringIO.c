@@ -1,5 +1,5 @@
 /*
- * $Id: cStringIO.c,v 2.16 1999/02/08 17:03:27 guido Exp $
+ * cStringIO.c,v 1.29 1999/06/15 14:10:27 jim Exp
  * 
  * Copyright (c) 1996-1998, Digital Creations, Fredericksburg, VA, USA.  
  * All rights reserved.
@@ -56,7 +56,7 @@ static char cStringIO_module_documentation[] =
 "\n"
 "This module provides a simple useful replacement for\n"
 "the StringIO module that is written in C.  It does not provide the\n"
-"full generality if StringIO, but it provides anough for most\n"
+"full generality if StringIO, but it provides enough for most\n"
 "applications and is especially useful in conjuction with the\n"
 "pickle module.\n"
 "\n"
@@ -78,7 +78,7 @@ static char cStringIO_module_documentation[] =
 "If someone else wants to provide a more complete implementation,\n"
 "go for it. :-)  \n"
 "\n"
-"$Id: cStringIO.c,v 2.16 1999/02/08 17:03:27 guido Exp $\n"
+"cStringIO.c,v 1.29 1999/06/15 14:10:27 jim Exp\n"
 ;
 
 #include "Python.h"
@@ -134,7 +134,7 @@ static PyObject *
 O_seek(Oobject *self, PyObject *args) {
   int position, mode = 0;
 
-  UNLESS(PyArg_ParseTuple(args, "i|i", &position, &mode)) {
+  UNLESS(PyArg_ParseTuple(args, "i|i:seek", &position, &mode)) {
     return NULL;
   }
 
@@ -187,7 +187,7 @@ O_read(Oobject *self, PyObject *args) {
   int n = -1;
   char *output;
 
-  UNLESS(PyArg_ParseTuple(args, "|i", &n)) return NULL;
+  UNLESS(PyArg_ParseTuple(args, "|i:read", &n)) return NULL;
 
   n=O_cread((PyObject*)self,&output,n);
 
@@ -264,7 +264,7 @@ O_write(Oobject *self, PyObject *args) {
   char *c;
   int l;
 
-  UNLESS(PyArg_ParseTuple(args, "O", &s)) return NULL;
+  UNLESS(PyArg_ParseTuple(args, "O:write", &s)) return NULL;
   UNLESS(-1 != (l=PyString_Size(s))) return NULL;
   UNLESS(c=PyString_AsString(s)) return NULL;
   UNLESS(-1 != O_cwrite((PyObject*)self,c,l)) return NULL;
@@ -286,7 +286,7 @@ O_getval(Oobject *self, PyObject *args) {
   int s;
 
   use_pos=Py_None;
-  UNLESS(PyArg_ParseTuple(args,"|O",&use_pos)) return NULL;
+  UNLESS(PyArg_ParseTuple(args,"|O:getval",&use_pos)) return NULL;
   if(PyObject_IsTrue(use_pos)) {
       s=self->pos;
       if (s > self->string_size) s=self->string_size;
@@ -350,7 +350,7 @@ O_writelines(Oobject *self, PyObject *args) {
   PyObject *string_module = 0;
   static PyObject *string_joinfields = 0;
 
-  UNLESS(PyArg_ParseTuple(args, "O", &args)) {
+  UNLESS(PyArg_ParseTuple(args, "O:writelines", &args)) {
     return NULL;
   }
 
@@ -407,7 +407,7 @@ static void
 O_dealloc(Oobject *self) {
   if (self->buf != NULL)
     free(self->buf);
-  PyMem_DEL(self);
+  PyObject_Del(self);
 }
 
 static PyObject *
@@ -465,7 +465,7 @@ static PyObject *
 newOobject(int  size) {
   Oobject *self;
 	
-  self = PyObject_NEW(Oobject, &Otype);
+  self = PyObject_New(Oobject, &Otype);
   if (self == NULL)
     return NULL;
   self->pos=0;
@@ -500,7 +500,7 @@ static PyObject *
 I_seek(Oobject *self, PyObject *args) {
   int position, mode = 0;
 
-  UNLESS(PyArg_ParseTuple(args, "i|i", &position, &mode)) {
+  UNLESS(PyArg_ParseTuple(args, "i|i:seek", &position, &mode)) {
     return NULL;
   }
 
@@ -536,7 +536,7 @@ static struct PyMethodDef I_methods[] = {
 static void
 I_dealloc(Iobject *self) {
   Py_XDECREF(self->pbuf);
-  PyMem_DEL(self);
+  PyObject_Del(self);
 }
 
 static PyObject *
@@ -578,10 +578,15 @@ newIobject(PyObject *s) {
   Iobject *self;
   char *buf;
   int size;
-	
-  UNLESS(buf=PyString_AsString(s)) return NULL;
-  UNLESS(-1 != (size=PyString_Size(s))) return NULL;
-  UNLESS(self = PyObject_NEW(Iobject, &Itype)) return NULL;
+
+  if (!PyString_Check(s)) {
+      PyErr_Format(PyExc_TypeError, "expected string, %.200s found",
+		   s->ob_type->tp_name);
+      return NULL;
+  }
+  buf = PyString_AS_STRING(s);
+  size = PyString_GET_SIZE(s);
+  UNLESS(self = PyObject_New(Iobject, &Itype)) return NULL;
   Py_INCREF(s);
   self->buf=buf;
   self->string_size=size;
@@ -603,7 +608,8 @@ static PyObject *
 IO_StringIO(PyObject *self, PyObject *args) {
   PyObject *s=0;
 
-  UNLESS(PyArg_ParseTuple(args, "|O", &s)) return NULL;
+  if (!PyArg_ParseTuple(args, "|O:StringIO", &s))
+      return NULL;
   if(s) return newIobject(s);
   return newOobject(128);
 }
@@ -658,7 +664,4 @@ initcStringIO() {
 
   /* Maybe make certain warnings go away */
   if(0) PycString_IMPORT;
-  
-  /* Check for errors */
-  if (PyErr_Occurred()) Py_FatalError("can't initialize module cStringIO");
 }

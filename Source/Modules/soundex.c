@@ -18,11 +18,6 @@
 #include <ctype.h>
 #include "Python.h"
 
-#if defined (_AMIGA) && defined (toupper)
-/* Don't use toupper MACRO */
-#undef toupper
-#endif
-
 static char soundex_module__doc__[] =
 "Perform Soundex comparisons on strings, allowing non-literal matching.";
 
@@ -130,7 +125,7 @@ get_soundex(PyObject *self, PyObject *args)
 	char *str;
 	char sdx[7];
 
-	if(!PyArg_ParseTuple( args, "s", &str))
+	if(!PyArg_ParseTuple( args, "s:get_soundex", &str))
 	  return NULL;
 
 	soundex_hash(str, sdx);
@@ -146,7 +141,7 @@ sound_similar(PyObject *self, PyObject *args)
     char *str1, *str2;
     char res1[7], res2[7];
     
-    if(!PyArg_ParseTuple(args, "ss", &str1, &str2))
+    if(!PyArg_ParseTuple(args, "ss:sound_similar", &str1, &str2))
         return NULL;
 
     soundex_hash(str1, res1);

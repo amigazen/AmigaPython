@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* struct module -- pack values into and (out of) strings */
 
 /* New version supporting byte order, alignment and size options,
@@ -65,6 +34,8 @@ The variable struct.error is an exception raised on errors.";
 #include <limits.h>
 #include <ctype.h>
 
+#include "protos/structmodule.h"
+
 /* Exception */
 
 static PyObject *StructError;
@@ -88,8 +59,6 @@ typedef struct { char c; long x; } s_long;
 typedef struct { char c; float x; } s_float;
 typedef struct { char c; double x; } s_double;
 typedef struct { char c; void *x; } s_void_p;
-
-#include "protos/structmodule.h"
 
 #define SHORT_ALIGN (sizeof(s_short) - sizeof(short))
 #define INT_ALIGN (sizeof(s_int) - sizeof(int))
@@ -1100,7 +1069,7 @@ struct_calcsize(self, args)
 	const formatdef *f;
 	int size;
 
-	if (!PyArg_ParseTuple(args, "s", &fmt))
+	if (!PyArg_ParseTuple(args, "s:calcsize", &fmt))
 		return NULL;
 	f = whichtable(&fmt);
 	size = calcsize(fmt, f);
@@ -1265,7 +1234,7 @@ struct_unpack(self, args)
 	int len, size, num;
 	PyObject *res, *v;
 
-	if (!PyArg_ParseTuple(args, "ss#", &fmt, &start, &len))
+	if (!PyArg_ParseTuple(args, "ss#:unpack", &fmt, &start, &len))
 		return NULL;
 	f = whichtable(&fmt);
 	size = calcsize(fmt, f);

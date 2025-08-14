@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Traceback implementation */
 
 #include "Python.h"
@@ -70,9 +39,11 @@ static void
 tb_dealloc(tb)
 	tracebackobject *tb;
 {
+	Py_TRASHCAN_SAFE_BEGIN(tb)
 	Py_XDECREF(tb->tb_next);
 	Py_XDECREF(tb->tb_frame);
-	PyMem_DEL(tb);
+	PyObject_DEL(tb);
+	Py_TRASHCAN_SAFE_END(tb)
 }
 
 #define Tracebacktype PyTraceBack_Type
@@ -199,8 +170,17 @@ tb_displayline(f, filename, lineno, name)
 	if (xfp == NULL || err != 0)
 		return err;
 	for (i = 0; i < lineno; i++) {
-		if (fgets(linebuf, sizeof linebuf, xfp) == NULL)
-			break;
+		char* pLastChar = &linebuf[sizeof(linebuf)-2];
+		do {
+			*pLastChar = '\0';
+			if (fgets(linebuf, sizeof linebuf, xfp) == NULL)
+				break;
+			/* fgets read *something*; if it didn't get as
+			   far as pLastChar, it must have found a newline
+			   or hit the end of the file;	if pLastChar is \n,
+			   it obviously found a newline; else we haven't
+			   yet seen a newline, so must continue */
+		} while (*pLastChar != '\0' && *pLastChar != '\n');
 	}
 	if (i == lineno) {
 		char *p = linebuf;
@@ -269,7 +249,7 @@ PyTraceBack_Print(v, f)
 		if (limit <= 0)
 			return 0;
 	}
-	err = PyFile_WriteString("Traceback (innermost last):\n", f);
+	err = PyFile_WriteString("Traceback (most recent call last):\n", f);
 	if (!err)
 		err = tb_printinternal((tracebackobject *)v, f, limit);
 	return err;

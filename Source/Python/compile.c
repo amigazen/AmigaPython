@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Compile an expression node to intermediate code */
 
 /* XXX TO DO:
@@ -54,7 +23,6 @@ PERFORMANCE OF THIS SOFTWARE.
 #include "structmember.h"
 
 #include <ctype.h>
-
 #include "protos/compile.h"
 
 /* Three symbols from graminit.h are also defined in Python.h, with
@@ -114,7 +82,7 @@ code_dealloc(co)
 	Py_XDECREF(co->co_filename);
 	Py_XDECREF(co->co_name);
 	Py_XDECREF(co->co_lnotab);
-	PyMem_DEL(co);
+	PyObject_DEL(co);
 }
 
 static PyObject *
@@ -123,13 +91,11 @@ code_repr(co)
 {
 	char buf[500];
 	int lineno = -1;
-	unsigned char *p;
 	char *filename = "???";
 	char *name = "???";
 
-	_PyCode_GETCODEPTR(co, &p);
-	if (*p == SET_LINENO)
-		lineno = (p[1] & 0xff) | ((p[2] & 0xff) << 8);
+	if (co->co_firstlineno != 0)
+		lineno = co->co_firstlineno;
 	if (co->co_filename && PyString_Check(co->co_filename))
 		filename = PyString_AsString(co->co_filename);
 	if (co->co_name && PyString_Check(co->co_name))
@@ -144,6 +110,8 @@ code_compare(co, cp)
 	PyCodeObject *co, *cp;
 {
 	int cmp;
+	cmp = PyObject_Compare(co->co_name, cp->co_name);
+	if (cmp) return cmp;
 	cmp = co->co_argcount - cp->co_argcount;
 	if (cmp) return cmp;
 	cmp = co->co_nlocals - cp->co_nlocals;
@@ -164,7 +132,9 @@ static long
 code_hash(co)
 	PyCodeObject *co;
 {
-	long h, h1, h2, h3, h4;
+	long h, h0, h1, h2, h3, h4;
+	h0 = PyObject_Hash(co->co_name);
+	if (h0 == -1) return -1;
 	h1 = PyObject_Hash(co->co_code);
 	if (h1 == -1) return -1;
 	h2 = PyObject_Hash(co->co_consts);
@@ -173,7 +143,7 @@ code_hash(co)
 	if (h3 == -1) return -1;
 	h4 = PyObject_Hash(co->co_varnames);
 	if (h4 == -1) return -1;
-	h = h1 ^ h2 ^ h3 ^ h4 ^
+	h = h0 ^ h1 ^ h2 ^ h3 ^ h4 ^
 		co->co_argcount ^ co->co_nlocals ^ co->co_flags;
 	if (h == -1) h = -2;
 	return h;
@@ -301,7 +271,9 @@ PyCode_New(argcount, nlocals, stacksize, flags,
 struct compiling {
 	PyObject *c_code;		/* string */
 	PyObject *c_consts;	/* list of objects */
+	PyObject *c_const_dict; /* inverse of c_consts */
 	PyObject *c_names;	/* list of strings (names) */
+	PyObject *c_name_dict;  /* inverse of c_names */
 	PyObject *c_globals;	/* dictionary (value=None) */
 	PyObject *c_locals;	/* dictionary (value=localID) */
 	PyObject *c_varnames;	/* list (inverse of c_locals) */
@@ -403,7 +375,7 @@ static void com_addint Py_PROTO((struct compiling *, int));
 static void com_addoparg Py_PROTO((struct compiling *, int, int));
 static void com_addfwref Py_PROTO((struct compiling *, int, int *));
 static void com_backpatch Py_PROTO((struct compiling *, int));
-static int com_add Py_PROTO((struct compiling *, PyObject *, PyObject *));
+static int com_add Py_PROTO((struct compiling *, PyObject *, PyObject *, PyObject *));
 static int com_addconst Py_PROTO((struct compiling *, PyObject *));
 static int com_addname Py_PROTO((struct compiling *, PyObject *));
 static void com_addopname Py_PROTO((struct compiling *, int, node *));
@@ -421,22 +393,27 @@ com_init(c, filename)
 	struct compiling *c;
 	char *filename;
 {
+	memset((void *)c, '\0', sizeof(struct compiling));
 	if ((c->c_code = PyString_FromStringAndSize((char *)NULL,
 						    1000)) == NULL)
-		goto fail_3;
+		goto fail;
 	if ((c->c_consts = PyList_New(0)) == NULL)
-		goto fail_2;
+		goto fail;
+	if ((c->c_const_dict = PyDict_New()) == NULL)
+		goto fail;
 	if ((c->c_names = PyList_New(0)) == NULL)
-		goto fail_1;
+		goto fail;
+	if ((c->c_name_dict = PyDict_New()) == NULL)
+		goto fail;
 	if ((c->c_globals = PyDict_New()) == NULL)
-		goto fail_0;
+		goto fail;
 	if ((c->c_locals = PyDict_New()) == NULL)
-		goto fail_00;
+		goto fail;
 	if ((c->c_varnames = PyList_New(0)) == NULL)
-		goto fail_000;
+		goto fail;
 	if ((c->c_lnotab = PyString_FromStringAndSize((char *)NULL,
 						      1000)) == NULL)
-		goto fail_0000;
+		goto fail;
 	c->c_nlocals = 0;
 	c->c_argcount = 0;
 	c->c_flags = 0;
@@ -458,19 +435,8 @@ com_init(c, filename)
 	c-> c_lnotab_next = 0;
 	return 1;
 	
-  fail_0000:
-  	Py_DECREF(c->c_lnotab);
-  fail_000:
-  	Py_DECREF(c->c_locals);
-  fail_00:
-  	Py_DECREF(c->c_globals);
-  fail_0:
-  	Py_DECREF(c->c_names);
-  fail_1:
-	Py_DECREF(c->c_consts);
-  fail_2:
-	Py_DECREF(c->c_code);
-  fail_3:
+  fail:
+	com_free(c);
  	return 0;
 }
 
@@ -480,7 +446,9 @@ com_free(c)
 {
 	Py_XDECREF(c->c_code);
 	Py_XDECREF(c->c_consts);
+	Py_XDECREF(c->c_const_dict);
 	Py_XDECREF(c->c_names);
+	Py_XDECREF(c->c_name_dict);
 	Py_XDECREF(c->c_globals);
 	Py_XDECREF(c->c_locals);
 	Py_XDECREF(c->c_varnames);
@@ -665,24 +633,39 @@ com_backpatch(c, anchor)
 /* Handle literals and names uniformly */
 
 static int
-com_add(c, list, v)
+com_add(c, list, dict, v)
 	struct compiling *c;
 	PyObject *list;
+	PyObject *dict;
 	PyObject *v;
 {
-	int n = PyList_Size(list);
-	int i;
-	/* XXX This is quadratic in the number of names per compilation unit.
-	   XXX Should use a dictionary. */
-	for (i = n; --i >= 0; ) {
-		PyObject *w = PyList_GetItem(list, i);
-		if (v->ob_type == w->ob_type && PyObject_Compare(v, w) == 0)
-			return i;
+	PyObject *w, *t, *np=NULL;
+	long n;
+
+	t = Py_BuildValue("(OO)", v, v->ob_type);
+	if (t == NULL)
+	    goto fail;
+	w = PyDict_GetItem(dict, t);
+	if (w != NULL) {
+		n = PyInt_AsLong(w);
+	} else {
+		n = PyList_Size(list);
+		np = PyInt_FromLong(n);
+		if (np == NULL)
+		    goto fail;
+		if (PyList_Append(list, v) != 0)
+		    goto fail;
+		if (PyDict_SetItem(dict, t, np) != 0)
+		    goto fail;
+		Py_DECREF(np);
 	}
-	/* Check for error from PyObject_Compare */
-	if (PyErr_Occurred() || PyList_Append(list, v) != 0)
-		c->c_errors++;
+	Py_DECREF(t);
 	return n;
+  fail:
+	Py_XDECREF(np);
+	Py_XDECREF(t);
+	c->c_errors++;
+	return 0;
 }
 
 static int
@@ -690,7 +673,7 @@ com_addconst(c, v)
 	struct compiling *c;
 	PyObject *v;
 {
-	return com_add(c, c->c_consts, v);
+	return com_add(c, c->c_consts, c->c_const_dict, v);
 }
 
 static int
@@ -698,7 +681,7 @@ com_addname(c, v)
 	struct compiling *c;
 	PyObject *v;
 {
-	return com_add(c, c->c_names, v);
+	return com_add(c, c->c_names, c->c_name_dict, v);
 }
 
 #ifdef PRIVATE_NAME_MANGLING
@@ -877,8 +860,18 @@ parsestr(s)
 	int c;
 	int first = *s;
 	int quote = first;
-	if (isalpha(quote) || quote == '_')
-		quote = *++s;
+	int rawmode = 0;
+	int unicode = 0;
+	if (isalpha(quote) || quote == '_') {
+		if (quote == 'u' || quote == 'U') {
+			quote = *++s;
+			unicode = 1;
+		}
+		if (quote == 'r' || quote == 'R') {
+			quote = *++s;
+			rawmode = 1;
+		}
+	}
 	if (quote != '\'' && quote != '\"') {
 		PyErr_BadInternalCall();
 		return NULL;
@@ -897,8 +890,17 @@ parsestr(s)
 			return NULL;
 		}
 	}
-	if (first != quote || strchr(s, '\\') == NULL)
+	if (unicode || Py_UnicodeFlag) {
+		if (rawmode)
+			return PyUnicode_DecodeRawUnicodeEscape(
+				s, len, NULL);
+		else
+			return PyUnicode_DecodeUnicodeEscape(
+				s, len, NULL);
+	}
+	else if (rawmode || strchr(s, '\\') == NULL) {
 		return PyString_FromStringAndSize(s, len);
+	}
 	v = PyString_FromStringAndSize((char *)NULL, len);
 	p = buf = PyString_AsString(v);
 	end = s + len;
@@ -965,11 +967,32 @@ parsestrplus(n)
 	REQ(CHILD(n, 0), STRING);
 	if ((v = parsestr(STR(CHILD(n, 0)))) != NULL) {
 		/* String literal concatenation */
-		for (i = 1; i < NCH(n) && v != NULL; i++) {
-			PyString_ConcatAndDel(&v, parsestr(STR(CHILD(n, i))));
+		for (i = 1; i < NCH(n); i++) {
+		    PyObject *s;
+		    s = parsestr(STR(CHILD(n, i)));
+		    if (s == NULL)
+			goto onError;
+		    if (PyString_Check(v) && PyString_Check(s)) {
+			PyString_ConcatAndDel(&v, s);
+			if (v == NULL)
+			    goto onError;
+		    }
+		    else {
+			PyObject *temp;
+			temp = PyUnicode_Concat(v, s);
+			Py_DECREF(s);
+			if (temp == NULL)
+			    goto onError;
+			Py_DECREF(v);
+			v = temp;
+		    }
 		}
 	}
 	return v;
+
+ onError:
+	Py_XDECREF(v);
+	return NULL;
 }
 
 static void
@@ -1168,11 +1191,17 @@ com_call_function(c, n)
 		PyObject *keywords = NULL;
 		int i, na, nk;
 		int lineno = n->n_lineno;
+		int star_flag = 0;
+		int starstar_flag = 0;
+		int opcode;
 		REQ(n, arglist);
 		na = 0;
 		nk = 0;
 		for (i = 0; i < NCH(n); i += 2) {
 			node *ch = CHILD(n, i);
+			if (TYPE(ch) == STAR ||
+			    TYPE(ch) == DOUBLESTAR)
+			  break;
 			if (ch->n_lineno != lineno) {
 				lineno = ch->n_lineno;
 				com_addoparg(c, SET_LINENO, lineno);
@@ -1184,12 +1213,27 @@ com_call_function(c, n)
 				nk++;
 		}
 		Py_XDECREF(keywords);
+		while (i < NCH(n)) {
+		    node *tok = CHILD(n, i);
+		    node *ch = CHILD(n, i+1);
+		    i += 3;
+		    switch (TYPE(tok)) {
+		    case STAR:       star_flag = 1;     break;
+		    case DOUBLESTAR: starstar_flag = 1;	break;
+		    }
+		    com_node(c, ch);
+		}
 		if (na > 255 || nk > 255) {
 			com_error(c, PyExc_SyntaxError,
 				  "more than 255 arguments");
 		}
-		com_addoparg(c, CALL_FUNCTION, na | (nk << 8));
-		com_pop(c, na + 2*nk);
+		if (star_flag || starstar_flag)
+		    opcode = CALL_FUNCTION_VAR - 1 + 
+			star_flag + (starstar_flag << 1);
+		else
+		    opcode = CALL_FUNCTION;
+		com_addoparg(c, opcode, na | (nk << 8));
+		com_pop(c, na + 2*nk + star_flag + starstar_flag);
 	}
 }
 
@@ -3443,6 +3487,14 @@ jcompile(n, filename, base)
 		Py_XDECREF(filename);
 		Py_XDECREF(name);
 	}
+	else if (!PyErr_Occurred()) {
+		/* This could happen if someone called PyErr_Clear() after an
+		   error was reported above.  That's not supposed to happen,
+		   but I just plugged one case and I'm not sure there can't be
+		   others.  In that case, raise SystemError so that at least
+		   it gets reported instead dumping core. */
+		PyErr_SetString(PyExc_SystemError, "lost syntax error");
+	}
 	com_free(&sc);
 	return co;
 }
@@ -3453,7 +3505,7 @@ PyCode_Addr2Line(co, addrq)
 	int addrq;
 {
 	int size = PyString_Size(co->co_lnotab) / 2;
-	char *p = PyString_AsString(co->co_lnotab);
+	unsigned char *p = (unsigned char*)PyString_AsString(co->co_lnotab);
 	int line = co->co_firstlineno;
 	int addr = 0;
 	while (--size >= 0) {

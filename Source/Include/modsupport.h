@@ -4,37 +4,6 @@
 extern "C" {
 #endif
 
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Module support interface */
 
 #ifdef HAVE_STDARG_PROTOTYPES
@@ -61,8 +30,8 @@ extern DL_IMPORT(PyObject *) Py_BuildValue();
 extern DL_IMPORT(int) PyArg_VaParse Py_PROTO((PyObject *, char *, va_list));
 extern DL_IMPORT(PyObject *) Py_VaBuildValue Py_PROTO((char *, va_list));
 
-#define PYTHON_API_VERSION 1007
-#define PYTHON_API_STRING "1007"
+#define PYTHON_API_VERSION 1009
+#define PYTHON_API_STRING "1009"
 /* The API version is maintained (independently from the Python version)
    so we can detect mismatches between the interpreter and dynamically
    loaded modules.  These are diagnosticised by an error message but
@@ -75,6 +44,8 @@ extern DL_IMPORT(PyObject *) Py_VaBuildValue Py_PROTO((char *, va_list));
 
    Please add a line or two to the top of this log for each API
    version change:
+
+   14-Mar-2000  GvR     1009    Unicode API added
 
    3-Jan-1999	GvR	1007	Decided to change back!  (Don't reuse 1008!)
 

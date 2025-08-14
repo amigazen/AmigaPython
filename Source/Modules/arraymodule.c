@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Array object implementation */
 
 /* An array is a uniform list -- all items have the same type.
@@ -38,9 +7,11 @@ PERFORMANCE OF THIS SOFTWARE.
 
 #ifdef STDC_HEADERS
 #include <stddef.h>
-#else
+#else /* !STDC_HEADERS */
+#ifndef DONT_HAVE_SYS_TYPES_H
 #include <sys/types.h>		/* For size_t */
-#endif
+#endif /* DONT_HAVE_SYS_TYPES_H */
+#endif /* !STDC_HEADERS */
 
 struct arrayobject; /* Forward */
 
@@ -62,7 +33,6 @@ staticforward PyTypeObject Arraytype;
 #define is_arrayobject(op) ((op)->ob_type == &Arraytype)
 
 /* Forward */
-#include "protos/arraymodule.h"
 static PyObject *newarrayobject Py_PROTO((int, struct arraydescr *));
 #if 0
 static int getarraysize Py_PROTO((PyObject *));
@@ -73,6 +43,8 @@ static int setarrayitem Py_PROTO((PyObject *, int, PyObject *));
 static int insarrayitem Py_PROTO((PyObject *, int, PyObject *));
 static int addarrayitem Py_PROTO((PyObject *, PyObject *));
 #endif
+
+#include "protos/arraymodule.h"
 
 static PyObject *
 c_getitem(ap, i)
@@ -345,7 +317,7 @@ newarrayobject(size, descr)
 	if (nbytes / descr->itemsize != (size_t)size) {
 		return PyErr_NoMemory();
 	}
-	op = PyMem_NEW(arrayobject, 1);
+	op = PyObject_NewVar(arrayobject, &Arraytype, size);
 	if (op == NULL) {
 		return PyErr_NoMemory();
 	}
@@ -355,14 +327,11 @@ newarrayobject(size, descr)
 	else {
 		op->ob_item = PyMem_NEW(char, nbytes);
 		if (op->ob_item == NULL) {
-			PyMem_DEL(op);
+			PyObject_Del(op);
 			return PyErr_NoMemory();
 		}
 	}
-	op->ob_type = &Arraytype;
-	op->ob_size = size;
 	op->ob_descr = descr;
-	_Py_NewReference(op);
 	return (PyObject *) op;
 }
 
@@ -465,7 +434,7 @@ array_dealloc(op)
 {
 	if (op->ob_item != NULL)
 		PyMem_DEL(op->ob_item);
-	PyMem_DEL(op);
+	PyObject_Del(op);
 }
 
 static int
@@ -758,6 +727,10 @@ array_byteswap(self, args)
 {
 	char *p;
 	int i;
+
+        if (!PyArg_ParseTuple(args, ":byteswap"))
+                return NULL;
+
 	switch (self->ob_descr->itemsize) {
 	case 1:
 		break;
@@ -804,10 +777,10 @@ array_byteswap(self, args)
 }
 
 static char byteswap_doc [] =
-"byteswap(x)\n\
+"byteswap()\n\
 \n\
-Byteswap all items of the array.  This is only supported for integer\n\
-values of x, which determines the size of the blocks swapped.";
+Byteswap all items of the array.  If the items in the array are not 1, 2,\n\
+4, or 8 bytes in size, RuntimeError is raised.";
 
 static PyObject *
 array_reverse(self, args)
@@ -1138,7 +1111,8 @@ representation.";
 PyMethodDef array_methods[] = {
 	{"append",	(PyCFunction)array_append, 0, append_doc},
 	{"buffer_info", (PyCFunction)array_buffer_info, 0, buffer_info_doc},
-	{"byteswap",	(PyCFunction)array_byteswap, 0, byteswap_doc},
+	{"byteswap",	(PyCFunction)array_byteswap, METH_VARARGS,
+         byteswap_doc},
 /*	{"count",	(method)array_count},*/
 	{"fromfile",	(PyCFunction)array_fromfile, 0, fromfile_doc},
 	{"fromlist",	(PyCFunction)array_fromlist, 0, fromlist_doc},
@@ -1442,7 +1416,7 @@ itemsize -- the length in bytes of one array item\n\
 ";
 
 statichere PyTypeObject Arraytype = {
-	PyObject_HEAD_INIT(&PyType_Type)
+	PyObject_HEAD_INIT(NULL)
 	0,
 	"array",
 	sizeof(arrayobject),
@@ -1470,6 +1444,8 @@ DL_EXPORT(void)
 initarray()
 {
 	PyObject *m, *d;
+
+        Arraytype.ob_type = &PyType_Type;
 	m = Py_InitModule3("array", a_methods, module_doc);
 	d = PyModule_GetDict(m);
 	PyDict_SetItemString(d, "ArrayType", (PyObject *)&Arraytype);

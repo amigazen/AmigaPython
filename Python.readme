@@ -1,9 +1,9 @@
 
 
-                               PYTHON 1.5.2
+                                PYTHON 1.6
                           NOTES ON THE AMIGA PORT
 
-                             October 24, 1999.
+                             October 12, 2000.
 
 	
            Conversion and Amiga specific code by Irmen de Jong.
@@ -32,12 +32,12 @@
 |                      |
 +----------------------+
 
-IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.5.2 build 1):
+Well, this is Python version 1.6 (build 1)!
+See the notes in Docs/NEWS for more information on what's new since 1.5.2.
+Be aware that there are a few language incompatibilities. Just check
+out the regular Python 1.6 news on www.python.org to find out what they are.
 
-    - Prints correct string when command `exit' is issued at the prompt.
-    - Fixed some missing 1.5.2 issues, like the os.error exception type.
-    - A new time.strftime which passes the test.
-    - Fixed amiga.crc32 function to comply with CRC32 standards.
+BTW Perhaps AmigaPython 2.0 will even see the light in the near future... :-)
 
 
 +----------------------+
@@ -51,11 +51,10 @@ IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.5.2 build 1):
   reference and much more).
 
 * The above mentioned documentation is also available on Aminet, as
-  dev/lang/Python152_Doc.lha.
+  dev/lang/Python16_Doc.lha.
 
 * The AmigaPython homepage is at http://www.bigfoot.com/~irmen/python.html
   (note the new address!). Check it out for news, future plans, bugs etc.
-  You can also obtain the beta I-Net 225 version here.
 
 * In the `Docs/Amiga' directory you can find the docs for the Amiga specific
   modules and features. Read them, they contain vital information!
@@ -78,20 +77,11 @@ IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.5.2 build 1):
 
 * To run a speed benchmark, type:
 	Python -c "import test.pystone; test.pystone.main()"
-  and have some patience. On my system, I get 366 pystones/second.
+  and have some patience. On my system, I get 355 pystones/second.
 
 * In the `Icons' directory there are some icon suggestions.
   def_py.info is an icon for Python source files (.py)
   def_pyc.info is an icon for Pytnon bytecode files (.pyc)
-
-* The following modules are built-in in this release:
-  ARexxll Doslib amiga array binascii cPickle cStringIO cmath crypt
-  environment errno grp imp marshal math md5 new operator pcre pwd regex
-  rotor select sha socket soundex strop struct sys syslog time
-
-  Amiga specific: amiga, ARexxll, Doslib, environment
-  Needs usergroup.library: crypt, grp, pwd.
-  Needs AmiTCP's bsdsocket.library: select, socket, syslog.
 
 * Mail  me  if  you encounter any Amiga specific problems, or if you have any
   Amiga  related  questions  about  Python,  or  just  for fun.  General
@@ -135,10 +125,6 @@ IMPORTANT CHANGES SINCE THE PREVIOUS VERSION (version 1.5.2 build 1):
   The default l:queue-handler is buggy.  Make sure you have installed a fixed
   l:queue-handler (I'm using util/sys/HWGQueue.lha from Aminet)
 
-* I cannot import Dos or ARexx!
-
-  Try `import site' first.
-
 * Other errors
 
   Mail me at irmen@bigfoot.com with a clear description of the problem.
@@ -160,6 +146,7 @@ Lyster E. Wick for his various contributions (NewIcons/ARexx/WB/bugreports)
 Marc Christiansen for his detailed description of the strftime and
   amiga.crc32 problems (and persuading me to fix them)
 Bablos to make me start polishing up the embedded python code.
+Adam Chodorowski for a few new doslib functions.
 
 And ofcourse thanks to my friends who supported me in the first phase of
 this project and pushed me to continue this work (that was LONG ago, in the

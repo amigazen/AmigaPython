@@ -31,7 +31,6 @@
 #include "Python.h"
 #include "regexpr.h"
 #include <assert.h>
-
 #include "protos/regexpr.h"
 
 /* The original code blithely assumed that sizeof(short) == 2.  Not

@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* System module */
 
 /*
@@ -47,12 +16,11 @@ Data members:
 #include "Python.h"
 
 #include "osdefs.h"
+#include "protos/sysmodule.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
-
-#include "protos/sysmodule.h"
 
 #ifdef MS_COREDLL
 extern void *PyWin_DLLhModule;
@@ -66,6 +34,8 @@ PySys_GetObject(name)
 {
 	PyThreadState *tstate = PyThreadState_Get();
 	PyObject *sd = tstate->interp->sysdict;
+	if (sd == NULL)
+		return NULL;
 	return PyDict_GetItemString(sd, name);
 }
 
@@ -106,7 +76,7 @@ sys_exc_info(self, args)
 	PyObject *args;
 {
 	PyThreadState *tstate;
-	if (!PyArg_Parse(args, ""))
+	if (!PyArg_ParseTuple(args, ":exc_info"))
 		return NULL;
 	tstate = PyThreadState_Get();
 	return Py_BuildValue(
@@ -141,6 +111,41 @@ If the status is omitted or None, it defaults to zero (i.e., success).\n\
 If the status numeric, it will be used as the system exit status.\n\
 If it is another kind of object, it will be printed and the system\n\
 exit status will be one (i.e., failure).";
+
+static PyObject *
+sys_get_string_encoding(self, args)
+	PyObject *self;
+	PyObject *args;
+{
+	if (!PyArg_ParseTuple(args, ":get_string_encoding"))
+		return NULL;
+	return PyString_FromString(PyUnicode_GetDefaultEncoding());
+}
+
+static char get_string_encoding_doc[] =
+"get_string_encoding() -> string\n\
+\n\
+Return the current default string encoding used by the Unicode \n\
+implementation.";
+
+static PyObject *
+sys_set_string_encoding(self, args)
+	PyObject *self;
+	PyObject *args;
+{
+	char *encoding;
+	if (!PyArg_ParseTuple(args, "s:set_string_encoding", &encoding))
+		return NULL;
+	if (PyUnicode_SetDefaultEncoding(encoding))
+	    	return NULL;
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
+static char set_string_encoding_doc[] =
+"set_string_encoding(encoding)\n\
+\n\
+Set the current default string encoding used by the Unicode implementation.";
 
 static PyObject *
 sys_settrace(self, args)
@@ -192,7 +197,7 @@ sys_setcheckinterval(self, args)
 	PyObject *args;
 {
 	PyThreadState *tstate = PyThreadState_Get();
-	if (!PyArg_ParseTuple(args, "i", &tstate->interp->checkinterval))
+	if (!PyArg_ParseTuple(args, "i:setcheckinterval", &tstate->interp->checkinterval))
 		return NULL;
 	Py_INCREF(Py_None);
 	return Py_None;
@@ -214,7 +219,7 @@ sys_mdebug(self, args)
 	PyObject *args;
 {
 	int flag;
-	if (!PyArg_Parse(args, "i", &flag))
+	if (!PyArg_ParseTuple(args, "i:mdebug", &flag))
 		return NULL;
 	mallopt(M_DEBUG, flag);
 	Py_INCREF(Py_None);
@@ -228,7 +233,7 @@ sys_getrefcount(self, args)
 	PyObject *args;
 {
 	PyObject *arg;
-	if (!PyArg_Parse(args, "O", &arg))
+	if (!PyArg_ParseTuple(args, "O:getrefcount", &arg))
 		return NULL;
 	return PyInt_FromLong((long) arg->ob_refcnt);
 }
@@ -246,7 +251,7 @@ sys_getcounts(self, args)
 {
 	extern PyObject *get_counts Py_PROTO((void));
 
-	if (!PyArg_Parse(args, ""))
+	if (!PyArg_ParseTuple(args, ":getcounts"))
 		return NULL;
 	return get_counts();
 }
@@ -264,10 +269,11 @@ extern PyObject *_Py_GetDXProfile Py_PROTO((PyObject *,  PyObject *));
 
 static PyMethodDef sys_methods[] = {
 	/* Might as well keep this in alphabetic order */
-	{"exc_info",	sys_exc_info, 0, exc_info_doc},
+	{"exc_info",	sys_exc_info, 1, exc_info_doc},
 	{"exit",	sys_exit, 0, exit_doc},
+	{"get_string_encoding", sys_get_string_encoding, 1, get_string_encoding_doc},
 #ifdef COUNT_ALLOCS
-	{"getcounts",	sys_getcounts, 0},
+	{"getcounts",	sys_getcounts, 1},
 #endif
 #ifdef DYNAMIC_EXECUTION_PROFILE
 	{"getdxp",	_Py_GetDXProfile, 1},
@@ -275,10 +281,11 @@ static PyMethodDef sys_methods[] = {
 #ifdef Py_TRACE_REFS
 	{"getobjects",	_Py_GetObjects, 1},
 #endif
-	{"getrefcount",	sys_getrefcount, 0, getrefcount_doc},
+	{"getrefcount",	sys_getrefcount, 1, getrefcount_doc},
 #ifdef USE_MALLOPT
-	{"mdebug",	sys_mdebug, 0},
+	{"mdebug",	sys_mdebug, 1},
 #endif
+	{"set_string_encoding", sys_set_string_encoding, 1, set_string_encoding_doc},
 	{"setcheckinterval",	sys_setcheckinterval, 1, setcheckinterval_doc},
 	{"setprofile",	sys_setprofile, 0, setprofile_doc},
 	{"settrace",	sys_settrace, 0, settrace_doc},
@@ -352,7 +359,9 @@ Static objects:\n\
 \n\
 maxint -- the largest supported integer (the smallest is -maxint-1)\n\
 builtin_module_names -- tuple of module names built into this intepreter\n\
-version -- the version of this interpreter\n\
+version -- the version of this interpreter as a string\n\
+version_info -- version information as a tuple\n\
+hexversion -- version information encoded as a single integer\n\
 copyright -- copyright notice pertaining to this interpreter\n\
 platform -- platform identifier\n\
 executable -- pathname of this Python interpreter\n\
@@ -381,6 +390,7 @@ _PySys_Init()
 	extern int fclose Py_PROTO((FILE *));
 	PyObject *m, *v, *sysdict;
 	PyObject *sysin, *sysout, *syserr;
+	char *s;
 
 	m = Py_InitModule3("sys", sys_methods, sys_doc);
 	sysdict = PyModule_GetDict(m);
@@ -405,6 +415,28 @@ _PySys_Init()
 	Py_XDECREF(v);
 	PyDict_SetItemString(sysdict, "hexversion",
 			     v = PyInt_FromLong(PY_VERSION_HEX));
+	Py_XDECREF(v);
+	/*
+	 * These release level checks are mutually exclusive and cover
+	 * the field, so don't get too fancy with the pre-processor!
+	 */
+#if PY_RELEASE_LEVEL == PY_RELEASE_LEVEL_ALPHA
+	s = "alpha";
+#endif
+#if PY_RELEASE_LEVEL == PY_RELEASE_LEVEL_BETA
+	s = "beta";
+#endif
+#if PY_RELEASE_LEVEL == PY_RELEASE_LEVEL_GAMMA
+	s = "candidate";
+#endif
+#if PY_RELEASE_LEVEL == PY_RELEASE_LEVEL_FINAL
+	s = "final";
+#endif
+	PyDict_SetItemString(sysdict, "version_info",
+			     v = Py_BuildValue("iiisi", PY_MAJOR_VERSION,
+					       PY_MINOR_VERSION,
+					       PY_MICRO_VERSION, s,
+					       PY_RELEASE_SERIAL));
 	Py_XDECREF(v);
 	PyDict_SetItemString(sysdict, "copyright",
 			     v = PyString_FromString(Py_GetCopyright()));

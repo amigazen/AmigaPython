@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Tokenizer implementation */
 
 #include "pgenheaders.h"
@@ -220,26 +189,27 @@ tok_nextc(tok)
 			if (new == NULL)
 				tok->done = E_INTR;
 			else if (*new == '\0') {
-				free(new);
+				PyMem_FREE(new);
 				tok->done = E_EOF;
 			}
 			else if (tok->start != NULL) {
 				int start = tok->start - tok->buf;
 				int oldlen = tok->cur - tok->buf;
 				int newlen = oldlen + strlen(new);
-				char *buf = realloc(tok->buf, newlen+1);
+				char *buf = tok->buf;
+				PyMem_RESIZE(buf, char, newlen+1);
 				tok->lineno++;
 				if (buf == NULL) {
-					free(tok->buf);
+					PyMem_DEL(tok->buf);
 					tok->buf = NULL;
-					free(new);
+					PyMem_FREE(new);
 					tok->done = E_NOMEM;
 					return EOF;
 				}
 				tok->buf = buf;
 				tok->cur = tok->buf + oldlen;
 				strcpy(tok->buf + oldlen, new);
-				free(new);
+				PyMem_FREE(new);
 				tok->inp = tok->buf + newlen;
 				tok->end = tok->inp + 1;
 				tok->start = tok->buf + start;
@@ -247,7 +217,7 @@ tok_nextc(tok)
 			else {
 				tok->lineno++;
 				if (tok->buf != NULL)
-					free(tok->buf);
+					PyMem_DEL(tok->buf);
 				tok->buf = new;
 				tok->cur = tok->buf;
 				tok->inp = strchr(tok->buf, '\0');
@@ -565,24 +535,40 @@ PyTokenizer_Get(tok, p_start, p_end)
 	/* Set start of current token */
 	tok->start = tok->cur - 1;
 	
-	/* Skip comment */
+	/* Skip comment, while looking for tab-setting magic */
 	if (c == '#') {
-		/* Hack to allow overriding the tabsize in the file.
-		   This is also recognized by vi, when it occurs near the
-		   beginning or end of the file.  (Will vi never die...?)
-		   For Python it must be at the beginning of the file! */
-		/* XXX The real vi syntax is actually different :-( */
-		/* XXX Should recognize Emacs syntax, too */
-		int x;
-		if (sscanf(tok->cur,
-				" vi:set tabsize=%d:", &x) == 1 &&
-						x >= 1 && x <= 40) {
-			/* PySys_WriteStderr("# vi:set tabsize=%d:\n", x); */
-			tok->tabsize = x;
-		}
+		static char *tabforms[] = {
+			"tab-width:",		/* Emacs */
+			":tabstop=",		/* vim, full form */
+			":ts=",			/* vim, abbreviated form */
+			"set tabsize=",		/* will vi never die? */
+		/* more templates can be added here to support other editors */
+		};
+		char cbuf[80];
+		char *tp, **cp;
+		tp = cbuf;
 		do {
+			*tp++ = c = tok_nextc(tok);
+		} while (c != EOF && c != '\n' &&
+			 tp - cbuf + 1 < sizeof(cbuf));
+		*tp = '\0';
+		for (cp = tabforms; 
+		     cp < tabforms + sizeof(tabforms)/sizeof(tabforms[0]);
+		     cp++) {
+			if ((tp = strstr(cbuf, *cp))) {
+				int newsize = atoi(tp + strlen(*cp));
+
+				if (newsize >= 1 && newsize <= 40) {
+					tok->tabsize = newsize;
+					if (Py_VerboseFlag)
+					    PySys_WriteStderr(
+						"Tab size set to %d\n",
+						newsize);
+				}
+			}
+		}
+		while (c != EOF && c != '\n')
 			c = tok_nextc(tok);
-		} while (c != EOF && c != '\n');
 	}
 	
 	/* Check for EOF and errors now */
@@ -592,12 +578,22 @@ PyTokenizer_Get(tok, p_start, p_end)
 	
 	/* Identifier (most frequent token!) */
 	if (isalpha(c) || c == '_') {
+		/* Process r"", u"" and ur"" */
 		switch (c) {
 		case 'r':
 		case 'R':
 			c = tok_nextc(tok);
 			if (c == '"' || c == '\'')
 				goto letter_quote;
+			break;
+		case 'u':
+		case 'U':
+			c = tok_nextc(tok);
+			if (c == 'r' || c == 'R')
+				c = tok_nextc(tok);
+			if (c == '"' || c == '\'')
+				goto letter_quote;
+			break;
 		}
 		while (isalnum(c) || c == '_') {
 			c = tok_nextc(tok);

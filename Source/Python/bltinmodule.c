@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Built-in functions */
 
 #include "Python.h"
@@ -41,12 +10,13 @@ PERFORMANCE OF THIS SOFTWARE.
 
 #include <ctype.h>
 
+#include "protos/bltinmodule.h"
+
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
 /* Forward */
-#include "protos/bltinmodule.h"
 static PyObject *filterstring Py_PROTO((PyObject *, PyObject *));
 static PyObject *filtertuple  Py_PROTO((PyObject *, PyObject *));
 
@@ -131,10 +101,11 @@ builtin_apply(self, args)
 }
 
 static char apply_doc[] =
-"apply(function, args[, kwargs]) -> value\n\
+"apply(object, args[, kwargs]) -> value\n\
 \n\
-Call a function with positional arguments taken from the tuple args,\n\
-and keyword arguments taken from the optional dictionary kwargs.";
+Call a callable object with positional arguments taken from the tuple args,\n\
+and keyword arguments taken from the optional dictionary kwargs.\n\
+Note that classes are callable, as are instances with a __call__() method.";
 
 
 static PyObject *
@@ -152,12 +123,34 @@ builtin_buffer(self, args)
 }
 
 static char buffer_doc[] =
-"buffer(object [, offset[, size]) -> object\n\
+"buffer(object [, offset[, size]]) -> object\n\
 \n\
 Creates a new buffer object which references the given object.\n\
 The buffer will reference a slice of the target object from the\n\
 start of the object (or at the specified offset). The slice will\n\
 extend to the end of the target object (or with the specified size).";
+
+
+static PyObject *
+builtin_unicode(self, args)
+	PyObject *self;
+	PyObject *args;
+{
+        PyObject *v;
+	char *encoding = NULL;
+	char *errors = NULL;
+
+	if ( !PyArg_ParseTuple(args, "O|ss:unicode", &v, &encoding, &errors) )
+	    return NULL;
+	return PyUnicode_FromEncodedObject(v, encoding, errors);
+}
+
+static char unicode_doc[] =
+"unicode(string [, encoding[, errors]]) -> object\n\
+\n\
+Creates a new Unicode object from the given encoded string.\n\
+encoding defaults to the current default string encoding and \n\
+errors, defining the error handling, to 'strict'.";
 
 
 static PyObject *
@@ -312,6 +305,31 @@ Return a string of one character with ordinal i; 0 <= i < 256.";
 
 
 static PyObject *
+builtin_unichr(self, args)
+	PyObject *self;
+	PyObject *args;
+{
+	long x;
+	Py_UNICODE s[1];
+
+	if (!PyArg_ParseTuple(args, "l:unichr", &x))
+		return NULL;
+	if (x < 0 || x >= 65536) {
+		PyErr_SetString(PyExc_ValueError,
+				"unichr() arg not in range(65536)");
+		return NULL;
+	}
+	s[0] = (Py_UNICODE)x;
+	return PyUnicode_FromUnicode(s, 1);
+}
+
+static char unichr_doc[] =
+"unichr(i) -> Unicode character\n\
+\n\
+Return a Unicode string of one character with ordinal i; 0 <= i < 65536.";
+
+
+static PyObject *
 builtin_cmp(self, args)
 	PyObject *self;
 	PyObject *args;
@@ -400,17 +418,44 @@ complex_from_string(v)
 	PyObject *v;
 {
 	extern double strtod Py_PROTO((const char *, char **));
-	char *s, *start, *end;
+	const char *s, *start;
+	char *end;
 	double x=0.0, y=0.0, z;
 	int got_re=0, got_im=0, done=0;
 	int digit_or_dot;
 	int sw_error=0;
 	int sign;
 	char buffer[256]; /* For errors */
+	int len;
 
-	start = s = PyString_AS_STRING(v);
+	if (PyString_Check(v)) {
+		s = PyString_AS_STRING(v);
+		len = PyString_GET_SIZE(v);
+	}
+	else if (PyUnicode_Check(v)) {
+		char s_buffer[256];
+
+		if (PyUnicode_GET_SIZE(v) >= sizeof(s_buffer)) {
+			PyErr_SetString(PyExc_ValueError,
+				 "complex() literal too large to convert");
+			return NULL;
+		}
+		if (PyUnicode_EncodeDecimal(PyUnicode_AS_UNICODE(v), 
+					    PyUnicode_GET_SIZE(v),
+					    s_buffer, 
+					    NULL))
+			return NULL;
+		s = s_buffer;
+		len = strlen(s);
+	}
+	else if (PyObject_AsCharBuffer(v, &s, &len)) {
+		PyErr_SetString(PyExc_TypeError,
+				"complex() needs a string first argument");
+		return NULL;
+	}
 
 	/* position on first nonblank */
+	start = s;
 	while (*s && isspace(Py_CHARMASK(*s)))
 		s++;
 	if (s[0] == '\0') {
@@ -426,7 +471,7 @@ complex_from_string(v)
 		switch (*s) {
 
 		case '\0':
-			if (s-start != PyString_GET_SIZE(v)) {
+			if (s-start != len) {
 				PyErr_SetString(
 					PyExc_ValueError,
 					"null byte in argument for complex()");
@@ -535,7 +580,7 @@ builtin_complex(self, args)
 	i = NULL;
 	if (!PyArg_ParseTuple(args, "O|O:complex", &r, &i))
 		return NULL;
-	if (PyString_Check(r))
+	if (PyString_Check(r) || PyUnicode_Check(r))
 		return complex_from_string(r);
 	if ((nbr = r->ob_type->tp_as_number) == NULL ||
 	    nbr->nb_float == NULL ||
@@ -813,24 +858,6 @@ globals and locals.  If only globals is given, locals defaults to it.";
 
 
 static PyObject *
-builtin_float(self, args)
-	PyObject *self;
-	PyObject *args;
-{
-	PyObject *v;
-
-	if (!PyArg_ParseTuple(args, "O:float", &v))
-		return NULL;
-	return PyNumber_Float(v);
-}
-
-static char float_doc[] =
-"float(x) -> floating point number\n\
-\n\
-Convert a string or number to a floating point number, if possible.";
-
-
-static PyObject *
 builtin_getattr(self, args)
 	PyObject *self;
 	PyObject *args;
@@ -864,7 +891,7 @@ builtin_globals(self, args)
 {
 	PyObject *d;
 
-	if (!PyArg_ParseTuple(args, ""))
+	if (!PyArg_ParseTuple(args, ":globals"))
 		return NULL;
 	d = PyEval_GetGlobals();
 	Py_INCREF(d);
@@ -1230,7 +1257,7 @@ builtin_intern(self, args)
 	PyObject *args;
 {
 	PyObject *s;
-	if (!PyArg_ParseTuple(args, "S", &s))
+	if (!PyArg_ParseTuple(args, "S:intern", &s))
 		return NULL;
 	Py_INCREF(s);
 	PyString_InternInPlace(&s);
@@ -1252,17 +1279,89 @@ builtin_int(self, args)
 	PyObject *args;
 {
 	PyObject *v;
+	int base = -909;		     /* unlikely! */
 
-	if (!PyArg_ParseTuple(args, "O:int", &v))
+	if (!PyArg_ParseTuple(args, "O|i:int", &v, &base))
 		return NULL;
-	return PyNumber_Int(v);
+	if (base == -909)
+		return PyNumber_Int(v);
+	else if (PyString_Check(v))
+		return PyInt_FromString(PyString_AS_STRING(v), NULL, base);
+	else if (PyUnicode_Check(v))
+		return PyInt_FromUnicode(PyUnicode_AS_UNICODE(v),
+					 PyUnicode_GET_SIZE(v),
+					 base);
+	else {
+		PyErr_SetString(PyExc_TypeError,
+				"can't convert non-string with explicit base");
+		return NULL;
+	}
 }
 
 static char int_doc[] =
-"int(x) -> integer\n\
+"int(x[, base]) -> integer\n\
 \n\
-Convert a string or number to an integer, if possible.\n\
-A floating point argument will be truncated towards zero.";
+Convert a string or number to an integer, if possible.  A floating point\n\
+argument will be truncated towards zero (this does not include a string\n\
+representation of a floating point number!)  When converting a string, use\n\
+the optional base.  It is an error to supply a base when converting a\n\
+non-string.";
+
+
+static PyObject *
+builtin_long(self, args)
+	PyObject *self;
+	PyObject *args;
+{
+	PyObject *v;
+	int base = -909;		     /* unlikely! */
+	
+	if (!PyArg_ParseTuple(args, "O|i:long", &v, &base))
+		return NULL;
+	if (base == -909)
+		return PyNumber_Long(v);
+	else if (PyString_Check(v))
+		return PyLong_FromString(PyString_AS_STRING(v), NULL, base);
+	else if (PyUnicode_Check(v))
+		return PyLong_FromUnicode(PyUnicode_AS_UNICODE(v),
+					  PyUnicode_GET_SIZE(v),
+					  base);
+	else {
+		PyErr_SetString(PyExc_TypeError,
+				"can't convert non-string with explicit base");
+		return NULL;
+	}
+}
+
+static char long_doc[] =
+"long(x) -> long integer\n\
+long(x, base) -> long integer\n\
+\n\
+Convert a string or number to a long integer, if possible.  A floating\n\
+point argument will be truncated towards zero (this does not include a\n\
+string representation of a floating point number!)  When converting a\n\
+string, use the given base.  It is an error to supply a base when\n\
+converting a non-string.";
+
+
+static PyObject *
+builtin_float(self, args)
+	PyObject *self;
+	PyObject *args;
+{
+	PyObject *v;
+
+	if (!PyArg_ParseTuple(args, "O:float", &v))
+		return NULL;
+	if (PyString_Check(v))
+		return PyFloat_FromString(v, NULL);
+	return PyNumber_Float(v);
+}
+
+static char float_doc[] =
+"float(x) -> floating point number\n\
+\n\
+Convert a string or number to a floating point number, if possible.";
 
 
 static PyObject *
@@ -1327,7 +1426,7 @@ builtin_slice(self, args)
 }
 
 static char slice_doc[] =
-"slice([start,] step[, stop]) -> slice object\n\
+"slice([start,] stop[, step]) -> slice object\n\
 \n\
 Create a slice object.  This is used for slicing by the Numeric extensions.";
 
@@ -1339,7 +1438,7 @@ builtin_locals(self, args)
 {
 	PyObject *d;
 
-	if (!PyArg_ParseTuple(args, ""))
+	if (!PyArg_ParseTuple(args, ":locals"))
 		return NULL;
 	d = PyEval_GetLocals();
 	Py_INCREF(d);
@@ -1350,25 +1449,6 @@ static char locals_doc[] =
 "locals() -> dictionary\n\
 \n\
 Return the dictionary containing the current scope's local variables.";
-
-
-static PyObject *
-builtin_long(self, args)
-	PyObject *self;
-	PyObject *args;
-{
-	PyObject *v;
-	
-	if (!PyArg_ParseTuple(args, "O:long", &v))
-		return NULL;
-	return PyNumber_Long(v);
-}
-
-static char long_doc[] =
-"long(x) -> long integer\n\
-\n\
-Convert a string or number to a long integer, if possible.\n\
-A floating point argument will be truncated towards zero.";
 
 
 static PyObject *
@@ -1516,11 +1596,34 @@ builtin_ord(self, args)
 	PyObject *self;
 	PyObject *args;
 {
-	char c;
+	PyObject *obj;
+	long ord;
+	int size;
 
-	if (!PyArg_ParseTuple(args, "c:ord", &c))
+	if (!PyArg_ParseTuple(args, "O:ord", &obj))
 		return NULL;
-	return PyInt_FromLong((long)(c & 0xff));
+
+	if (PyString_Check(obj)) {
+		size = PyString_GET_SIZE(obj);
+		if (size == 1)
+			ord = (long)((unsigned char)*PyString_AS_STRING(obj));
+	} else if (PyUnicode_Check(obj)) {
+		size = PyUnicode_GET_SIZE(obj);
+		if (size == 1)
+			ord = (long)*PyUnicode_AS_UNICODE(obj);
+	} else {
+		PyErr_Format(PyExc_TypeError,
+			     "expected string or Unicode character, " \
+			     "%.200s found", obj->ob_type->tp_name);
+		return NULL;
+	}
+	if (size == 1)
+		return PyInt_FromLong(ord);
+
+	PyErr_Format(PyExc_TypeError, 
+		     "expected a character, length-%d string found",
+		     size);
+	return NULL;
 }
 
 static char ord_doc[] =
@@ -1728,7 +1831,7 @@ builtin_raw_input(self, args)
 		else { /* strip trailing '\n' */
 			result = PyString_FromStringAndSize(s, strlen(s)-1);
 		}
-		free(s);
+		PyMem_FREE(s);
 		return result;
 	}
 	if (v != NULL) {
@@ -2004,6 +2107,56 @@ static char vars_doc[] =
 Without arguments, equivalent to locals().\n\
 With an argument, equivalent to object.__dict__.";
 
+static int
+abstract_issubclass(derived, cls, err, first)
+	PyObject *derived;
+	PyObject *cls;
+	char *err;
+	int first;
+{
+	static PyObject *__bases__ = NULL;
+	PyObject *bases;
+	int i, n;
+	int r = 0;
+
+	if (__bases__ == NULL) {
+		__bases__ = PyString_FromString("__bases__");
+		if (__bases__ == NULL)
+			return -1;
+	}
+
+	if (first) {
+		bases = PyObject_GetAttr(cls, __bases__);
+		if (bases == NULL || !PyTuple_Check(bases)) {
+		        Py_XDECREF(bases);
+	        	PyErr_SetString(PyExc_TypeError, err);
+			return -1;
+		}
+		Py_DECREF(bases);
+	}
+
+	if (derived == cls)
+		return 1;
+
+	bases = PyObject_GetAttr(derived, __bases__);
+	if (bases == NULL || !PyTuple_Check(bases)) {
+	        Py_XDECREF(bases);
+	        PyErr_SetString(PyExc_TypeError, err);
+		return -1;
+	}
+
+	n = PyTuple_GET_SIZE(bases);
+	for (i = 0; i < n; i++) {
+		r = abstract_issubclass(PyTuple_GET_ITEM(bases, i),
+					cls, err, 0);
+		if (r != 0)
+			break;
+	}
+
+	Py_DECREF(bases);
+
+	return r;
+}
 
 static PyObject *
 builtin_isinstance(self, args)
@@ -2012,27 +2165,49 @@ builtin_isinstance(self, args)
 {
 	PyObject *inst;
 	PyObject *cls;
-	int retval;
+	PyObject *icls;
+	static PyObject *__class__ = NULL;
+	int retval = 0;
 
-	if (!PyArg_ParseTuple(args, "OO", &inst, &cls))
+	if (!PyArg_ParseTuple(args, "OO:isinstance", &inst, &cls))
 		return NULL;
-	if (PyType_Check(cls)) {
-		retval = ((PyObject *)(inst->ob_type) == cls);
-	}
-	else {
-		if (!PyClass_Check(cls)) {
-			PyErr_SetString(PyExc_TypeError,
-					"second argument must be a class");
-			return NULL;
-		}
 
-		if (!PyInstance_Check(inst))
-			retval = 0;
-		else {
+        if (PyClass_Check(cls)) {
+		if (PyInstance_Check(inst)) {
 			PyObject *inclass =
 				(PyObject*)((PyInstanceObject*)inst)->in_class;
 			retval = PyClass_IsSubclass(inclass, cls);
 		}
+	}
+	else if (PyType_Check(cls)) {
+		retval = ((PyObject *)(inst->ob_type) == cls);
+	}
+	else if (!PyInstance_Check(inst)) {
+	        if (__class__ == NULL) {
+			__class__ = PyString_FromString("__class__");
+			if (__class__ == NULL)
+				return NULL;
+		}
+		icls = PyObject_GetAttr(inst, __class__);
+		if (icls != NULL) {
+			retval = abstract_issubclass(
+				icls, cls,
+				"second argument must be a class", 
+				1);
+			Py_DECREF(icls);
+			if (retval < 0)
+				return NULL;
+		}
+		else {
+			PyErr_SetString(PyExc_TypeError,
+					"second argument must be a class");
+			return NULL;
+		}
+	}
+        else {
+		PyErr_SetString(PyExc_TypeError,
+				"second argument must be a class");
+		return NULL;
 	}
 	return PyInt_FromLong(retval);
 }
@@ -2053,15 +2228,20 @@ builtin_issubclass(self, args)
 	PyObject *cls;
 	int retval;
 
-	if (!PyArg_ParseTuple(args, "OO", &derived, &cls))
+	if (!PyArg_ParseTuple(args, "OO:issubclass", &derived, &cls))
 		return NULL;
+
 	if (!PyClass_Check(derived) || !PyClass_Check(cls)) {
-		PyErr_SetString(PyExc_TypeError, "arguments must be classes");
-		return NULL;
+		retval = abstract_issubclass(
+				derived, cls, "arguments must be classes", 1);
+		if (retval < 0) 
+			return NULL;
 	}
-	/* shortcut */
-	if (!(retval = (derived == cls)))
-		retval = PyClass_IsSubclass(derived, cls);
+	else {
+		/* shortcut */
+	  	if (!(retval = (derived == cls)))
+			retval = PyClass_IsSubclass(derived, cls);
+	}
 
 	return PyInt_FromLong(retval);
 }
@@ -2125,6 +2305,8 @@ static PyMethodDef builtin_methods[] = {
 	{"str",		builtin_str, 1, str_doc},
 	{"tuple",	builtin_tuple, 1, tuple_doc},
 	{"type",	builtin_type, 1, type_doc},
+	{"unicode",	builtin_unicode, 1, unicode_doc},
+	{"unichr",	builtin_unichr, 1, unichr_doc},
 	{"vars",	builtin_vars, 1, vars_doc},
 	{"xrange",	builtin_xrange, 1, xrange_doc},
 	{NULL,		NULL},
@@ -2156,9 +2338,14 @@ PyObject *PyExc_NotImplementedError;
 PyObject *PyExc_SyntaxError;
 PyObject *PyExc_SystemError;
 PyObject *PyExc_SystemExit;
+PyObject *PyExc_UnboundLocalError;
+PyObject *PyExc_UnicodeError;
 PyObject *PyExc_TypeError;
 PyObject *PyExc_ValueError;
 PyObject *PyExc_ZeroDivisionError;
+#ifdef MS_WINDOWS
+PyObject *PyExc_WindowsError;
+#endif
 
 PyObject *PyExc_MemoryErrorInst;
 
@@ -2185,6 +2372,11 @@ bltin_exc[] = {
 	{"KeyError",           &PyExc_KeyError,           1},
 	{"KeyboardInterrupt",  &PyExc_KeyboardInterrupt,  1},
 	{"MemoryError",        &PyExc_MemoryError,        1},
+	/* Note: NameError is not a leaf in exceptions.py, but unlike
+	   the other non-leafs NameError is meant to be raised directly
+	   at times -- the leaf_exc member really seems to mean something
+	   like "this is an abstract base class" when false.
+	*/
 	{"NameError",          &PyExc_NameError,          1},
 	{"OverflowError",      &PyExc_OverflowError,      1},
 	{"RuntimeError",       &PyExc_RuntimeError,       1},
@@ -2192,16 +2384,21 @@ bltin_exc[] = {
 	{"SyntaxError",        &PyExc_SyntaxError,        1},
 	{"SystemError",        &PyExc_SystemError,        1},
 	{"SystemExit",         &PyExc_SystemExit,         1},
+	{"UnboundLocalError",  &PyExc_UnboundLocalError,  1},
+	{"UnicodeError",       &PyExc_UnicodeError,       1},
 	{"TypeError",          &PyExc_TypeError,          1},
 	{"ValueError",         &PyExc_ValueError,         1},
+#ifdef MS_WINDOWS
+	{"WindowsError",       &PyExc_WindowsError,       1},
+#endif
 	{"ZeroDivisionError",  &PyExc_ZeroDivisionError,  1},
 	{NULL, NULL}
 };
 
 
-/* import exceptions module to extract class exceptions.  on success,
- * return 1. on failure return 0 which signals _PyBuiltin_Init_2 to fall
- * back to using old-style string based exceptions.
+/* Import exceptions module to extract class exceptions.  On success,
+ * return 1.  On failure return 0 which signals _PyBuiltin_Init_2 to
+ * issue a fatal error.
  */
 static int
 init_class_exc(dict)
@@ -2216,14 +2413,7 @@ init_class_exc(dict)
 	if (m == NULL ||
 	    (d = PyModule_GetDict(m)) == NULL)
 	{
-		PySys_WriteStderr("'import exceptions' failed; ");
-		if (Py_VerboseFlag) {
-			PySys_WriteStderr("traceback:\n");
-			PyErr_Print();
-		}
-		else {
-			PySys_WriteStderr("use -v for traceback\n");
-		}
+		PySys_WriteStderr("'import exceptions' failed\n");
 		goto finally;
 	}
 	for (i = 0; bltin_exc[i].name; i++) {
@@ -2264,18 +2454,8 @@ init_class_exc(dict)
 
 	/* we're done with the exceptions module */
 	Py_DECREF(m);
-
-	if (PyErr_Occurred()) {
-	    PySys_WriteStderr("Cannot initialize standard class exceptions; ");
-	    if (Py_VerboseFlag) {
-		    PySys_WriteStderr("traceback:\n");
-		    PyErr_Print();
-	    }
-	    else
-		    PySys_WriteStderr("use -v for traceback\n");
-	    goto finally;
-	}
 	return 1;
+
   finally:
 	Py_XDECREF(m);
 	Py_XDECREF(args);
@@ -2289,85 +2469,6 @@ fini_instances()
 {
 	Py_XDECREF(PyExc_MemoryErrorInst);
 	PyExc_MemoryErrorInst = NULL;
-}
-
-
-static PyObject *
-newstdexception(dict, name)
-	PyObject *dict;
-	char *name;
-{
-	PyObject *v = PyString_FromString(name);
-	if (v == NULL || PyDict_SetItemString(dict, name, v) != 0)
-		Py_FatalError("Cannot create string-based exceptions");
-	return v;
-}
-
-static void
-initerrors(dict)
-	PyObject *dict;
-{
-	int i, j;
-	int exccnt = 0;
-	for (i = 0; bltin_exc[i].name; i++, exccnt++) {
-		Py_XDECREF(*bltin_exc[i].exc);
-		if (bltin_exc[i].leaf_exc)
-			*bltin_exc[i].exc =
-				newstdexception(dict, bltin_exc[i].name);
-	}
-
-	/* This is kind of bogus because we special case the some of the
-	 * new exceptions to be nearly forward compatible.  But this means
-	 * we hard code knowledge about exceptions.py into C here.  I don't
-	 * have a better solution, though.
-	 */
-	PyExc_LookupError = PyTuple_New(2);
-	Py_INCREF(PyExc_IndexError);
-	PyTuple_SET_ITEM(PyExc_LookupError, 0, PyExc_IndexError);
-	Py_INCREF(PyExc_KeyError);
-	PyTuple_SET_ITEM(PyExc_LookupError, 1, PyExc_KeyError);
-	PyDict_SetItemString(dict, "LookupError", PyExc_LookupError);
-
-	PyExc_ArithmeticError = PyTuple_New(3);
-	Py_INCREF(PyExc_OverflowError);
-	PyTuple_SET_ITEM(PyExc_ArithmeticError, 0, PyExc_OverflowError);
-	Py_INCREF(PyExc_ZeroDivisionError);
-	PyTuple_SET_ITEM(PyExc_ArithmeticError, 1, PyExc_ZeroDivisionError);
-	Py_INCREF(PyExc_FloatingPointError);
-	PyTuple_SET_ITEM(PyExc_ArithmeticError, 2, PyExc_FloatingPointError);
-	PyDict_SetItemString(dict, "ArithmeticError", PyExc_ArithmeticError);
-
-	PyExc_EnvironmentError = PyTuple_New(2);
-	Py_INCREF(PyExc_IOError);
-	PyTuple_SET_ITEM(PyExc_EnvironmentError, 0, PyExc_IOError);
-	Py_INCREF(PyExc_OSError);
-	PyTuple_SET_ITEM(PyExc_EnvironmentError, 1, PyExc_OSError);
-	PyDict_SetItemString(dict, "EnvironmentError", PyExc_EnvironmentError);
-
-	/* missing from the StandardError tuple: Exception, StandardError,
-	 * and SystemExit
-	 */
-	PyExc_StandardError = PyTuple_New(exccnt-3);
-	for (i = 2, j = 0; bltin_exc[i].name; i++) {
-		PyObject *exc = *bltin_exc[i].exc;
-		/* SystemExit is not an error, but it is an exception */
-		if (exc != PyExc_SystemExit) {
-			Py_INCREF(exc);
-			PyTuple_SET_ITEM(PyExc_StandardError, j++, exc);
-		}
-	}
-	PyDict_SetItemString(dict, "StandardError", PyExc_StandardError);
-
-	/* Exception is a 2-tuple */
-	PyExc_Exception = PyTuple_New(2);
-	Py_INCREF(PyExc_SystemExit);
-	PyTuple_SET_ITEM(PyExc_Exception, 0, PyExc_SystemExit);
-	Py_INCREF(PyExc_StandardError);
-	PyTuple_SET_ITEM(PyExc_Exception, 1, PyExc_StandardError);
-	PyDict_SetItemString(dict, "Exception", PyExc_Exception);
-	
-	if (PyErr_Occurred())
-	      Py_FatalError("Could not initialize built-in string exceptions");
 }
 
 
@@ -2397,7 +2498,6 @@ _PyBuiltin_Init_1()
 	if (mod == NULL)
 		return NULL;
 	dict = PyModule_GetDict(mod);
-	initerrors(dict);
 	if (PyDict_SetItemString(dict, "None", Py_None) < 0)
 		return NULL;
 	if (PyDict_SetItemString(dict, "Ellipsis", Py_Ellipsis) < 0)
@@ -2413,18 +2513,9 @@ void
 _PyBuiltin_Init_2(dict)
 	PyObject *dict;
 {
-	/* if Python was started with -X, initialize the class exceptions */
-	if (Py_UseClassExceptionsFlag) {
-		if (!init_class_exc(dict)) {
-			/* class based exceptions could not be
-			 * initialized. Fall back to using string based
-			 * exceptions.
-			 */
-			PySys_WriteStderr(
-			"Warning!  Falling back to string-based exceptions\n");
-			initerrors(dict);
-		}
-	}
+	if (!init_class_exc(dict))
+		/* class based exceptions could not be initialized. */
+		Py_FatalError("Standard exceptions could not be initialized.");
 }
 
 

@@ -5,26 +5,32 @@
 # main.o and python.o intentionally left out
 
 NETOBJECTS = config.o getpath.o environment.o amigamodule.o \
-        regexpr.o arraymodule.o structmodule.o stropmodule.o \
-        mathmodule.o regexmodule.o newmodule.o soundex.o \
+        regexpr.o arraymodule.o structmodule.o \
+        mathmodule.o regexmodule.o newmodule.o \
         timemodule.o binascii.o md5module.o md5c.o rotormodule.o \
 	operator.o cmathmodule.o errnomodule.o pcremodule.o \
 	shamodule.o ARexxmodule.o Doslibmodule.o \
 	cryptmodule.o syslogmodule.o selectmodule.o socketmodule.o \
 	cStringIO.o cPickle.o pypcre.o pwdmodule.o grpmodule.o \
+	stropmodule.o _sre.o _codecsmodule.o  \
+	unicodedata.o amigaunicodedatabase.o
 ###	AmigaExecmodule.o 
+###	soundex.o
 
 
 # object list for Python without networking
 
 OBJECTS = config.o getpath.o environment.o amigamodule.o \
         regexpr.o arraymodule.o structmodule.o stropmodule.o \
-        mathmodule.o regexmodule.o newmodule.o soundex.o \
+        mathmodule.o regexmodule.o newmodule.o \
         timemodule.o binascii.o md5module.o md5c.o rotormodule.o \
 	operator.o cmathmodule.o errnomodule.o pcremodule.o \
 	shamodule.o ARexxmodule.o Doslibmodule.o \
 	cStringIO.o cPickle.o pypcre.o \
+	stropmodule.o _sre.o _codecsmodule.o \
+	unicodedata.o amigaunicodedatabase.o
 ### AmigaExecmodule.o 
+###	soundex.o 
 
 
 Modules.lib: $(NETOBJECTS)			# SELECT $(OBJECTS) OR $(NETOBJECTS)
@@ -123,5 +129,9 @@ timingmodule.o : timingmodule.c timing.h /Include/Python.h
 xxmodule.o : xxmodule.c /Include/Python.h
 
 zlibmodule.o : zlibmodule.c /Include/Python.h
+
+_codecsmodule.o: _codecsmodule.c /Include/Python.h
+
+_sre.o: _sre.c /Include/Python.h
 
 # --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS PRECEDE ---

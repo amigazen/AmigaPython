@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Execute compiled code */
 
 /* XXX TO DO:
@@ -80,7 +49,6 @@ static int call_trace Py_PROTO((PyObject **, PyObject **,
 static PyObject *call_builtin Py_PROTO((PyObject *, PyObject *, PyObject *));
 static PyObject *call_function Py_PROTO((PyObject *, PyObject *, PyObject *));
 static PyObject *loop_subscript Py_PROTO((PyObject *, PyObject *));
-static int slice_index Py_PROTO((PyObject *, int *));
 static PyObject *apply_slice Py_PROTO((PyObject *, PyObject *, PyObject *));
 static int assign_slice Py_PROTO((PyObject *, PyObject *,
 				  PyObject *, PyObject *));
@@ -313,8 +281,6 @@ static enum why_code do_raise Py_PROTO((PyObject *, PyObject *, PyObject *));
 static int unpack_sequence Py_PROTO((PyObject *, int, PyObject **));
 
 
-/* Backward compatible interface */
-
 PyObject *
 PyEval_EvalCode(co, globals, locals)
 	PyCodeObject *co;
@@ -482,6 +448,11 @@ eval_code2(co, globals, locals,
 			PyObject *keyword = kws[2*i];
 			PyObject *value = kws[2*i + 1];
 			int j;
+			if (keyword == NULL || !PyString_Check(keyword)) {
+				PyErr_SetString(PyExc_TypeError,
+						"keywords must be strings");
+				goto fail;
+			}
 			/* XXX slow -- speed up using dictionary? */
 			for (j = 0; j < co->co_argcount; j++) {
 				PyObject *nm = PyTuple_GET_ITEM(
@@ -496,15 +467,16 @@ eval_code2(co, globals, locals,
 				if (kwdict == NULL) {
 					PyErr_Format(PyExc_TypeError,
 					 "unexpected keyword argument: %.400s",
-					 PyString_AsString(keyword));
+					    PyString_AsString(keyword));
 					goto fail;
 				}
 				PyDict_SetItem(kwdict, keyword, value);
 			}
 			else {
 				if (GETLOCAL(j) != NULL) {
-					PyErr_SetString(PyExc_TypeError,
-						"keyword parameter redefined");
+					PyErr_Format(PyExc_TypeError, 
+				     "keyword parameter redefined: %.400s",
+					     PyString_AsString(keyword));
 					goto fail;
 				}
 				Py_INCREF(value);
@@ -1320,7 +1292,7 @@ eval_code2(co, globals, locals,
 		case LOAD_FAST:
 			x = GETLOCAL(oparg);
 			if (x == NULL) {
-				PyErr_SetObject(PyExc_NameError,
+				PyErr_SetObject(PyExc_UnboundLocalError,
 					   PyTuple_GetItem(co->co_varnames,
 							oparg));
 				break;
@@ -1338,7 +1310,7 @@ eval_code2(co, globals, locals,
 		case DELETE_FAST:
 			x = GETLOCAL(oparg);
 			if (x == NULL) {
-				PyErr_SetObject(PyExc_NameError,
+				PyErr_SetObject(PyExc_UnboundLocalError,
 					   PyTuple_GetItem(co->co_varnames,
 							oparg));
 				break;
@@ -1545,125 +1517,180 @@ eval_code2(co, globals, locals,
 			break;
 
 		case CALL_FUNCTION:
+		case CALL_FUNCTION_VAR:
+		case CALL_FUNCTION_KW:
+		case CALL_FUNCTION_VAR_KW:
 		{
-			int na = oparg & 0xff;
-			int nk = (oparg>>8) & 0xff;
-			int n = na + 2*nk;
-			PyObject **pfunc = stack_pointer - n - 1;
-			PyObject *func = *pfunc;
-			PyObject *self = NULL;
-			PyObject *class = NULL;
-			f->f_lasti = INSTR_OFFSET() - 3; /* For tracing */
-			if (PyMethod_Check(func)) {
-				self = PyMethod_Self(func);
-				class = PyMethod_Class(func);
-				func = PyMethod_Function(func);
-				Py_INCREF(func);
-				if (self != NULL) {
-					Py_INCREF(self);
-					Py_DECREF(*pfunc);
-					*pfunc = self;
-					na++;
-					n++;
-				}
-				else {
-					/* Unbound methods must be
-					   called with an instance of
-					   the class (or a derived
-					   class) as first argument */
-					if (na > 0 &&
-					    (self = stack_pointer[-n])
-					 	!= NULL &&
-					    PyInstance_Check(self) &&
-					    PyClass_IsSubclass(
-						    (PyObject *)
-						    (((PyInstanceObject *)self)
-						     ->in_class),
-						    class))
-						/* Handy-dandy */ ;
-					else {
-						PyErr_SetString(
-							PyExc_TypeError,
-	   "unbound method must be called with class instance 1st argument");
-						x = NULL;
-						break;
-					}
-				}
-			}
-			else
-				Py_INCREF(func);
-			if (PyFunction_Check(func)) {
-				PyObject *co = PyFunction_GetCode(func);
-				PyObject *globals =
-					PyFunction_GetGlobals(func);
-				PyObject *argdefs =
-					PyFunction_GetDefaults(func);
-				PyObject **d;
-				int nd;
-				if (argdefs != NULL) {
-					d = &PyTuple_GET_ITEM(argdefs, 0);
-					nd = ((PyTupleObject *)argdefs) ->
-						ob_size;
-				}
-				else {
-					d = NULL;
-					nd = 0;
-				}
-				x = eval_code2(
-					(PyCodeObject *)co,
-					globals, (PyObject *)NULL,
-					stack_pointer-n, na,
-					stack_pointer-2*nk, nk,
-					d, nd,
-					class);
+		    int na = oparg & 0xff;
+		    int nk = (oparg>>8) & 0xff;
+		    int flags = (opcode - CALL_FUNCTION) & 3;
+		    int n = na + 2*nk + (flags & 1) + ((flags >> 1) & 1);
+		    PyObject **pfunc = stack_pointer - n - 1;
+		    PyObject *func = *pfunc;
+		    PyObject *self = NULL;
+		    PyObject *class = NULL;
+		    f->f_lasti = INSTR_OFFSET() - 3; /* For tracing */
+		    if (PyMethod_Check(func)) {
+			self = PyMethod_Self(func);
+			class = PyMethod_Class(func);
+			func = PyMethod_Function(func);
+			Py_INCREF(func);
+			if (self != NULL) {
+			    Py_INCREF(self);
+			    Py_DECREF(*pfunc);
+			    *pfunc = self;
+			    na++;
+			    n++;
 			}
 			else {
-				PyObject *args = PyTuple_New(na);
-				PyObject *kwdict = NULL;
-				if (args == NULL) {
-					x = NULL;
-					break;
+			    /* Unbound methods must be called with an
+			       instance of the class (or a derived
+			       class) as first argument */ 
+			    if (na > 0 && (self = stack_pointer[-n]) != NULL 
+				&& PyInstance_Check(self) 
+				&& PyClass_IsSubclass((PyObject *)
+				    (((PyInstanceObject *)self)->in_class),
+						      class))
+                                  /* Handy-dandy */ ;
+			    else {
+				PyErr_SetString(PyExc_TypeError,
+	    "unbound method must be called with class instance 1st argument");
+				x = NULL;
+				break;
+			    }
+			}
+		    }
+		    else
+			Py_INCREF(func);
+		    if (PyFunction_Check(func) && flags == 0) {
+			PyObject *co = PyFunction_GetCode(func);
+			PyObject *globals = PyFunction_GetGlobals(func);
+			PyObject *argdefs = PyFunction_GetDefaults(func);
+			PyObject **d;
+			int nd;
+			if (argdefs != NULL) {
+			    d = &PyTuple_GET_ITEM(argdefs, 0);
+			    nd = ((PyTupleObject *)argdefs)->ob_size;
+			}
+			else {
+			    d = NULL;
+			    nd = 0;
+			}
+			x = eval_code2((PyCodeObject *)co, globals, 
+				       (PyObject *)NULL, stack_pointer-n, na,
+				       stack_pointer-2*nk, nk, d, nd,
+				       class);
+		    }
+		    else {
+			int nstar = 0;
+			PyObject *callargs;
+			PyObject *stararg = 0;
+			PyObject *kwdict = NULL;
+			if (flags & 2) {
+			    kwdict = POP();
+			    if (!PyDict_Check(kwdict)) {
+				PyErr_SetString(PyExc_TypeError,
+					"** argument must be a dictionary");
+				goto extcall_fail;
+			    }
+			}
+			if (flags & 1) {
+			    stararg = POP();
+			    if (!PySequence_Check(stararg)) {
+				PyErr_SetString(PyExc_TypeError,
+					"* argument must be a sequence");
+				goto extcall_fail;
+			    }
+			    /* Convert abstract sequence to concrete tuple */
+			    if (!PyTuple_Check(stararg)) {
+				PyObject *t = NULL;
+				t = PySequence_Tuple(stararg);
+				if (t == NULL) {
+				    goto extcall_fail;
 				}
-				if (nk > 0) {
-					kwdict = PyDict_New();
-					if (kwdict == NULL) {
-						x = NULL;
-						break;
-					}
-					err = 0;
-					while (--nk >= 0) {
-						PyObject *value = POP();
-						PyObject *key = POP();
-						err = PyDict_SetItem(
-							kwdict, key, value);
-						Py_DECREF(key);
-						Py_DECREF(value);
-						if (err)
-							break;
-					}
-					if (err) {
-						Py_DECREF(args);
-						Py_DECREF(kwdict);
-						break;
-					}
+				Py_DECREF(stararg);
+				stararg = t;
+			    }
+			    nstar = PyTuple_GET_SIZE(stararg);
+			    if (nstar < 0) {
+				goto extcall_fail;
+			    }
+			}
+			if (nk > 0) {
+			    if (kwdict == NULL) {
+				kwdict = PyDict_New();
+				if (kwdict == NULL) {
+    				    goto extcall_fail;
 				}
-				while (--na >= 0) {
-					w = POP();
-					PyTuple_SET_ITEM(args, na, w);
+			    }
+			    else {
+				    PyObject *d = PyDict_Copy(kwdict);
+				    if (d == NULL) {
+					    goto extcall_fail;
+				    }
+				    Py_DECREF(kwdict);
+				    kwdict = d;
+			    }
+			    err = 0;
+			    while (--nk >= 0) {
+				PyObject *value = POP();
+				PyObject *key = POP();
+				if (PyDict_GetItem(kwdict, key) != NULL) {
+				    err = 1;
+				    PyErr_Format(PyExc_TypeError,
+					"keyword parameter redefined: %.400s",
+						 PyString_AsString(key));
+				    Py_DECREF(key);
+				    Py_DECREF(value);
+				    goto extcall_fail;
 				}
-				x = PyEval_CallObjectWithKeywords(
-					func, args, kwdict);
-				Py_DECREF(args);
+				err = PyDict_SetItem(kwdict, key, value);
+				Py_DECREF(key);
+				Py_DECREF(value);
+				if (err)
+				    break;
+			    }
+			    if (err) {
+			      extcall_fail:
 				Py_XDECREF(kwdict);
+				Py_XDECREF(stararg);
+				Py_DECREF(func);
+				x=NULL;
+				break;
+			    }
 			}
-			Py_DECREF(func);
-			while (stack_pointer > pfunc) {
-				w = POP();
-				Py_DECREF(w);
+			callargs = PyTuple_New(na + nstar);
+			if (callargs == NULL) {
+			    x = NULL;
+			    break;
 			}
-			PUSH(x);
-			if (x != NULL) continue;
-			break;
+			if (stararg) {
+			    int i;
+			    for (i = 0; i < nstar; i++) {
+				PyObject *a = PyTuple_GET_ITEM(stararg, i);
+				Py_INCREF(a);
+				PyTuple_SET_ITEM(callargs, na + i, a);
+			    }
+			    Py_DECREF(stararg);
+			}
+			while (--na >= 0) {
+			    w = POP();
+			    PyTuple_SET_ITEM(callargs, na, w);
+			}
+			x = PyEval_CallObjectWithKeywords(func,
+							  callargs,
+							  kwdict);  
+			Py_DECREF(callargs);
+			Py_XDECREF(kwdict);
+		    }
+		    Py_DECREF(func);
+		    while (stack_pointer > pfunc) {
+			w = POP();
+			Py_DECREF(w);
+		    }
+		    PUSH(x);
+		    if (x != NULL) continue;
+		    break;
 		}
 		
 		case MAKE_FUNCTION:
@@ -2117,6 +2144,7 @@ prtrace(v, str)
 	if (PyObject_Print(v, stdout, 0) != 0)
 		PyErr_Clear(); /* Don't know what else to do */
 	printf("\n");
+	return 1;
 }
 #endif
 
@@ -2201,6 +2229,14 @@ call_trace(p_trace, p_newtrace, f, msg, arg)
 			Py_XDECREF(*p_newtrace);
 			*p_newtrace = NULL;
 		}
+		/* to be extra double plus sure we don't get recursive
+		 * calls inf either tracefunc or profilefunc gets an
+		 * exception, zap the global variables.
+		 */
+		Py_XDECREF(tstate->sys_tracefunc);
+		tstate->sys_tracefunc = NULL;
+		Py_XDECREF(tstate->sys_profilefunc);
+		tstate->sys_profilefunc = NULL;
 		return -1;
 	}
 	else {
@@ -2313,6 +2349,7 @@ PyEval_CallObjectWithKeywords(func, arg, kw)
 	if (kw != NULL && !PyDict_Check(kw)) {
 		PyErr_SetString(PyExc_TypeError,
 				"keyword list must be a dictionary");
+		Py_DECREF(arg);
 		return NULL;
 	}
 
@@ -2373,7 +2410,7 @@ call_builtin(func, arg, kw)
 		Py_DECREF(call);
 		return res;
 	}
-	PyErr_Format(PyExc_TypeError, "call of non-function (type %s)",
+	PyErr_Format(PyExc_TypeError, "call of non-function (type %.400s)",
 		     func->ob_type->tp_name);
 	return NULL;
 }
@@ -2444,7 +2481,7 @@ call_function(func, arg, kw)
 	else {
 		if (!PyFunction_Check(func)) {
 			PyErr_Format(PyExc_TypeError,
-				     "call of non-function (type %s)",
+				     "call of non-function (type %.200s)",
 				     func->ob_type->tp_name);
 			return NULL;
 		}
@@ -2490,7 +2527,8 @@ call_function(func, arg, kw)
 		class);
 	
 	Py_DECREF(arg);
-	PyMem_XDEL(k);
+	if (k != NULL)
+		PyMem_DEL(k);
 	
 	return result;
 }
@@ -2517,19 +2555,55 @@ loop_subscript(v, w)
 	return NULL;
 }
 
-static int
-slice_index(v, pi)
+/* Extract a slice index from a PyInt or PyLong, the index is bound to
+   the range [-INT_MAX+1, INTMAX]. Returns 0 and an exception if there is
+   and error. Returns 1 on success.*/
+
+int
+_PyEval_SliceIndex(v, pi)
 	PyObject *v;
 	int *pi;
 {
 	if (v != NULL) {
 		long x;
-		if (!PyInt_Check(v)) {
+		if (PyInt_Check(v)) {
+			x = PyInt_AsLong(v);
+		} else if (PyLong_Check(v)) {
+			x = PyLong_AsLong(v);
+			if (x==-1 && PyErr_Occurred()) {
+				PyObject *long_zero;
+
+				if (!PyErr_ExceptionMatches( PyExc_OverflowError ) ) {
+					/* It's not an overflow error, so just 
+					   signal an error */
+					return 0;
+				}
+
+				/* It's an overflow error, so we need to 
+				   check the sign of the long integer, 
+				   set the value to INT_MAX or 0, and clear 
+				   the error. */
+
+				/* Create a long integer with a value of 0 */
+				long_zero = PyLong_FromLong( 0L );
+				if (long_zero == NULL) return 0;
+
+				/* Check sign */
+				if (PyObject_Compare(long_zero, v) < 0)
+					x = INT_MAX;
+				else
+					x = 0;
+				
+				/* Free the long integer we created, and clear the
+				   OverflowError */
+				Py_DECREF(long_zero);
+				PyErr_Clear();
+			}
+		} else {
 			PyErr_SetString(PyExc_TypeError,
 					"slice index must be int");
-			return -1;
+			return 0;
 		}
-		x = PyInt_AsLong(v);
 		/* Truncate -- very long indices are truncated anyway */
 		if (x > INT_MAX)
 			x = INT_MAX;
@@ -2537,7 +2611,7 @@ slice_index(v, pi)
 			x = 0;
 		*pi = x;
 	}
-	return 0;
+	return 1;
 }
 
 static PyObject *
@@ -2545,9 +2619,9 @@ apply_slice(u, v, w) /* return u[v:w] */
 	PyObject *u, *v, *w;
 {
 	int ilow = 0, ihigh = INT_MAX;
-	if (slice_index(v, &ilow) != 0)
+	if (!_PyEval_SliceIndex(v, &ilow))
 		return NULL;
-	if (slice_index(w, &ihigh) != 0)
+	if (!_PyEval_SliceIndex(w, &ihigh))
 		return NULL;
 	return PySequence_GetSlice(u, ilow, ihigh);
 }
@@ -2557,9 +2631,9 @@ assign_slice(u, v, w, x) /* u[v:w] = x */
 	PyObject *u, *v, *w, *x;
 {
 	int ilow = 0, ihigh = INT_MAX;
-	if (slice_index(v, &ilow) != 0)
+	if (!_PyEval_SliceIndex(v, &ilow))
 		return -1;
-	if (slice_index(w, &ihigh) != 0)
+	if (!_PyEval_SliceIndex(w, &ihigh))
 		return -1;
 	if (x == NULL)
 		return PySequence_DelSlice(u, ilow, ihigh);
@@ -2644,10 +2718,9 @@ import_from(locals, v, name)
 	else {
 		x = PyDict_GetItem(w, name);
 		if (x == NULL) {
-			char buf[250];
-			sprintf(buf, "cannot import name %.230s",
-				PyString_AsString(name));
-			PyErr_SetString(PyExc_ImportError, buf);
+			PyErr_Format(PyExc_ImportError, 
+				     "cannot import name %.230s",
+				     PyString_AsString(name));
 			return -1;
 		}
 		else
@@ -2674,7 +2747,7 @@ build_class(methods, bases, name)
 	}
 	if (!PyString_Check(name)) {
 		PyErr_SetString(PyExc_SystemError,
-				"build_class witn non-string name");
+				"build_class with non-string name");
 		return NULL;
 	}
 	n = PyTuple_Size(bases);
@@ -2727,7 +2800,6 @@ exec_statement(f, prog, globals, locals)
 	PyObject *globals;
 	PyObject *locals;
 {
-	char *s;
 	int n;
 	PyObject *v;
 	int plain = 0;
@@ -2764,33 +2836,27 @@ exec_statement(f, prog, globals, locals)
 	if (PyDict_GetItemString(globals, "__builtins__") == NULL)
 		PyDict_SetItemString(globals, "__builtins__", f->f_builtins);
 	if (PyCode_Check(prog)) {
-		v = PyEval_EvalCode((PyCodeObject *) prog,
-				    globals, locals);
-		if (v == NULL)
-			return -1;
-		Py_DECREF(v);
-		return 0;
+		v = PyEval_EvalCode((PyCodeObject *) prog, globals, locals);
 	}
-	if (PyFile_Check(prog)) {
+	else if (PyFile_Check(prog)) {
 		FILE *fp = PyFile_AsFile(prog);
 		char *name = PyString_AsString(PyFile_Name(prog));
-		if (PyRun_File(fp, name, Py_file_input,
-			       globals, locals) == NULL)
+		v = PyRun_File(fp, name, Py_file_input, globals, locals);
+	}
+	else {
+		char *s = PyString_AsString(prog);
+		if ((int)strlen(s) != PyString_Size(prog)) {
+			PyErr_SetString(PyExc_ValueError,
+					"embedded '\\0' in exec string");
 			return -1;
-		return 0;
+		}
+		v = PyRun_String(s, Py_file_input, globals, locals);
 	}
-	s = PyString_AsString(prog);
-	if ((int)strlen(s) != PyString_Size(prog)) {
-		PyErr_SetString(PyExc_ValueError,
-				"embedded '\\0' in exec string");
-		return -1;
-	}
-	v = PyRun_String(s, Py_file_input, globals, locals);
+	if (plain)
+		PyFrame_LocalsToFast(f, 0);
 	if (v == NULL)
 		return -1;
 	Py_DECREF(v);
-	if (plain)
-		PyFrame_LocalsToFast(f, 0);
 	return 0;
 }
 

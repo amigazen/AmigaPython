@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* MD5 module */
 
 /* This module provides an interface to the RSA Data Security,
@@ -47,9 +16,9 @@ typedef struct {
         MD5_CTX	md5;		/* the context holder */
 } md5object;
 
-staticforward PyTypeObject MD5type;
-
 #include "protos/md5module.h"
+
+staticforward PyTypeObject MD5type;
 
 #define is_md5object(v)		((v)->ob_type == &MD5type)
 
@@ -58,7 +27,7 @@ newmd5object()
 {
 	md5object *md5p;
 
-	md5p = PyObject_NEW(md5object, &MD5type);
+	md5p = PyObject_New(md5object, &MD5type);
 	if (md5p == NULL)
 		return NULL;
 
@@ -73,7 +42,7 @@ static void
 md5_dealloc(md5p)
 	md5object *md5p;
 {
-	PyMem_DEL(md5p);
+	PyObject_Del(md5p);
 }
 
 
@@ -202,7 +171,7 @@ copy() -- return a copy of the current md5 object\n\
 ";
 
 statichere PyTypeObject MD5type = {
-	PyObject_HEAD_INIT(&PyType_Type)
+	PyObject_HEAD_INIT(NULL)
 	0,			  /*ob_size*/
 	"md5",			  /*tp_name*/
 	sizeof(md5object),	  /*tp_size*/
@@ -239,7 +208,7 @@ MD5_new(self, args)
 	unsigned char *cp = NULL;
 	int len = 0;
 
-	if (!PyArg_ParseTuple(args, "|s#", &cp, &len))
+	if (!PyArg_ParseTuple(args, "|s#:new", &cp, &len))
 		return NULL;
 
 	if ((md5p = newmd5object()) == NULL)
@@ -273,6 +242,8 @@ DL_EXPORT(void)
 initmd5()
 {
 	PyObject *m, *d;
+
+        MD5type.ob_type = &PyType_Type;
 	m = Py_InitModule3("md5", md5_functions, module_doc);
 	d = PyModule_GetDict(m);
 	PyDict_SetItemString(d, "MD5Type", (PyObject *)&MD5type);

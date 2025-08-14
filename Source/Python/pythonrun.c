@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Python interpreter top-level routines, including init/exit */
 
 #include "Python.h"
@@ -40,6 +9,7 @@ PERFORMANCE OF THIS SOFTWARE.
 #include "compile.h"
 #include "eval.h"
 #include "marshal.h"
+#include "protos/pythonrun.h"
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -59,7 +29,6 @@ extern char *Py_GetPath();
 extern grammar _PyParser_Grammar; /* From graminit.c */
 
 /* Forward */
-#include "protos/pythonrun.h"
 static void initmain Py_PROTO((void));
 static void initsite Py_PROTO((void));
 static PyObject *run_err_node Py_PROTO((node *n, char *filename,
@@ -73,12 +42,23 @@ static void initsigs Py_PROTO((void));
 static void call_sys_exitfunc Py_PROTO((void));
 static void call_ll_exitfuncs Py_PROTO((void));
 
+#ifdef Py_TRACE_REFS
+int _Py_AskYesNo(char *prompt);
+#endif
+
+extern void _PyUnicode_Init Py_PROTO((void));
+extern void _PyUnicode_Fini Py_PROTO((void));
+extern void _PyCodecRegistry_Init Py_PROTO((void));
+extern void _PyCodecRegistry_Fini Py_PROTO((void));
+
+
 int Py_DebugFlag; /* Needed by parser.c */
 int Py_VerboseFlag; /* Needed by import.c */
 int Py_InteractiveFlag; /* Needed by Py_FdIsInteractive() below */
 int Py_NoSiteFlag; /* Suppress 'import site' */
-int Py_UseClassExceptionsFlag = 1; /* Needed by bltinmodule.c */
+int Py_UseClassExceptionsFlag = 1; /* Needed by bltinmodule.c: deprecated */
 int Py_FrozenFlag; /* Needed by getpath.c */
+int Py_UnicodeFlag = 0; /* Needed by compile.c */
 
 static int initialized = 0;
 
@@ -134,6 +114,14 @@ Py_Initialize()
 	if (interp->modules == NULL)
 		Py_FatalError("Py_Initialize: can't make modules dictionary");
 
+	/* Init codec registry */
+	_PyCodecRegistry_Init();
+
+	/* Init Unicode implementation; relies on the codec registry */
+	_PyUnicode_Init();
+
+	_PyCompareState_Key = PyString_InternFromString("cmp_state");
+
 	bimod = _PyBuiltin_Init_1();
 	if (bimod == NULL)
 		Py_FatalError("Py_Initialize: can't initialize __builtin__");
@@ -150,11 +138,11 @@ Py_Initialize()
 	PyDict_SetItemString(interp->sysdict, "modules",
 			     interp->modules);
 
+	_PyImport_Init();
+
 	/* phase 2 of builtins */
 	_PyBuiltin_Init_2(interp->builtins);
 	_PyImport_FixupExtension("__builtin__", "__builtin__");
-
-	_PyImport_Init();
 
 	initsigs(); /* Signal handling stuff, including initintr() */
 
@@ -203,6 +191,12 @@ Py_Finalize()
 	/* Destroy PyExc_MemoryErrorInst */
 	_PyBuiltin_Fini_1();
 
+	/* Cleanup Unicode implementation */
+	_PyUnicode_Fini();
+
+	/* Cleanup Codec registry */
+	_PyCodecRegistry_Fini();
+
 	/* Destroy all modules */
 	PyImport_Cleanup();
 
@@ -219,7 +213,11 @@ Py_Finalize()
 #endif
 
 #ifdef Py_TRACE_REFS
-	if (_Py_AskYesNo("Print left references?")) {
+	if (
+#ifdef MS_WINDOWS /* Only ask on Windows if env var set */
+	    getenv("PYTHONDUMPREFS") &&
+#endif /* MS_WINDOWS */
+	    _Py_AskYesNo("Print left references?")) {
 		_Py_PrintReferences(stderr);
 	}
 #endif /* Py_TRACE_REFS */
@@ -515,7 +513,7 @@ PyRun_InteractiveOne(fp, filename)
 	if (n == NULL) {
 		if (err.error == E_EOF) {
 			if (err.text)
-				free(err.text);
+				PyMem_DEL(err.text);
 			return E_EOF;
 		}
 		err_input(&err);
@@ -986,7 +984,7 @@ err_input(err)
 	v = Py_BuildValue("(ziiz)", err->filename,
 			    err->lineno, err->offset, err->text);
 	if (err->text != NULL) {
-		free(err->text);
+		PyMem_DEL(err->text);
 		err->text = NULL;
 	}
 	switch (err->error) {
@@ -1050,7 +1048,7 @@ int _PyThread_Started = 0; /* Set by threadmodule.c and maybe others */
 #endif
 
 #define NEXITFUNCS 32
-static void (*exitfuncs[NEXITFUNCS]) Py_PROTO((void));
+static void (*exitfuncs[NEXITFUNCS])Py_PROTO((void));
 static int nexitfuncs = 0;
 
 int Py_AtExit(func)

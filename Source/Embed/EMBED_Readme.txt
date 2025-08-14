@@ -55,7 +55,7 @@ See the code.
 
 
 Problems:  none.  The only problem I'm aware of is that the resulting
-executable is 400K+ minimum...
+executable is 400K+ minimum... (nearly 600 K minimum for Python 1.6)
 
 
 Irmen de Jong

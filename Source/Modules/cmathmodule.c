@@ -5,7 +5,6 @@
 #include "Python.h"
 
 #include "mymath.h"
-
 #include "protos/cmathmodule.h"
 
 #ifdef i860

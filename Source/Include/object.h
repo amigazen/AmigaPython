@@ -4,42 +4,9 @@
 extern "C" {
 #endif
 
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Object and type object interface */
 
 /*
-123456789-123456789-123456789-123456789-123456789-123456789-123456789-12
-
 Objects are structures allocated on the heap.  Special rules apply to
 the use of objects to ensure they are properly garbage-collected.
 Objects are never allocated statically or on the stack; they must be
@@ -80,8 +47,6 @@ type and back.
 
 A standard interface exists for objects that contain an array of items
 whose size is determined when the object is allocated.
-
-123456789-123456789-123456789-123456789-123456789-123456789-123456789-12
 */
 
 #ifdef Py_DEBUG
@@ -121,8 +86,6 @@ typedef struct {
 
 
 /*
-123456789-123456789-123456789-123456789-123456789-123456789-123456789-12
-
 Type objects contain a string containing the type name (to help somewhat
 in debugging), the allocation parameters (see newobj() and newvarobj()),
 and methods for accessing objects of the type.  Methods are optional,a
@@ -150,6 +113,7 @@ typedef int (*getreadbufferproc) Py_PROTO((PyObject *, int, void **));
 typedef int (*getwritebufferproc) Py_PROTO((PyObject *, int, void **));
 typedef int (*getsegcountproc) Py_PROTO((PyObject *, int *));
 typedef int (*getcharbufferproc) Py_PROTO((PyObject *, int, const char **));
+typedef int (*objobjproc) Py_PROTO((PyObject *, PyObject *));
 
 typedef struct {
 	binaryfunc nb_add;
@@ -185,6 +149,7 @@ typedef struct {
 	intintargfunc sq_slice;
 	intobjargproc sq_ass_item;
 	intintobjargproc sq_ass_slice;
+	objobjproc sq_contains;
 } PySequenceMethods;
 
 typedef struct {
@@ -231,7 +196,7 @@ typedef struct _typeobject {
 	PySequenceMethods *tp_as_sequence;
 	PyMappingMethods *tp_as_mapping;
 
-	/* More standard operations (at end for binary compatibility) */
+	/* More standard operations (here for binary compatibility) */
 
 	hashfunc tp_hash;
 	ternaryfunc tp_call;
@@ -288,6 +253,9 @@ extern DL_IMPORT(int) PyNumber_CoerceEx Py_PROTO((PyObject **, PyObject **));
 extern DL_IMPORT(int) Py_ReprEnter Py_PROTO((PyObject *));
 extern DL_IMPORT(void) Py_ReprLeave Py_PROTO((PyObject *));
 
+/* tstate dict key for PyObject_Compare helper */
+extern PyObject *_PyCompareState_Key;
+
 /* Flag bits for printing: */
 #define Py_PRINT_RAW	1	/* No string quotes etc. */
 
@@ -317,14 +285,16 @@ given type object has a specified feature.
 /* PyBufferProcs contains bf_getcharbuffer */
 #define Py_TPFLAGS_HAVE_GETCHARBUFFER  (1L<<0)
 
-#define Py_TPFLAGS_DEFAULT  (Py_TPFLAGS_HAVE_GETCHARBUFFER)
+/* PySequenceMethods contains sq_contains */
+#define Py_TPFLAGS_HAVE_SEQUENCE_IN (1L<<1)
+
+#define Py_TPFLAGS_DEFAULT  (Py_TPFLAGS_HAVE_GETCHARBUFFER | \
+                             Py_TPFLAGS_HAVE_SEQUENCE_IN)
 
 #define PyType_HasFeature(t,f)  (((t)->tp_flags & (f)) != 0)
 
 
 /*
-123456789-123456789-123456789-123456789-123456789-123456789-123456789-12
-
 The macros Py_INCREF(op) and Py_DECREF(op) are used to increment or decrement
 reference counts.  Py_DECREF calls the object's deallocator function; for
 objects that don't contain references to other objects or heap memory
@@ -362,6 +332,7 @@ extern DL_IMPORT(void) _Py_Dealloc Py_PROTO((PyObject *));
 extern DL_IMPORT(void) _Py_NewReference Py_PROTO((PyObject *));
 extern DL_IMPORT(void) _Py_ForgetReference Py_PROTO((PyObject *));
 extern DL_IMPORT(void) _Py_PrintReferences Py_PROTO((FILE *));
+extern DL_IMPORT(void) _Py_ResetReferences Py_PROTO((void));
 #endif
 
 #ifndef Py_TRACE_REFS
@@ -466,8 +437,6 @@ object, so I can't just put extern in all cases. :-( )
 
 
 /*
-123456789-123456789-123456789-123456789-123456789-123456789-123456789-12
-
 More conventions
 ================
 
@@ -515,9 +484,60 @@ argument consume a reference count; however this may quickly get
 confusing (even the current practice is already confusing).  Consider
 it carefully, it may save lots of calls to Py_INCREF() and Py_DECREF() at
 times.
-
-123456789-123456789-123456789-123456789-123456789-123456789-123456789-12
 */
+
+/*
+  trashcan
+  CT 2k0130
+  non-recursively destroy nested objects
+
+  CT 2k0223
+  redefinition for better locality and less overhead.
+
+  Objects that want to be recursion safe need to use
+  the macroes 
+		Py_TRASHCAN_SAFE_BEGIN(name)
+  and
+		Py_TRASHCAN_SAFE_END(name)
+  surrounding their actual deallocation code.
+
+  It would be nice to do this using the thread state.
+  Also, we could do an exact stack measure then.
+  Unfortunately, deallocations also take place when
+  the thread state is undefined.
+
+  CT 2k0422 complete rewrite.
+  There is no need to allocate new objects.
+  Everything is done vialob_refcnt and ob_type now.
+  Adding support for free-threading should be easy, too.
+*/
+
+#define PyTrash_UNWIND_LEVEL 50
+
+#define Py_TRASHCAN_SAFE_BEGIN(op) \
+	{ \
+		++_PyTrash_delete_nesting; \
+		if (_PyTrash_delete_nesting < PyTrash_UNWIND_LEVEL) { \
+
+#define Py_TRASHCAN_SAFE_END(op) \
+		;} \
+		else \
+			_PyTrash_deposit_object((PyObject*)op);\
+		--_PyTrash_delete_nesting; \
+		if (_PyTrash_delete_later && _PyTrash_delete_nesting <= 0) \
+			_PyTrash_destroy_chain(); \
+	} \
+
+extern DL_IMPORT(void) _PyTrash_deposit_object Py_PROTO((PyObject*));
+extern DL_IMPORT(void) _PyTrash_destroy_chain Py_PROTO((void));
+
+extern DL_IMPORT(int) _PyTrash_delete_nesting;
+extern DL_IMPORT(PyObject *) _PyTrash_delete_later;
+
+/* swap the "xx" to check the speed loss */
+
+#define xxPy_TRASHCAN_SAFE_BEGIN(op) 
+#define xxPy_TRASHCAN_SAFE_END(op) ;
 
 #ifdef __cplusplus
 }

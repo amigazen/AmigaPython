@@ -12,6 +12,7 @@
 /* 25-dec-98: added support for I-Net 225 (at the bottom) */
 /* 24-apr-99: added some defines for Python 1.5.2 */
 /* 16-okt-99: added 'network-free' options */
+/* 9-sep-00:  Python 1.6 */
 
 
 /*************************** ADDED STUFF FOR AMIGA PYTHON ****************/
@@ -39,11 +40,11 @@
 #undef gid_t
 
 /* Define if your struct tm has tm_zone.  */
-#undef HAVE_TM_ZONE
+#undef HAVE_TM_ZONE 
 
 /* Define if you don't have tm_zone but do have the external array
    tzname.  */
-#define HAVE_TZNAME
+#define HAVE_TZNAME 1
 
 /* Define if on MINIX.  */
 #undef _MINIX
@@ -71,16 +72,20 @@
 #undef size_t
 
 /* Define if you have the ANSI C header files.  */
-#define STDC_HEADERS
+#define STDC_HEADERS 1
 
 /* Define if you can safely include both <sys/time.h> and <time.h>.  */
-#define TIME_WITH_SYS_TIME
+#define TIME_WITH_SYS_TIME 1
 
 /* Define if your <sys/time.h> declares struct tm.  */
 #undef TM_IN_SYS_TIME
 
 /* Define to `int' if <sys/types.h> doesn't define.  */
 #undef uid_t
+
+/* Define if your processor stores words with the most significant
+   byte first (like Motorola and SPARC, unlike Intel and VAX).  */
+#define WORDS_BIGENDIAN 1
 
 /* Define if your <unistd.h> contains bad prototypes for exec*()
    (as it does on SGI IRIX 4.x) */
@@ -107,14 +112,17 @@
 #undef HAVE_OLD_CPP
 
 /* Define if your compiler supports function prototypes */
-#define HAVE_PROTOTYPES
+#define HAVE_PROTOTYPES 1
 
 /* Define if your compiler supports variable length function prototypes
    (e.g. void fprintf(FILE *, char *, ...);) *and* <stdarg.h> */
-#define HAVE_STDARG_PROTOTYPES
+#define HAVE_STDARG_PROTOTYPES 1
 
 /* Define if malloc(0) returns a NULL pointer */
-#define MALLOC_ZERO_RETURNS_NULL
+#define MALLOC_ZERO_RETURNS_NULL 1
+
+/* Imports case sensitive? */
+#define CHECK_IMPORT_CASE 1
 
 /* Define if you have POSIX threads */
 #undef _POSIX_THREADS
@@ -130,7 +138,7 @@
 
 /* Define if  you can safely include both <sys/select.h> and <sys/time.h>
    (which you can't on SCO ODT 3.0). */
-#define SYS_SELECT_WITH_SYS_TIME
+#define SYS_SELECT_WITH_SYS_TIME 1
 
 /* Define if a va_list is an array of some kind */
 #undef VA_LIST_IS_ARRAY
@@ -174,8 +182,17 @@
 /* The number of bytes in an off_t. */
 #define SIZEOF_OFF_T 4
 
+/* The number of bytes in a double.  */
+#define SIZEOF_DOUBLE 8
+
+/* The number of bytes in a float.  */
+#define SIZEOF_FLOAT 4
+
 /* The number of bytes in a long long.  */
 #undef SIZEOF_LONG_LONG
+
+/* The number of bytes in a short.  */
+#define SIZEOF_SHORT 2
 
 /* The number of bytes in a void *.  */
 #define SIZEOF_VOID_P 4
@@ -184,7 +201,7 @@
 #undef HAVE_ALARM
 
 /* Define if you have the clock function.  */
-#define HAVE_CLOCK
+#define HAVE_CLOCK 1
 
 /* Define if you have the dlopen function.  */
 #undef HAVE_DLOPEN
@@ -208,22 +225,22 @@
 #undef HAVE_FTRUNCATE
 
 /* Define if you have the getcwd function.  */
-#define HAVE_GETCWD
+#define HAVE_GETCWD 1
 
 /* Define if you have the gethostname_r function.  */
 #undef HAVE_GETHOSTNAME_R
 
 /* Define if you have the getpeername function.  */
-#define HAVE_GETPEERNAME
+#define HAVE_GETPEERNAME 1
 
 /* Define if you have the getpid function.  */
-#define HAVE_GETPID
+#define HAVE_GETPID 1
 
 /* Define if you have the getpwent function.  */
-#define HAVE_GETPWENT
+#define HAVE_GETPWENT 1
 
 /* Define if you have the gettimeofday function.  */
-#define HAVE_GETTIMEOFDAY
+#define HAVE_GETTIMEOFDAY 1
 
 /* Define if you have the getwd function.  */
 #undef HAVE_GETWD
@@ -235,19 +252,19 @@
 #undef HAVE_KILL
 
 /* Define if you have the link function.  */
-#define HAVE_LINK
+#define HAVE_LINK 1
 
 /* Define if you have the lstat function.  */
-#define HAVE_LSTAT
+#define HAVE_LSTAT 1
 
 /* Define if you have the memmove function.  */
-#define HAVE_MEMMOVE
+#define HAVE_MEMMOVE 1
 
 /* Define if you have the mkfifo function.  */
 #undef HAVE_MKFIFO
 
 /* Define if you have the mktime function.  */
-#define HAVE_MKTIME
+#define HAVE_MKTIME 1
 
 /* Define if you have the nice function.  */
 #undef HAVE_NICE
@@ -259,19 +276,19 @@
 #undef HAVE_PLOCK
 
 /* Define if you have the putenv function.  */
-#define HAVE_PUTENV
+#define HAVE_PUTENV 1
 
 /* Define if you have the readlink function.  */
-#define HAVE_READLINK
+#define HAVE_READLINK 1
 
 /* Define if you have the select function.  */
-#define HAVE_SELECT
+#define HAVE_SELECT 1
 
 /* Define if you have the setgid function.  */
-#define HAVE_SETGID
+#define HAVE_SETGID 1
 
 /* Define if you have the setlocale function.  */
-#define HAVE_SETLOCALE
+#define HAVE_SETLOCALE 1
 
 /* Define if you have the setpgid function.  */
 #undef HAVE_SETPGID
@@ -280,10 +297,10 @@
 #undef HAVE_SETPGRP
 
 /* Define if you have the setuid function.  */
-#define HAVE_SETUID
+#define HAVE_SETUID 1
 
 /* Define if you have the setvbuf function.  */
-#define HAVE_SETVBUF
+#define HAVE_SETVBUF 1
 
 /* Define if you have the sigaction function.  */
 #undef HAVE_SIGACTION
@@ -295,19 +312,19 @@
 #undef HAVE_SIGRELSE
 
 /* Define if you have the strdup function.  */
-#define HAVE_STRDUP
+#define HAVE_STRDUP 1
 
 /* Define if you have the strerror function.  */
-#define HAVE_STRERROR
+#define HAVE_STRERROR 1
 
 /* Define if you have the strftime function.  */
-#define HAVE_STRFTIME
+#define HAVE_STRFTIME 1
 
 /* Define if you have the strptime function.  */
 #undef HAVE_STRPTIME
 
 /* Define if you have the symlink function.  */
-#define HAVE_SYMLINK
+#define HAVE_SYMLINK 1
 
 /* Define if you have the tcgetpgrp function.  */
 #undef HAVE_TCGETPGRP
@@ -322,7 +339,7 @@
 #undef HAVE_TRUNCATE
 
 /* Define if you have the uname function.  */
-#define HAVE_UNAME
+#define HAVE_UNAME 1
 
 /* Define if you have the waitpid function.  */
 #undef HAVE_WAITPID
@@ -370,7 +387,7 @@
 #undef HAVE_EXECV
 
 /* system function? */
-#define HAVE_SYSTEM
+#define HAVE_SYSTEM 1
 
 /* wait function? */
 #undef HAVE_WAIT
@@ -379,31 +396,31 @@
 #undef HAVE_KILL
 
 /* pipe function? */
-#define HAVE_PIPE
+#define HAVE_PIPE 1
 
 /* popen function? */
-#define HAVE_POPEN
+#define HAVE_POPEN 1
 
 /* fork function? */
 #undef HAVE_FORK
 
 /* getegid function? */
-#define HAVE_GETEGID
+#define HAVE_GETEGID 1
 
 /* geteuid function? */
-#define HAVE_GETEUID
+#define HAVE_GETEUID 1
 
 /* getgid function? */
-#define HAVE_GETGID
+#define HAVE_GETGID 1
 
 /* getppid function? */
 #undef HAVE_GETPPID
 
 /* getuid function? */
-#define HAVE_GETUID
+#define HAVE_GETUID 1
 
 /* opendir function? */
-#define HAVE_OPENDIR
+#define HAVE_OPENDIR 1
 
 
 /* Define if you have the <dirent.h> header file.  */
@@ -413,13 +430,13 @@
 #undef HAVE_DLFCN_H
 
 /* Define if you have the <fcntl.h> header file.  */
-#define HAVE_FCNTL_H
+#define HAVE_FCNTL_H 1
 
 /* Define if you have the <limits.h> header file.  */
-#define HAVE_LIMITS_H
+#define HAVE_LIMITS_H 1
 
 /* Define if you have the <locale.h> header file.  */
-#define HAVE_LOCALE_H
+#define HAVE_LOCALE_H 1
 
 /* Define if you have the <ncurses.h> header file.  */
 #undef HAVE_NCURSES_H
@@ -431,25 +448,25 @@
 #undef HAVE_PTHREAD_H
 
 /* Define if you have the <signal.h> header file.  */
-#define HAVE_SIGNAL_H
+#define HAVE_SIGNAL_H 1
 
 /* Define if you have the <stdarg.h> header file.  */
-#define HAVE_STDARG_H
+#define HAVE_STDARG_H 1
 
 /* Define if you have the <stddef.h> header file.  */
-#define HAVE_STDDEF_H
+#define HAVE_STDDEF_H 1
 
 /* Define if you have the <stdlib.h> header file.  */
-#define HAVE_STDLIB_H
+#define HAVE_STDLIB_H 1
 
 /* Define if you have the <sys/audioio.h> header file.  */
 #undef HAVE_SYS_AUDIOIO_H
 
 /* Define if you have the <sys/dir.h> header file.  */
-#define HAVE_SYS_DIR_H
+#define HAVE_SYS_DIR_H 1
 
 /* Define if you have the <sys/file.h> header file.  */
-#define HAVE_SYS_FILE_H
+#define HAVE_SYS_FILE_H 1
 
 /* Define if you have the <sys/lock.h> header file.  */
 #undef HAVE_SYS_LOCK_H
@@ -458,13 +475,13 @@
 #undef HAVE_SYS_NDIR_H
 
 /* Define if you have the <sys/param.h> header file.  */
-#define HAVE_SYS_PARAM_H
+#define HAVE_SYS_PARAM_H 1
 
 /* Define if you have the <sys/select.h> header file.  */
 #undef HAVE_SYS_SELECT_H
 
 /* Define if you have the <sys/time.h> header file.  */
-#define HAVE_SYS_TIME_H
+#define HAVE_SYS_TIME_H 1
 
 /* Define if you have the <sys/times.h> header file.  */
 #undef HAVE_SYS_TIMES_H
@@ -479,10 +496,10 @@
 #undef HAVE_THREAD_H
 
 /* Define if you have the <unistd.h> header file.  */
-#define HAVE_UNISTD_H
+#define HAVE_UNISTD_H 1
 
 /* Define if you have the <utime.h> header file.  */
-#define HAVE_UTIME_H
+#define HAVE_UTIME_H 1
 
 /* Define if you have the dl library (-ldl).  */
 #undef HAVE_LIBDL
@@ -497,7 +514,7 @@
 #undef HAVE_LIBSUN
 
 
-#endif /* BOTH AMITCP OR INET
+#endif /* BOTH AMITCP OR INET */
 
 
 /************************* FROM HERE:   AMITCP stuff ********************/
@@ -505,18 +522,18 @@
 #ifdef AMITCP
 
 /* Define if you have the chown function.  */
-#define HAVE_CHOWN
+#define HAVE_CHOWN 1
 
 /* Define if getpgrp() must be called as getpgrp(0). */
-/* #define GETPGRP_HAVE_ARG */
+/* #define GETPGRP_HAVE_ARG 1 */
 
 /* Define if you have the getpgrp function.  */
-#define HAVE_GETPGRP
+#define HAVE_GETPGRP 1
 
 /* Define if you have the setsid function.  */
-#define HAVE_SETSID
+#define HAVE_SETSID 1
 
-#define HAVE_SYS_WAIT_H
+#define HAVE_SYS_WAIT_H 1
 
 
 #endif /* AmiTCP only */
@@ -538,47 +555,47 @@
 
 #if !defined(AMITCP) && !defined(INET225)
 
-#define HAVE_TZNAME
+#define HAVE_TZNAME 1
 #define RETSIGTYPE void
-#define STDC_HEADERS
-#define HAVE_PROTOTYPES
-#define HAVE_STDARG_PROTOTYPES
-#define MALLOC_ZERO_RETURNS_NULL
-#define SIZEOF_INT 4
+#define STDC_HEADERS 1
+#define HAVE_PROTOTYPES 1
+#define HAVE_STDARG_PROTOTYPES 1
+#define MALLOC_ZERO_RETURNS_NULL 1
+#define SIZEOF_INT 4 
 #define SIZEOF_LONG 4
 #define SIZEOF_OFF_T 4
 #undef SIZEOF_LONG_LONG
 #define SIZEOF_VOID_P 4
-#define HAVE_CLOCK
-#define HAVE_GETCWD
-#define HAVE_GETPID
-#define HAVE_LINK
-#define HAVE_LSTAT
-#define HAVE_MEMMOVE
-#define HAVE_MKTIME
-#define HAVE_PUTENV
-#define HAVE_READLINK
-#define HAVE_SETLOCALE
-#define HAVE_SETVBUF
-#define HAVE_STRDUP
-#define HAVE_STRERROR
-#define HAVE_STRFTIME
-#define HAVE_SYMLINK
-#define HAVE_UNAME
-#define HAVE_SYSTEM
-#define HAVE_PIPE
-#define HAVE_POPEN
-#define HAVE_OPENDIR
-#define HAVE_FCNTL_H
-#define HAVE_LIMITS_H
-#define HAVE_LOCALE_H
-#define HAVE_SIGNAL_H
-#define HAVE_STDARG_H
-#define HAVE_STDDEF_H
-#define HAVE_STDLIB_H
-#define HAVE_SYS_DIR_H
-#define HAVE_SYS_FILE_H
-#define HAVE_UNISTD_H
+#define HAVE_CLOCK 1
+#define HAVE_GETCWD 1
+#define HAVE_GETPID 1
+#define HAVE_LINK 1
+#define HAVE_LSTAT 1
+#define HAVE_MEMMOVE 1
+#define HAVE_MKTIME 1
+#define HAVE_PUTENV 1
+#define HAVE_READLINK 1
+#define HAVE_SETLOCALE 1
+#define HAVE_SETVBUF 1
+#define HAVE_STRDUP 1
+#define HAVE_STRERROR 1
+#define HAVE_STRFTIME 1
+#define HAVE_SYMLINK 1
+#define HAVE_UNAME 1
+#define HAVE_SYSTEM 1
+#define HAVE_PIPE 1
+#define HAVE_POPEN 1
+#define HAVE_OPENDIR 1
+#define HAVE_FCNTL_H 1
+#define HAVE_LIMITS_H 1
+#define HAVE_LOCALE_H 1
+#define HAVE_SIGNAL_H 1
+#define HAVE_STDARG_H 1
+#define HAVE_STDDEF_H 1
+#define HAVE_STDLIB_H 1
+#define HAVE_SYS_DIR_H 1
+#define HAVE_SYS_FILE_H 1
+#define HAVE_UNISTD_H 1
 
 #endif /* No networking */
 

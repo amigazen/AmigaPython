@@ -55,8 +55,12 @@ static PyObject *builtin_isinstance ( PyObject *self , PyObject *args );
 static PyObject *builtin_issubclass ( PyObject *self , PyObject *args );
 static int init_class_exc ( PyObject *dict );
 static void fini_instances ( void );
-static PyObject *newstdexception ( PyObject *dict , char *name );
-static void initerrors ( PyObject *dict );
 static void finierrors ( void );
 static PyObject *filtertuple ( PyObject *func , PyObject *tuple );
 static PyObject *filterstring ( PyObject *func , PyObject *strobj );
+
+static PyObject *builtin_unicode ( PyObject *self , PyObject *args );
+static PyObject *builtin_unichr ( PyObject *self , PyObject *args );
+static int abstract_issubclass ( PyObject *derived , PyObject *cls , char *err , int first );
+
+

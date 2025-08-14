@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Long (arbitrary precision) integer object implementation */
 
 /* XXX The functional organization of this file is terrible */
@@ -36,6 +5,7 @@ PERFORMANCE OF THIS SOFTWARE.
 #include "Python.h"
 #include "longintrepr.h"
 #include "mymath.h"
+#include "protos/longobject.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -43,12 +13,11 @@ PERFORMANCE OF THIS SOFTWARE.
 #define ABS(x) ((x) < 0 ? -(x) : (x))
 
 /* Forward */
-#include "protos/longobject.h"
 static PyLongObject *long_normalize Py_PROTO((PyLongObject *));
 static PyLongObject *mul1 Py_PROTO((PyLongObject *, wdigit));
 static PyLongObject *muladd1 Py_PROTO((PyLongObject *, wdigit, wdigit));
 static PyLongObject *divrem1 Py_PROTO((PyLongObject *, wdigit, digit *));
-static PyObject *long_format Py_PROTO((PyObject *aa, int base));
+static PyObject *long_format Py_PROTO((PyObject *aa, int base, int addL));
 
 static int ticker;	/* XXX Could be shared with ceval? */
 
@@ -146,6 +115,11 @@ PyLong_FromDouble(dval)
 	double frac;
 	int i, ndig, expo, neg;
 	neg = 0;
+	if (dval && dval * 0.5 == dval) {
+		PyErr_SetString(PyExc_OverflowError,
+			"cannot convert float infinity to long");
+		return NULL;
+	}
 	if (dval < 0.0) {
 		neg = 1;
 		dval = -dval;
@@ -566,13 +540,13 @@ divrem1(a, n, prem)
 
 /* Convert a long int object to a string, using a given conversion base.
    Return a string object.
-   If base is 8 or 16, add the proper prefix '0' or '0x'.
-   External linkage: used in bltinmodule.c by hex() and oct(). */
+   If base is 8 or 16, add the proper prefix '0' or '0x'. */
 
 static PyObject *
-long_format(aa, base)
+long_format(aa, base, addL)
 	PyObject *aa;
 	int base;
+        int addL;
 {
 	register PyLongObject *a = (PyLongObject *)aa;
 	PyStringObject *str;
@@ -595,13 +569,14 @@ long_format(aa, base)
 		++bits;
 		i >>= 1;
 	}
-	i = 6 + (size_a*SHIFT + bits-1) / bits;
+	i = 5 + (addL ? 1 : 0) + (size_a*SHIFT + bits-1) / bits;
 	str = (PyStringObject *) PyString_FromStringAndSize((char *)0, i);
 	if (str == NULL)
 		return NULL;
 	p = PyString_AS_STRING(str) + i;
 	*p = '\0';
-	*--p = 'L';
+        if (addL)
+                *--p = 'L';
 	if (a->ob_size < 0)
 		sign = '-';
 	
@@ -719,7 +694,7 @@ PyLong_FromString(str, pend, base)
 	int base;
 {
 	int sign = 1;
-	char *start;
+	char *start, *orig_str = str;
 	PyLongObject *z;
 	
 	if ((base != 0 && base < 2) || base > 36) {
@@ -767,17 +742,44 @@ PyLong_FromString(str, pend, base)
 	}
 	if (z == NULL)
 		return NULL;
-	if (str == start) {
-		PyErr_SetString(PyExc_ValueError,
-				"no digits in long int constant");
-		Py_DECREF(z);
-		return NULL;
-	}
+	if (str == start)
+		goto onError;
 	if (sign < 0 && z != NULL && z->ob_size != 0)
 		z->ob_size = -(z->ob_size);
+	if (*str == 'L' || *str == 'l')
+		str++;
+	while (*str && isspace(Py_CHARMASK(*str)))
+		str++;
+	if (*str != '\0')
+		goto onError;
 	if (pend)
 		*pend = str;
 	return (PyObject *) z;
+
+ onError:
+	PyErr_Format(PyExc_ValueError, 
+		     "invalid literal for long(): %.200s", orig_str);
+	Py_XDECREF(z);
+	return NULL;
+}
+
+PyObject *
+PyLong_FromUnicode(u, length, base)
+	Py_UNICODE *u;
+	int length;
+	int base;
+{
+	char buffer[256];
+
+	if (length >= sizeof(buffer)) {
+		PyErr_SetString(PyExc_ValueError,
+				"long() literal too large to convert");
+		return NULL;
+	}
+	if (PyUnicode_EncodeDecimal(u, length, buffer, NULL))
+		return NULL;
+
+	return PyLong_FromString(buffer, NULL, base);
 }
 
 static PyLongObject *x_divrem
@@ -963,14 +965,21 @@ static void
 long_dealloc(v)
 	PyObject *v;
 {
-	PyMem_DEL(v);
+	PyObject_DEL(v);
 }
 
 static PyObject *
 long_repr(v)
 	PyObject *v;
 {
-	return long_format(v, 10);
+	return long_format(v, 10, 1);
+}
+
+static PyObject *
+long_str(v)
+	PyObject *v;
+{
+	return long_format(v, 10, 0);
 }
 
 static int
@@ -1184,6 +1193,15 @@ long_mul(a, b)
 	
 	size_a = ABS(a->ob_size);
 	size_b = ABS(b->ob_size);
+	if (size_a > size_b) {
+		/* we are faster with the small object on the left */
+		int hold_sa = size_a;
+		PyLongObject *hold_a = a;
+		size_a = size_b;
+		size_b = hold_sa;
+		a = b;
+		b = hold_a;
+	}
 	z = _PyLong_New(size_a + size_b);
 	if (z == NULL)
 		return NULL;
@@ -1346,7 +1364,11 @@ long_pow(a, b, c)
 				temp = (PyLongObject *)long_mul(z, a);
 				Py_DECREF(z);
 			 	if ((PyObject*)c!=Py_None && temp!=NULL) {
-			 		l_divmod(temp, c, &div, &mod);
+			 		if (l_divmod(temp,c,&div,&mod) < 0) {
+						Py_DECREF(temp);
+						z = NULL;
+						goto error;
+					}
 				 	Py_XDECREF(div);
 				 	Py_DECREF(temp);
 				 	temp = mod;
@@ -1361,7 +1383,11 @@ long_pow(a, b, c)
 			temp = (PyLongObject *)long_mul(a, a);
 			Py_DECREF(a);
 		 	if ((PyObject*)c!=Py_None && temp!=NULL) {
-			 	l_divmod(temp, c, &div, &mod);
+			 	if (l_divmod(temp, c, &div, &mod) < 0) {
+					Py_DECREF(temp);
+					z = NULL;
+					goto error;
+				}
 			 	Py_XDECREF(div);
 			 	Py_DECREF(temp);
 			 	temp = mod;
@@ -1378,11 +1404,17 @@ long_pow(a, b, c)
 	}
 	Py_XDECREF(a);
 	if ((PyObject*)c!=Py_None && z!=NULL) {
-			l_divmod(z, c, &div, &mod);
+		if (l_divmod(z, c, &div, &mod) < 0) {
+			Py_DECREF(z);
+			z = NULL;
+		}
+		else {
 			Py_XDECREF(div);
 			Py_DECREF(z);
-			z=mod;
+			z = mod;
+		}
 	}
+  error:
 	return (PyObject *)z;
 }
 
@@ -1738,14 +1770,14 @@ static PyObject *
 long_oct(v)
 	PyObject *v;
 {
-	return long_format(v, 8);
+	return long_format(v, 8, 1);
 }
 
 static PyObject *
 long_hex(v)
 	PyObject *v;
 {
-	return long_format(v, 16);
+	return long_format(v, 16, 1);
 }
 
 
@@ -1787,7 +1819,7 @@ PyTypeObject PyLong_Type = {
 	"long int",
 #ifdef __SASC
 	sizeof(struct _longobject) - sizeof(digit),
-#else /* !__SASC */
+#else
 	sizeof(PyLongObject) - sizeof(digit),
 #endif
 	sizeof(digit),
@@ -1803,4 +1835,6 @@ PyTypeObject PyLong_Type = {
 	0,		/*tp_as_mapping*/
 	(long (*) Py_FPROTO((PyObject *)))
 	(hashfunc)long_hash, /*tp_hash*/
+        0,              /*tp_call*/
+        (reprfunc)long_str, /*tp_str*/
 };

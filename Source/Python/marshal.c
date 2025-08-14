@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Write Python objects to files and read them back.
    This is intended for writing and reading compiled Python code only;
    a true persistent storage facility would be much harder, since
@@ -52,6 +21,7 @@ PERFORMANCE OF THIS SOFTWARE.
 #define TYPE_LIST	'['
 #define TYPE_DICT	'{'
 #define TYPE_CODE	'c'
+#define TYPE_UNICODE	'u'
 #define TYPE_UNKNOWN	'?'
 
 typedef struct {
@@ -63,11 +33,11 @@ typedef struct {
 	char *end;
 } WFILE;
 
-#include "protos/marshal.h"
-
 #define w_byte(c, p) if (((p)->fp)) putc((c), (p)->fp); \
 		      else if ((p)->ptr != (p)->end) *(p)->ptr++ = (c); \
 			   else w_more(c, p)
+
+#include "protos/marshal.h"
 
 static void
 w_more(c, p)
@@ -215,9 +185,22 @@ w_object(v, p)
 #endif
 	else if (PyString_Check(v)) {
 		w_byte(TYPE_STRING, p);
-		n = PyString_Size(v);
+		n = PyString_GET_SIZE(v);
 		w_long((long)n, p);
-		w_string(PyString_AsString(v), n, p);
+		w_string(PyString_AS_STRING(v), n, p);
+	}
+	else if (PyUnicode_Check(v)) {
+	        PyObject *utf8;
+		utf8 = PyUnicode_AsUTF8String(v);
+		if (utf8 == NULL) {
+		    p->error = 1;
+		    return;
+		}
+		w_byte(TYPE_UNICODE, p);
+		n = PyString_GET_SIZE(utf8);
+		w_long((long)n, p);
+		w_string(PyString_AS_STRING(utf8), n, p);
+		Py_DECREF(utf8);
 	}
 	else if (PyTuple_Check(v)) {
 		w_byte(TYPE_TUPLE, p);
@@ -229,10 +212,10 @@ w_object(v, p)
 	}
 	else if (PyList_Check(v)) {
 		w_byte(TYPE_LIST, p);
-		n = PyList_Size(v);
+		n = PyList_GET_SIZE(v);
 		w_long((long)n, p);
 		for (i = 0; i < n; i++) {
-			w_object(PyList_GetItem(v, i), p);
+			w_object(PyList_GET_ITEM(v, i), p);
 		}
 	}
 	else if (PyDict_Check(v)) {
@@ -486,7 +469,7 @@ r_object(p)
 		}
 		v = PyString_FromStringAndSize((char *)NULL, n);
 		if (v != NULL) {
-			if (r_string(PyString_AsString(v), (int)n, p) != n) {
+			if (r_string(PyString_AS_STRING(v), (int)n, p) != n) {
 				Py_DECREF(v);
 				v = NULL;
 				PyErr_SetString(PyExc_EOFError,
@@ -495,6 +478,29 @@ r_object(p)
 		}
 		return v;
 	
+	case TYPE_UNICODE:
+	    {
+		char *buffer;
+
+		n = r_long(p);
+		if (n < 0) {
+			PyErr_SetString(PyExc_ValueError, "bad marshal data");
+			return NULL;
+		}
+		buffer = PyMem_NEW(char, n);
+		if (buffer == NULL)
+			return PyErr_NoMemory();
+		if (r_string(buffer, (int)n, p) != n) {
+			PyMem_DEL(buffer);
+			PyErr_SetString(PyExc_EOFError,
+				"EOF read where object expected");
+			return NULL;
+		}
+		v = PyUnicode_DecodeUTF8(buffer, n, NULL);
+		PyMem_DEL(buffer);
+		return v;
+	    }
+	    
 	case TYPE_TUPLE:
 		n = r_long(p);
 		if (n < 0) {
@@ -680,7 +686,7 @@ marshal_dump(self, args)
 	WFILE wf;
 	PyObject *x;
 	PyObject *f;
-	if (!PyArg_Parse(args, "(OO)", &x, &f))
+	if (!PyArg_ParseTuple(args, "OO:dump", &x, &f))
 		return NULL;
 	if (!PyFile_Check(f)) {
 		PyErr_SetString(PyExc_TypeError,
@@ -708,7 +714,7 @@ marshal_load(self, args)
 	RFILE rf;
 	PyObject *f;
 	PyObject *v;
-	if (!PyArg_Parse(args, "O", &f))
+	if (!PyArg_ParseTuple(args, "O:load", &f))
 		return NULL;
 	if (!PyFile_Check(f)) {
 		PyErr_SetString(PyExc_TypeError,
@@ -733,7 +739,7 @@ marshal_dumps(self, args)
 	PyObject *args;
 {
 	PyObject *x;
-	if (!PyArg_Parse(args, "O", &x))
+	if (!PyArg_ParseTuple(args, "O:dumps", &x))
 		return NULL;
 	return PyMarshal_WriteObjectToString(x);
 }
@@ -747,7 +753,7 @@ marshal_loads(self, args)
 	PyObject *v;
 	char *s;
 	int n;
-	if (!PyArg_Parse(args, "s#", &s, &n))
+	if (!PyArg_ParseTuple(args, "s#:loads", &s, &n))
 		return NULL;
 	rf.fp = NULL;
 	rf.str = args;
@@ -763,10 +769,10 @@ marshal_loads(self, args)
 }
 
 static PyMethodDef marshal_methods[] = {
-	{"dump",	marshal_dump},
-	{"load",	marshal_load},
-	{"dumps",	marshal_dumps},
-	{"loads",	marshal_loads},
+	{"dump",	marshal_dump,	1},
+	{"load",	marshal_load,	1},
+	{"dumps",	marshal_dumps,	1},
+	{"loads",	marshal_loads,	1},
 	{NULL,		NULL}		/* sentinel */
 };
 

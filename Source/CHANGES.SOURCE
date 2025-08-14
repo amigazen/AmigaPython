@@ -1,9 +1,5 @@
- 
-Changes to the original 1.5.2 source code distribution:
+Changes to the original 1.6 source code distribution:
 -------------------------------------------------------
-
-[This is perhaps no longer fully up to date??? --- Irmen 19/10/1999]
-
 
 General:
 
@@ -39,6 +35,9 @@ Added subdir Amiga_Misc with:
   You don't need any of the original makefiles (just delete them if you like).
   (new since 1.5: SMAKEFILE splitted, one for each main directory)
 
+- Added Prototype files for many source files.
+  See `protos' directories in: Modules, Objects, Parser, Python.
+
 - Created Include/config.h
 - Created Include/protos.h
 - Created Modules/config.c
@@ -48,6 +47,147 @@ Added subdir Amiga_Misc with:
 - Created Modules/Doslibmodule.c
 
 
+Include/Python.h:
+	- added #include "protos.h"
+	- added #include <fcntl.h>
+
+Include/mymath.h:
+	- added SAS/C math includes
+
+Include/osdefs.h:
+	- added AMIGA specific #defines
+
+Include/myselect.h:
+	- added #include <proto/socket.h> for AMITCP/INET
+
+Include/compile.h:
+	- removed _node decl for SAS/C
+
+Include/bitset.h:
+	- replaced BYTE def on _AMIGA with #include <exec/types.h>
+
+Include/Import.h:
+	- fixed proto for initfunc
+
+Include/cStringIO.h:
+	- added prototype for xxxPyCObject_Import
+Include/Object.h:
+	- fixed proto for _PyTrash_destroy_chain
+
+Parser/intrcheck.c:
+	- Added test for AMIGA for intcatcher prototype
+	- Added #include for fcntl.h
+	- Added SAS/C specific ^C handling
+
+Objects/longobject.c: (line 1787)
+	- changed sizeof(PyLongObject) to sizeof(struct _longobject) because of
+	  illegal sizeof expression (?)
+
+Objects/classobject.c:
+	- added prototyped version of UNARY macro
+
+Objects/unicodectype.c:
+	- added check for __SASC at BREAK_SWITCH_UP to break the huge switch
+	  into multiple blocks, to make it easier for the compiler.
+
+Python/pythonrun.c:
+	- Added proto for exitfuncs
+	- Fixed proto for _PyUnicode_Init, _PyUnicode_Fini,
+	    _PyCodecRegistry_Init, _PyCodecRegistry_Fini
+
+Python/getargs.c:
+	- Added #include <limits.h>
+
+Python/sysmodule.c:
+	- Added code for absolute path check in PySys_SetArgv
+
+Python/import.c:
+	- Fixed path building in find_module, now uses dos.library/AddPart
+	- Added Amiga version of check_case: now the imports are case sensitive
+
+Python/pythonrun.c:
+	- Case insensive filename match for .pyc and .pyo
+
+Python/sigcheck.c:
+	- Added stack checking code
+
+Modules/mathmodule.c:
+	- added prototyped versions of function macros, and for SAS/C,
+	  versions which call the math functions directly. Calling them
+	  through a function pointer (the default) results in bigger code
+	  and rounding errors (!?)
+
+Modules/socketmodule.c: 
+	- added check(s) for _AMIGA
+	- Added AMITCP/INET includes
+	- Added a couple of #defines for AMITCP/INET API
+	- Changed use of fcntl to IoctlSocket (for s.setblocking)
+	- Clear socket buffer for new socket (PySocketSock_New)
+
+Modules/main.c:
+	- Changed <prefix>/python1.5 to <prefix>/python1.6
+	- Added AmiTCP/INET init & cleanup functions to Modules/main.c
+		(checkXXXXlib functions)
+
+Modules/binascii.c:
+	- fixed unsigned char bytes
+
+Modules/getpath.c:
+	- changed VERSION to 1.6
+	- changed #if to #ifdef
+	- added Amiga version of PYTHONPATH #define
+	- added Amiga versions for getting full path of executable,
+	  reduce, checking if path is relative, ...
+
+Modules/md5c.c:
+	- added lines to use regular memcpy and memset on AMIGA
+
+Modules/selectmodule.c:
+	- Added Amiga's version of select funcion (with optional 5th parameter)
+
+Modules/timemodule.c:
+	- fixed proto for floattime()
+	- added code for floatsleep() (uses select() if available)
+
+Modules/cmathmodule.c:
+	- added function definition macros with prototypes
+
+Modules/cryptmodule.c:
+	- added AMITCP/INET includes
+
+Modules/grpmodule.c:
+	- added AMITCP/INET includes
+	- added AMITCP/INET code changes
+
+Modules/pwdmodule.c:
+	- added AMITCP/INET includes
+	- added AMITCP/INET code changes
+
+Modules/syslogmodule.c:
+	- added AMITCP/INET includes
+	- added AMITCP/INET code changes
+
+Modules/cPickle.c:
+	- fixed proto for put2 & save
+	- added proto for write_func in Picklerobject
+	- added proto for read_func and readline_func in Unpicklerobject
+
+Modules/operator.c:
+	- added function def macros with prototypes
+
+Modules/getbuildinfo.c:
+	- added proto for Py_GetBuildInfo
+	- Added Amiga version string ($VER)
+
+Modules/unicodedata.c:
+	- Added amiga specific code to initialize the unicode database.
+
+Modules/unicodedatabase.c:
+	- Removed, replaced with an Amiga specific version
+	  ("amigaunicodedatabase.c") that reads the database from disk files.
+	  This is done because the original file is too large to compile and
+	  the dynamic data loading saves memory.
+
 - Changes to library files in Lib drawer. These changes are also documented
   in the README file. Files involved:
 	os.py           (amiga additions)
@@ -55,9 +195,6 @@ Added subdir Amiga_Misc with:
 	posixpath.py    (stub for old posixpath.py)
 	amigapath.py    (amiga's replacement for posixpath.py)
 	site.py		(exit string for Amiga)
-
-- Slight changes in the testset (Lib/test):
-  test_select.py (can't be easily tested on amiga - not on files)
 
 - Added Lib/plat-amiga directory with files.
 
@@ -68,126 +205,3 @@ Added subdir Amiga_Misc with:
   and from Python to Python/NON-AMIGA.
   (these files are not included in the source archive for space reasons)
 
-- Added Prototype files for many source files.
-  See `protos' directories in: Modules, Objects, Parser, Python.
-
-
-Modules/main.c:
-	- Added AmiTCP/INET init & cleanup functions to Modules/main.c
-		(checkXXXXlib functions)
-
-Modules/getpath.c:
-	- changed #if to #ifdef
-	- added Amiga version of PYTHONPATH #define
-	- added Amiga versions for getting full path of executable,
-	  reduce, checking if path is relative, ...
-
-Modules/mathmodule.c:
-	- added prototyped versions of function macros, and for SAS/C,
-	  versions which call the math functions directly. Calling them
-	  through a function pointer (the default) results in bigger code
-	  and rounding errors (!?)
-
-Modules/md5c.c:
-	- added lines to use regular memcpy and memset on AMIGA
-
-Modules/soundex.c:
-	- undef'd toupper macro
-
-Modules/socketmodule.c:
-	- added check(s) for _AMIGA
-	- Added AMITCP/INET includes
-	- Added a couple of #defines for AMITCP/INET API
-	- Changed use of fcntl to IoctlSocket (for s.setblocking)
-	- Clear socket buffer for new socket (PySocketSock_New)
-
-Modules/selectmodule.c:
-	- Added Amiga's version of select funcion (with optional 5th parameter)
-
-Modules/timemodule.c:
-	- fixed proto for floattime()
-	- added code for floatsleep() (uses select() if available)
-
-Modules/binascii.c:
-	- fixed unsigned char bytes
-
-Modules/cmathmodule.c:
-	- added function definition macros with prototypes
-
-Modules/cPickle.c:
-	- fixed proto for put2 & save
-	- added proto for write_func in Picklerobject
-	- added proto for read_func and readline_func in Unpicklerobject
-
-Modules/cryptmodule.c:
-	- added AMITCP/INET includes
-
-Modules/pwdmodule.c:
-	- added AMITCP/INET includes
-	- added AMITCP/INET code changes
-
-Modules/grpmodule.c:
-	- added AMITCP/INET includes
-
-Modules/syslogmodule.c:
-	- added AMITCP/INET includes
-	- added AMITCP/INET code changes
-
-Modules/operator.c:
-	- added function def macros with prototypes
-
-Modules/getbuildinfo.c:
-	- added proto for Py_GetBuildInfo
-	- Added Amiga version string ($VER)
-
-Include/osdefs.h:
-	- added AMIGA specific #defines
-
-Include/myselect.h:
-	- added #include <proto/socket.h> for AMITCP/INET
-
-Include/mymath.h:
-	- added SAS/C math includes
-
-Include/compile.h:
-	- removed _node decl for SAS/C
-
-Include/bitset.h:
-	- replaced BYTE def on _AMIGA with #include <exec/types.h>
-
-Include/Python.h:
-	- added #include "protos.h"
-	- added #include <fcntl.h>
-
-Include/Import.h:
-	- fixed proto for initfunc
-
-Include/cStringIO.h:
-	- added prototype for xxxPyCObject_Import
-
-Objects/longobject.c: (line 1787)
-	- changed sizeof(PyLongObject) to sizeof(struct _longobject) because of
-	  illegal sizeof expression (?)
-
-Objects/classobject.c:
-	- added prototyped version of UNARY macro
-
-Parser/intrcheck.c:
-	- Added test for AMIGA for intcatcher prototype
-	- Added #include for fcntl.h
-	- Added SAS/C specific ^C handling
-
-Python/sysmodule.c:
-	- Added code for absolute path check in PySys_SetArgv
-
-Python/import.c:
-	- Fixed proto for GetLastModificationTime
-	- Fixed path building in find_module, now uses dos.library/AddPart
-	- Added Amiga version of check_case: now the imports are case sensitive
-
-Python/pythonrun.c:
-	- Added proto for exitfuncs, parse_syntax_error
-	- Case insensive filename match for .pyc and .pyo
-
-Python/sigcheck.c:
-	- Added stack checking code

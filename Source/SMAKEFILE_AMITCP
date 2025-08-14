@@ -1,6 +1,6 @@
 
 #
-#	Toplevel SMakefile for Python 1.5.
+#	Toplevel SMakefile for AmigaPython.
 #
 #	Made by Irmen de Jong, 10 nov. 1995.
 #		updated: 25 march 1996 for use with AmiTCP
@@ -10,9 +10,9 @@
 #		updated: 12 jan 1998, for Python 1.5
 #			  (partitioned into 5 parts)
 #		updated: 25 dec 1998, added support for I-Net 225
+#		updated: 10 sep 2000, Python 1.6
 #
 #	
-#	This makefile replaces all other makefiles.
 #
 #	THIS IS THE MAKEFILE FOR AMITCP !!!!
 #
@@ -20,7 +20,7 @@
 
 
 # ye old progname:
-PROGRAM = Python_030
+PROGRAM = Python16
 
 
 all: $(PROGRAM)
@@ -78,7 +78,7 @@ LIBS = Modules/Modules.lib Parser/Parser.lib Python/Python.lib Objects/Objects.l
 
 OBJECTS=Modules/python.o Modules/main.o $(NEWMODULES)
 
-Python.GST: amiga/make_gst.c Include/config.h Include/protos.h SCOPTIONS
+Python.GST: amiga/make_gst.c Include/Python.h Include/config.h Include/protos.h SCOPTIONS
 	-delete >NIL: Python.GST
 	-GST >NIL: Python.GST unload
 	-SC amiga/make_gst.c MKGST Python.GST NOOBJNAME

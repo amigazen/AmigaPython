@@ -7,3 +7,5 @@ static PyObject *binascii_rlecode_hqx ( PyObject *self , PyObject *args );
 static PyObject *binascii_b2a_hqx ( PyObject *self , PyObject *args );
 static PyObject *binascii_rledecode_hqx ( PyObject *self , PyObject *args );
 static PyObject *binascii_crc_hqx ( PyObject *self , PyObject *args );
+static int binascii_find_valid ( char *s , int slen , int num );
+static PyObject *binascii_crc32 ( PyObject *self , PyObject *args );

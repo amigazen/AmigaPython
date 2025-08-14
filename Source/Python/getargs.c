@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* New getargs implementation */
 
 /* XXX There are several unchecked sprintf or strcat calls in this file.
@@ -40,6 +9,9 @@ PERFORMANCE OF THIS SOFTWARE.
 
 #include <ctype.h>
 
+#ifdef HAVE_LIMITS_H
+#include <limits.h>
+#endif
 
 int PyArg_Parse Py_PROTO((PyObject *, char *, ...));
 int PyArg_ParseTuple Py_PROTO((PyObject *, char *, ...));
@@ -177,6 +149,8 @@ vgetargs1(args, format, p_va, compat)
 			break;
 		}
 		else if (level != 0)
+			; /* Pass */
+		else if (c == 'e')
 			; /* Pass */
 		else if (isalpha(c))
 			max++;
@@ -442,6 +416,11 @@ convertsimple(arg, p_format, p_va, msgbuf)
 }
 
 
+/* Internal API needed by convertsimple1(): */
+extern 
+PyObject *_PyUnicode_AsDefaultEncodedString(PyObject *unicode,
+				  const char *errors);
+
 /* Convert a non-tuple argument.  Return NULL if conversion went OK,
    or a string representing the expected type if the conversion failed.
    When failing, an exception may or may not have been raised.
@@ -458,34 +437,64 @@ convertsimple1(arg, p_format, p_va)
 	
 	switch (c) {
 	
-	case 'b': /* byte -- very short int */
+	case 'b': /* unsigned byte -- very short int */
 		{
 			char *p = va_arg(*p_va, char *);
 			long ival = PyInt_AsLong(arg);
 			if (ival == -1 && PyErr_Occurred())
 				return "integer<b>";
+			else if (ival < 0) {
+				PyErr_SetString(PyExc_OverflowError,
+					"unsigned byte integer is less than minimum");
+				return "integer<b>";
+			}
+			else if (ival > UCHAR_MAX) {
+				PyErr_SetString(PyExc_OverflowError,
+				    "unsigned byte integer is greater than maximum");
+				return "integer<b>";
+			}
 			else
-				*p = (char) ival;
+				*p = (unsigned char) ival;
 			break;
 		}
 	
-	case 'h': /* short int */
+	case 'h': /* signed short int */
 		{
 			short *p = va_arg(*p_va, short *);
 			long ival = PyInt_AsLong(arg);
 			if (ival == -1 && PyErr_Occurred())
 				return "integer<h>";
+			else if (ival < SHRT_MIN) {
+				PyErr_SetString(PyExc_OverflowError,
+					"signed short integer is less than minimum");
+				return "integer<h>";
+			}
+			else if (ival > SHRT_MAX) {
+				PyErr_SetString(PyExc_OverflowError,
+				  "signed short integer is greater than maximum");
+				return "integer<h>";
+			}
 			else
 				*p = (short) ival;
 			break;
 		}
 	
-	case 'i': /* int */
+	case 'i': /* signed int */
 		{
 			int *p = va_arg(*p_va, int *);
 			long ival = PyInt_AsLong(arg);
 			if (ival == -1 && PyErr_Occurred())
 				return "integer<i>";
+			else if (ival < INT_MIN) {
+				PyErr_SetString(PyExc_OverflowError,
+					"signed integer is less than minimum");
+				return "integer<i>";
+			}
+			else if (ival > INT_MAX) {
+				PyErr_SetString(PyExc_OverflowError,
+				  "signed integer is greater than maximum");
+				return "integer<i>";
+			}
 			else
 				*p = ival;
 			break;
@@ -565,8 +574,8 @@ convertsimple1(arg, p_format, p_va)
 	case 's': /* string */
 		{
 			if (*format == '#') { /* any buffer-like object */
-			        void **p = (void **)va_arg(*p_va, char **);
-			        PyBufferProcs *pb = arg->ob_type->tp_as_buffer;
+				void **p = (void **)va_arg(*p_va, char **);
+				PyBufferProcs *pb = arg->ob_type->tp_as_buffer;
 				int *q = va_arg(*p_va, int *);
 				int count;
 
@@ -582,10 +591,17 @@ convertsimple1(arg, p_format, p_va)
 				*q = count;
 				format++;
 			} else {
-			        char **p = va_arg(*p_va, char **);
+				char **p = va_arg(*p_va, char **);
 			
-			        if (PyString_Check(arg))
-				  *p = PyString_AsString(arg);
+				if (PyString_Check(arg))
+				    *p = PyString_AS_STRING(arg);
+				else if (PyUnicode_Check(arg)) {
+				    arg = _PyUnicode_AsDefaultEncodedString(
+							            arg, NULL);
+				    if (arg == NULL)
+					return "unicode conversion error";
+				    *p = PyString_AS_STRING(arg);
+				}
 				else
 				  return "string";
 				if ((int)strlen(*p) != PyString_Size(arg))
@@ -597,8 +613,8 @@ convertsimple1(arg, p_format, p_va)
 	case 'z': /* string, may be NULL (None) */
 		{
 			if (*format == '#') { /* any buffer-like object */
-			        void **p = (void **)va_arg(*p_va, char **);
-			        PyBufferProcs *pb = arg->ob_type->tp_as_buffer;
+				void **p = (void **)va_arg(*p_va, char **);
+				PyBufferProcs *pb = arg->ob_type->tp_as_buffer;
 				int *q = va_arg(*p_va, int *);
 				int count;
 
@@ -619,12 +635,19 @@ convertsimple1(arg, p_format, p_va)
 				}
 				format++;
 			} else {
-			        char **p = va_arg(*p_va, char **);
+				char **p = va_arg(*p_va, char **);
 			
-			        if (arg == Py_None)
+				if (arg == Py_None)
 				  *p = 0;
 				else if (PyString_Check(arg))
 				  *p = PyString_AsString(arg);
+				else if (PyUnicode_Check(arg)) {
+				  arg = _PyUnicode_AsDefaultEncodedString(
+								  arg, NULL);
+				  if (arg == NULL)
+				      return "unicode conversion error";
+				  *p = PyString_AS_STRING(arg);
+				}
 				else
 				  return "None or string";
 				if (*format == '#') {
@@ -642,6 +665,154 @@ convertsimple1(arg, p_format, p_va)
 			break;
 		}
 	
+	case 'e': /* encoded string */
+		{
+			char **buffer;
+			const char *encoding;
+			PyObject *u, *s;
+			int size;
+
+			/* Get 'e' parameter: the encoding name */
+			encoding = (const char *)va_arg(*p_va, const char *);
+			if (encoding == NULL)
+			    	encoding = PyUnicode_GetDefaultEncoding();
+			
+			/* Get 's' parameter: the output buffer to use */
+			if (*format != 's')
+				return "(unknown parser marker combination)";
+			buffer = (char **)va_arg(*p_va, char **);
+			format++;
+			if (buffer == NULL)
+				return "(buffer is NULL)";
+			
+			/* Convert object to Unicode */
+			u = PyUnicode_FromObject(arg);
+			if (u == NULL)
+				return "string, unicode or text buffer";
+			
+			/* Encode object; use default error handling */
+			s = PyUnicode_AsEncodedString(u,
+						      encoding,
+						      NULL);
+			Py_DECREF(u);
+			if (s == NULL)
+				return "(encoding failed)";
+			if (!PyString_Check(s)) {
+				Py_DECREF(s);
+				return "(encoder failed to return a string)";
+			}
+			size = PyString_GET_SIZE(s);
+
+			/* Write output; output is guaranteed to be
+			   0-terminated */
+			if (*format == '#') { 
+				/* Using buffer length parameter '#':
+
+				   - if *buffer is NULL, a new buffer
+				   of the needed size is allocated and
+				   the data copied into it; *buffer is
+				   updated to point to the new buffer;
+				   the caller is responsible for
+				   PyMem_Free()ing it after usage
+
+				   - if *buffer is not NULL, the data
+				   is copied to *buffer; *buffer_len
+				   has to be set to the size of the
+				   buffer on input; buffer overflow is
+				   signalled with an error; buffer has
+				   to provide enough room for the
+				   encoded string plus the trailing
+				   0-byte
+
+				   - in both cases, *buffer_len is
+				   updated to the size of the buffer
+				   /excluding/ the trailing 0-byte
+
+				*/
+				int *buffer_len = va_arg(*p_va, int *);
+
+				format++;
+				if (buffer_len == NULL)
+					return "(buffer_len is NULL)";
+				if (*buffer == NULL) {
+					*buffer = PyMem_NEW(char, size + 1);
+					if (*buffer == NULL) {
+						Py_DECREF(s);
+						return "(memory error)";
+					}
+				} else {
+					if (size + 1 > *buffer_len) {
+						Py_DECREF(s);
+						return "(buffer overflow)";
+					}
+				}
+				memcpy(*buffer,
+				       PyString_AS_STRING(s),
+				       size + 1);
+				*buffer_len = size;
+			} else {
+				/* Using a 0-terminated buffer:
+
+				   - the encoded string has to be
+				   0-terminated for this variant to
+				   work; if it is not, an error raised
+
+				   - a new buffer of the needed size
+				   is allocated and the data copied
+				   into it; *buffer is updated to
+				   point to the new buffer; the caller
+				   is responsible for PyMem_Free()ing it
+				   after usage
+
+				 */
+				if ((int)strlen(PyString_AS_STRING(s)) != size)
+					return "(encoded string without "\
+					       "NULL bytes)";
+				*buffer = PyMem_NEW(char, size + 1);
+				if (*buffer == NULL) {
+					Py_DECREF(s);
+					return "(memory error)";
+				}
+				memcpy(*buffer,
+				       PyString_AS_STRING(s),
+				       size + 1);
+			}
+			Py_DECREF(s);
+			break;
+		}
+
+	case 'u': /* raw unicode buffer (Py_UNICODE *) */
+		{
+			if (*format == '#') { /* any buffer-like object */
+				void **p = (void **)va_arg(*p_va, char **);
+				PyBufferProcs *pb = arg->ob_type->tp_as_buffer;
+				int *q = va_arg(*p_va, int *);
+				int count;
+
+				if ( pb == NULL ||
+				     pb->bf_getreadbuffer == NULL ||
+				     pb->bf_getsegcount == NULL )
+				  return "read-only buffer";
+				if ( (*pb->bf_getsegcount)(arg, NULL) != 1 )
+				  return "single-segment read-only buffer";
+				if ( (count =
+				      (*pb->bf_getreadbuffer)(arg, 0, p)) < 0 )
+				  return "(unspecified)";
+				/* buffer interface returns bytes, we want
+				   length in characters */
+				*q = count/(sizeof(Py_UNICODE)); 
+				format++;
+			} else {
+				Py_UNICODE **p = va_arg(*p_va, Py_UNICODE **);
+			
+				if (PyUnicode_Check(arg))
+				    *p = PyUnicode_AS_UNICODE(arg);
+				else
+				  return "unicode";
+			}
+			break;
+		}
+
 	case 'S': /* string object */
 		{
 			PyObject **p = va_arg(*p_va, PyObject **);
@@ -649,6 +820,16 @@ convertsimple1(arg, p_format, p_va)
 				*p = arg;
 			else
 				return "string";
+			break;
+		}
+	
+	case 'U': /* Unicode object */
+		{
+			PyObject **p = va_arg(*p_va, PyObject **);
+			if (PyUnicode_Check(arg))
+				*p = arg;
+			else
+				return "unicode";
 			break;
 		}
 	
@@ -673,7 +854,7 @@ convertsimple1(arg, p_format, p_va)
 				if ((*pred)(arg)) 
 					*p = arg;
 				else
-				         return "(unspecified)";
+					return "(unspecified)";
 				
 			}
 			else if (*format == '&') {
@@ -984,7 +1165,7 @@ vgetargskeywords(args, keywords, format, kwlist, p_va)
 			}
 			if (!match) {
 				sprintf(msgbuf,
-		         "%s is an invalid keyword argument for this function",
+			"%s is an invalid keyword argument for this function",
 					ks);
 				PyErr_SetString(PyExc_TypeError, msgbuf);
 				return 0;

@@ -13,6 +13,7 @@
 /* Updated 25-apr-99 for Python 1.5.2                  */
 /*                (added sha, removed timing)          */
 /* Updated 16-okt-99 for 'network free' version        */
+/* Updated 12-sep-00 for Python 1.6                    */
 /*******************************************************/
 
 
@@ -85,13 +86,16 @@ struct _inittab _PyImport_Inittab[] = {
 	{"time",inittime},
 //	{"timing",inittiming},		// XXX obsolete
 	{"md5",initmd5}, 
-	{"soundex",initsoundex},
+//	{"soundex",initsoundex},
 	{"rotor",initrotor},
 	{"operator",initoperator},
 	{"cStringIO",initcStringIO},
 	{"cPickle",initcPickle},
 	{"sha",initsha},
-//	{"zlib",PyInit_zlib},
+//	{"zlib",initzlib},
+	{"_codecs", init_codecs},
+	{"_sre", init_sre},
+	{"unicodedata", initunicodedata},
 
 #if defined(AMITCP) || defined(INET225)
 	/* Use the lib-checking init functions defined above */

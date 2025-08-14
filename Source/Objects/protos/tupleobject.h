@@ -8,3 +8,5 @@ static PyObject *tupleitem ( PyTupleObject *a , int i );
 static PyObject *tupleslice ( PyTupleObject *a , int ilow , int ihigh );
 static PyObject *tupleconcat ( PyTupleObject *a , PyObject *bb );
 static PyObject *tuplerepeat ( PyTupleObject *a , int n );
+static int tuplecontains ( PyTupleObject *a , PyObject *el );
+

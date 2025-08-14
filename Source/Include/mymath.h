@@ -10,7 +10,6 @@
 #endif
 
 #ifndef HAVE_HYPOT
-#include "myproto.h"
 extern double hypot Py_PROTO((double, double));
 #ifdef MWERKS_BEFORE_PRO4
 #define hypot we_dont_want_faulty_hypot_decl

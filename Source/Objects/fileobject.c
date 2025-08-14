@@ -1,40 +1,11 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* File object implementation */
 
 #include "Python.h"
 #include "structmember.h"
 
+#ifndef DONT_HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif /* DONT_HAVE_SYS_TYPES_H */
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -62,7 +33,9 @@ PERFORMANCE OF THIS SOFTWARE.
 
 #define BUF(v) PyString_AS_STRING((PyStringObject *)v)
 
+#ifndef DONT_HAVE_ERRNO_H
 #include <errno.h>
+#endif
 
 typedef struct {
 	PyObject_HEAD
@@ -71,6 +44,8 @@ typedef struct {
 	PyObject *f_mode;
 	int (*f_close) Py_PROTO((FILE *));
 	int f_softspace; /* Flag used by 'print' command */
+	int f_binary; /* Flag which indicates whether the file is open
+			 open in binary (1) or test (0) mode */
 } PyFileObject;
 
 #include "protos/fileobject.h"
@@ -110,6 +85,10 @@ PyFile_FromFile(fp, name, mode, close)
 	f->f_mode = PyString_FromString(mode);
 	f->f_close = close;
 	f->f_softspace = 0;
+	if (strchr(mode,'b') != NULL)
+	    f->f_binary = 1;
+	else
+	    f->f_binary = 0;
 	if (f->f_name == NULL || f->f_mode == NULL) {
 		Py_DECREF(f);
 		return NULL;
@@ -207,7 +186,7 @@ file_dealloc(f)
 	if (f->f_mode != NULL) {
 		Py_DECREF(f->f_mode);
 	}
-	free((char *)f);
+	PyObject_DEL(f);
 }
 
 static PyObject *
@@ -261,7 +240,7 @@ file_seek(f, args)
 	if (f->f_fp == NULL)
 		return err_closed();
 	whence = 0;
-	if (!PyArg_ParseTuple(args, "O|i", &offobj, &whence))
+	if (!PyArg_ParseTuple(args, "O|i:seek", &offobj, &whence))
 		return NULL;
 #if !defined(HAVE_LARGEFILE_SUPPORT)
 	offset = PyInt_AsLong(offobj);
@@ -303,7 +282,7 @@ file_truncate(f, args)
 	if (f->f_fp == NULL)
 		return err_closed();
 	newsizeobj = NULL;
-	if (!PyArg_ParseTuple(args, "|O", &newsizeobj))
+	if (!PyArg_ParseTuple(args, "|O:truncate", &newsizeobj))
 		return NULL;
 	if (newsizeobj != NULL) {
 #if !defined(HAVE_LARGEFILE_SUPPORT)
@@ -443,10 +422,15 @@ file_isatty(f, args)
 #ifndef DONT_HAVE_FSTAT
 #define HAVE_FSTAT
 
+#ifndef DONT_HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#include <sys/stat.h>
-
 #endif
+
+#ifndef DONT_HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
+#endif /* DONT_HAVE_FSTAT */
 
 #if BUFSIZ < 8192
 #define SMALLCHUNK 8192
@@ -511,7 +495,7 @@ file_read(f, args)
 	
 	if (f->f_fp == NULL)
 		return err_closed();
-	if (!PyArg_ParseTuple(args, "|l", &bytesrequested))
+	if (!PyArg_ParseTuple(args, "|l:read", &bytesrequested))
 		return NULL;
 	if (bytesrequested < 0)
 		buffersize = new_buffersize(f, (size_t)0);
@@ -589,7 +573,7 @@ file_readinto(f, args)
 */
 
 static PyObject *
-getline(f, n)
+get_line(f, n)
 	PyFileObject *f;
 	int n;
 {
@@ -711,7 +695,7 @@ PyFile_GetLine(f, n)
 	}
 	if (((PyFileObject*)f)->f_fp == NULL)
 		return err_closed();
-	return getline((PyFileObject *)f, n);
+	return get_line((PyFileObject *)f, n);
 }
 
 /* Python method */
@@ -725,13 +709,13 @@ file_readline(f, args)
 
 	if (f->f_fp == NULL)
 		return err_closed();
-	if (!PyArg_ParseTuple(args, "|i", &n))
+	if (!PyArg_ParseTuple(args, "|i:readline", &n))
 		return NULL;
 	if (n == 0)
 		return PyString_FromString("");
 	if (n < 0)
 		n = 0;
-	return getline(f, n);
+	return get_line(f, n);
 }
 
 static PyObject *
@@ -754,7 +738,7 @@ file_readlines(f, args)
 
 	if (f->f_fp == NULL)
 		return err_closed();
-	if (!PyArg_ParseTuple(args, "|l", &sizehint))
+	if (!PyArg_ParseTuple(args, "|l:readlines", &sizehint))
 		return NULL;
 	if ((list = PyList_New(0)) == NULL)
 		return NULL;
@@ -825,7 +809,7 @@ file_readlines(f, args)
 			goto error;
 		if (sizehint > 0) {
 			/* Need to complete the last line */
-			PyObject *rest = getline(f, 0);
+			PyObject *rest = get_line(f, 0);
 			if (rest == NULL) {
 				Py_DECREF(line);
 				goto error;
@@ -856,7 +840,7 @@ file_write(f, args)
 	int n, n2;
 	if (f->f_fp == NULL)
 		return err_closed();
-	if (!PyArg_Parse(args, "s#", &s, &n))
+	if (!PyArg_Parse(args, f->f_binary ? "s#" : "t#", &s, &n))
 		return NULL;
 	f->f_softspace = 0;
 	Py_BEGIN_ALLOW_THREADS
@@ -877,40 +861,119 @@ file_writelines(f, args)
 	PyFileObject *f;
 	PyObject *args;
 {
-	int i, n;
+#define CHUNKSIZE 1000
+	PyObject *list, *line;
+	PyObject *result;
+	int i, j, index, len, nwritten, islist;
+
 	if (f->f_fp == NULL)
 		return err_closed();
-	if (args == NULL || !PyList_Check(args)) {
+	if (args == NULL || !PySequence_Check(args)) {
 		PyErr_SetString(PyExc_TypeError,
-			   "writelines() requires list of strings");
+			   "writelines() requires sequence of strings");
 		return NULL;
 	}
-	n = PyList_Size(args);
-	f->f_softspace = 0;
-	Py_BEGIN_ALLOW_THREADS
-	errno = 0;
-	for (i = 0; i < n; i++) {
-		PyObject *line = PyList_GetItem(args, i);
-		int len;
-		int nwritten;
-		if (!PyString_Check(line)) {
-			Py_BLOCK_THREADS
-			PyErr_SetString(PyExc_TypeError,
-				   "writelines() requires list of strings");
+	islist = PyList_Check(args);
+
+	/* Strategy: slurp CHUNKSIZE lines into a private list,
+	   checking that they are all strings, then write that list
+	   without holding the interpreter lock, then come back for more. */
+	index = 0;
+	if (islist)
+		list = NULL;
+	else {
+		list = PyList_New(CHUNKSIZE);
+		if (list == NULL)
 			return NULL;
-		}
-		len = PyString_Size(line);
-		nwritten = fwrite(PyString_AsString(line), 1, len, f->f_fp);
-		if (nwritten != len) {
-			Py_BLOCK_THREADS
-			PyErr_SetFromErrno(PyExc_IOError);
-			clearerr(f->f_fp);
-			return NULL;
-		}
 	}
-	Py_END_ALLOW_THREADS
+	result = NULL;
+
+	for (;;) {
+		if (islist) {
+			Py_XDECREF(list);
+			list = PyList_GetSlice(args, index, index+CHUNKSIZE);
+			if (list == NULL)
+				return NULL;
+			j = PyList_GET_SIZE(list);
+		}
+		else {
+			for (j = 0; j < CHUNKSIZE; j++) {
+				line = PySequence_GetItem(args, index+j);
+				if (line == NULL) {
+					if (PyErr_ExceptionMatches(
+						PyExc_IndexError)) {
+						PyErr_Clear();
+						break;
+					}
+					/* Some other error occurred.
+					   XXX We may lose some output. */
+					goto error;
+				}
+				PyList_SetItem(list, j, line);
+			}
+		}
+		if (j == 0)
+			break;
+
+		/* Check that all entries are indeed strings. If not,
+		   apply the same rules as for file.write() and
+		   convert the results to strings. This is slow, but
+		   seems to be the only way since all conversion APIs
+		   could potentially execute Python code. */
+		for (i = 0; i < j; i++) {
+			PyObject *v = PyList_GET_ITEM(list, i);
+			if (!PyString_Check(v)) {
+			    	const char *buffer;
+			    	int len;
+				if (((f->f_binary && 
+				      PyObject_AsReadBuffer(v,
+					      (const void**)&buffer,
+							    &len)) ||
+				     PyObject_AsCharBuffer(v,
+							   &buffer,
+							   &len))) {
+					PyErr_SetString(PyExc_TypeError,
+				"writelines() requires sequences of strings");
+					goto error;
+				}
+				line = PyString_FromStringAndSize(buffer,
+								  len);
+				if (line == NULL)
+					goto error;
+				Py_DECREF(v);
+				PyList_SET_ITEM(list, i, line);
+			}
+		}
+
+		/* Since we are releasing the global lock, the
+		   following code may *not* execute Python code. */
+		Py_BEGIN_ALLOW_THREADS
+		f->f_softspace = 0;
+		errno = 0;
+		for (i = 0; i < j; i++) {
+		    	line = PyList_GET_ITEM(list, i);
+			len = PyString_GET_SIZE(line);
+			nwritten = fwrite(PyString_AS_STRING(line),
+					  1, len, f->f_fp);
+			if (nwritten != len) {
+				Py_BLOCK_THREADS
+				PyErr_SetFromErrno(PyExc_IOError);
+				clearerr(f->f_fp);
+				goto error;
+			}
+		}
+		Py_END_ALLOW_THREADS
+
+		if (j < CHUNKSIZE)
+			break;
+		index += CHUNKSIZE;
+	}
+
 	Py_INCREF(Py_None);
-	return Py_None;
+	result = Py_None;
+  error:
+	Py_XDECREF(list);
+	return result;
 }
 
 static PyMethodDef file_methods[] = {

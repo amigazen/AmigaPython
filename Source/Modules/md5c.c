@@ -54,7 +54,7 @@ static void Decode PROTO_LIST
 static void MD5_memcpy PROTO_LIST ((POINTER, POINTER, unsigned int));
 static void MD5_memset PROTO_LIST ((POINTER, int, unsigned int));
 
-#ifdef AMIGA
+#ifdef _AMIGA
 #include <string.h>
 #define MD5_memcpy memcpy
 #define MD5_memset memset
@@ -316,7 +316,7 @@ unsigned int len;
 /* Note: Replace "for loop" with standard memcpy if possible.
  */
 
-#ifndef AMIGA
+#ifndef _AMIGA
 static void MD5_memcpy (output, input, len)
 POINTER output;
 POINTER input;
@@ -340,4 +340,4 @@ unsigned int len;
   for (i = 0; i < len; i++)
  ((char *)output)[i] = (char)value;
 }
-#endif /* AMIGA */
+#endif /* _AMIGA */

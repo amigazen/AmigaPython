@@ -3,9 +3,10 @@
 
 /* This version adapted to Amiga FFP/IEEE roundoff errors */
 
-#include "config.h"
-#include "mymath.h"
 #include <errno.h>
+#include "config.h"
+#include "myproto.h"
+#include "mymath.h"
 
 
 /* Only use this function for FFP or IEEE math */

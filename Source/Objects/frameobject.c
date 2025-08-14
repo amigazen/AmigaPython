@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Frame object implementation */
 
 #include "Python.h"
@@ -37,7 +6,6 @@ PERFORMANCE OF THIS SOFTWARE.
 #include "frameobject.h"
 #include "opcode.h"
 #include "structmember.h"
-
 #include "protos/frameobject.h"
 
 #define OFF(x) offsetof(PyFrameObject, x)
@@ -105,6 +73,7 @@ frame_dealloc(f)
 	int i;
 	PyObject **fastlocals;
 
+	Py_TRASHCAN_SAFE_BEGIN(f)
 	/* Kill all local variables */
 	fastlocals = f->f_localsplus;
 	for (i = f->f_nlocals; --i >= 0; ++fastlocals) {
@@ -122,6 +91,7 @@ frame_dealloc(f)
 	Py_XDECREF(f->f_exc_traceback);
 	f->f_back = free_list;
 	free_list = f;
+	Py_TRASHCAN_SAFE_END(f)
 }
 
 PyTypeObject PyFrame_Type = {
@@ -180,28 +150,27 @@ PyFrame_New(tstate, code, globals, locals)
 	if (builtins != NULL && !PyDict_Check(builtins))
 		builtins = NULL;
 	if (free_list == NULL) {
+		/* PyObject_New is inlined */
 		f = (PyFrameObject *)
-			malloc(sizeof(PyFrameObject) +
-			       extras*sizeof(PyObject *));
+			PyObject_MALLOC(sizeof(PyFrameObject) +
+					extras*sizeof(PyObject *));
 		if (f == NULL)
 			return (PyFrameObject *)PyErr_NoMemory();
-		f->ob_type = &PyFrame_Type;
-		_Py_NewReference(f);
+		PyObject_INIT(f, &PyFrame_Type);
 	}
 	else {
 		f = free_list;
 		free_list = free_list->f_back;
 		if (f->f_nlocals + f->f_stacksize < extras) {
 			f = (PyFrameObject *)
-				realloc(f, sizeof(PyFrameObject) +
-					extras*sizeof(PyObject *));
+				PyObject_REALLOC(f, sizeof(PyFrameObject) +
+						 extras*sizeof(PyObject *));
 			if (f == NULL)
 				return (PyFrameObject *)PyErr_NoMemory();
 		}
 		else
 			extras = f->f_nlocals + f->f_stacksize;
-		f->ob_type = &PyFrame_Type;
-		_Py_NewReference(f);
+		PyObject_INIT(f, &PyFrame_Type);
 	}
 	if (builtins == NULL) {
 		/* No builtins!  Make up a minimal one. */
@@ -376,6 +345,6 @@ PyFrame_Fini()
 	while (free_list != NULL) {
 		PyFrameObject *f = free_list;
 		free_list = free_list->f_back;
-		PyMem_DEL(f);
+		PyObject_DEL(f);
 	}
 }

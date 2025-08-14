@@ -4,16 +4,16 @@ AMITCPOBJ= getopt.o timerinit.o gettimeofday.o utime.o envvars.o fmod.o \
 	_dup.o _dup2.o stat.o _fstat.o fib.o dostat.o access.o stubs.o \
 	_allocufb.o _chkufb.o _close.o _lseek.o _open.o _read.o _write.o fhopen.o \
 	strftime.o sleep.o usleep.o \
-	stackinit.o
+	stackinit.o CheckStack.o
 
 
 INET225OBJ = timerinit.o gettimeofday.o utime.o envvars.o fmod.o \
 	rexxvars.o crc32.o wbargs.o unixemul.o sleep.o usleep.o \
-	strftime.o stackinit.o
+	strftime.o stackinit.o CheckStack.o
 
 
 OBJ = envvars.o fmod.o getopt.o \
-	rexxvars.o crc32.o wbargs.o unixemul.o strftime.o stackinit.o
+	rexxvars.o crc32.o wbargs.o unixemul.o strftime.o stackinit.o CheckStack.o
 
 
 
@@ -46,3 +46,4 @@ stackinit.o: stackinit.c
 
 crc32.o: crc32.asm
 	sc CRC32.asm DEFINE=M68030	;; XXX change to M68000 if compiling for 68000!
+

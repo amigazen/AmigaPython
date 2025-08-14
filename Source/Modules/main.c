@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Python interpreter main program */
 
 #include "Python.h"
@@ -45,7 +14,7 @@ PERFORMANCE OF THIS SOFTWARE.
 #if defined(PYOS_OS2) || defined(MS_WINDOWS)
 #define PYTHONHOMEHELP "<prefix>\\lib"
 #else
-#define PYTHONHOMEHELP "<prefix>/python1.5"
+#define PYTHONHOMEHELP "<prefix>/python1.6"
 #endif
 
 /* Interface to getopt(): */
@@ -75,9 +44,9 @@ Options and arguments (and corresponding environment variables):\n\
 ";
 static char *usage_mid = "\
 -u     : unbuffered binary stdout and stderr (also PYTHONUNBUFFERED=x)\n\
+-U     : Unicode literals: treats '...' literals like u'...'\n\
 -v     : verbose (trace import statements) (also PYTHONVERBOSE=x)\n\
 -x     : skip first line of source, allowing use of non-Unix forms of #!cmd\n\
--X     : disable class based built-in exceptions\n\
 -c cmd : program passed in as string (terminates option list)\n\
 file   : program read from script file\n\
 -      : program read from stdin (default; interactive mode if a tty)\n\
@@ -258,7 +227,7 @@ Py_Main(argc, argv)
 	if ((p = getenv("PYTHONUNBUFFERED")) && *p != '\0')
 		unbuffered = 1;
 
-	while ((c = getopt(argc, argv, "c:diOStuvxX")) != EOF) {
+	while ((c = getopt(argc, argv, "c:diOStuUvxX")) != EOF) {
 		if (c == 'c') {
 			/* -c is the last option; following arguments
 			   that look like options are left for the
@@ -307,8 +276,8 @@ Py_Main(argc, argv)
 			skipfirstline = 1;
 			break;
 
-		case 'X':
-			Py_UseClassExceptionsFlag = 0;
+		case 'U':
+			Py_UnicodeFlag++;
 			break;
 
 		/* This space reserved for other options */
@@ -339,8 +308,15 @@ Py_Main(argc, argv)
 				exit(2);
 			}
 			else if (skipfirstline) {
-				char line[256];
-				fgets(line, sizeof line, fp);
+				int ch;
+				/* Push back first newline so line numbers
+				   remain the same */
+				while ((ch = getc(fp)) != EOF) {
+					if (ch == '\n') {
+						(void)ungetc(ch, fp);
+						break;
+					}
+				}
 			}
 		}
 	}

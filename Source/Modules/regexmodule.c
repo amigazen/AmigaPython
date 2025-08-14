@@ -3,37 +3,6 @@ XXX support range parameter on search
 XXX support mstop parameter on search
 */
 
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Regular expression objects */
 /* This uses Tatu Ylonen's copyleft-free reimplementation of
    GNU regular expressions */
@@ -66,13 +35,14 @@ static void
 reg_dealloc(re)
 	regexobject *re;
 {
-	PyMem_XDEL(re->re_patbuf.buffer);
+	if (re->re_patbuf.buffer)
+		PyMem_DEL(re->re_patbuf.buffer);
 	Py_XDECREF(re->re_translate);
 	Py_XDECREF(re->re_lastok);
 	Py_XDECREF(re->re_groupindex);
 	Py_XDECREF(re->re_givenpat);
 	Py_XDECREF(re->re_realpat);
-	PyMem_DEL(re);
+	PyObject_Del(re);
 }
 
 static PyObject *
@@ -121,7 +91,7 @@ regobj_match(re, args)
 	int offset = 0;
 	int result;
 
-	if (!PyArg_ParseTuple(args, "O|i", &argstring, &offset))
+	if (!PyArg_ParseTuple(args, "O|i:match", &argstring, &offset))
 		return NULL;
 	if (!PyArg_Parse(argstring, "t#", &buffer, &size))
 		return NULL;
@@ -160,9 +130,9 @@ regobj_search(re, args)
 	int range;
 	int result;
 	
-	if (!PyArg_ParseTuple(args, "O|i", &argstring, &offset))
+	if (!PyArg_ParseTuple(args, "O|i:search", &argstring, &offset))
 		return NULL;
-	if (!PyArg_Parse(argstring, "t#", &buffer, &size))
+	if (!PyArg_Parse(argstring, "t#:search", &buffer, &size))
 		return NULL;
 
 	if (offset < 0 || offset > size) {
@@ -420,7 +390,7 @@ newregexobject(pattern, translate, givenpat, groupindex)
 				"translation table must be 256 bytes");
 		return NULL;
 	}
-	re = PyObject_NEW(regexobject, &Regextype);
+	re = PyObject_New(regexobject, &Regextype);
 	if (re != NULL) {
 		char *error;
 		re->re_patbuf.buffer = NULL;
@@ -461,7 +431,7 @@ regex_compile(self, args)
 	PyObject *pat = NULL;
 	PyObject *tran = NULL;
 
-	if (!PyArg_ParseTuple(args, "S|S", &pat, &tran))
+	if (!PyArg_ParseTuple(args, "S|S:compile", &pat, &tran))
 		return NULL;
 	return newregexobject(pat, tran, pat, NULL);
 }
@@ -586,7 +556,7 @@ regex_symcomp(self, args)
 	PyObject *npattern;
 	PyObject *retval = NULL;
 
-	if (!PyArg_ParseTuple(args, "S|S", &pattern, &tran))
+	if (!PyArg_ParseTuple(args, "S|S:symcomp", &pattern, &tran))
 		return NULL;
 
 	gdict = PyDict_New();

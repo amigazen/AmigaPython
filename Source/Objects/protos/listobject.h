@@ -28,3 +28,4 @@ static PyObject *list_getattr ( PyListObject *f , char *name );
 static PyObject *immutable_list_op ( void );
 static PyObject *immutable_list_getattr ( PyListObject *f , char *name );
 static int immutable_list_ass ( void );
+static int list_contains(PyListObject *a, PyObject *el);

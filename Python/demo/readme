@@ -16,6 +16,9 @@ scripts/        Some useful Python scripts that can be put in your
 
 socket/         Examples for the 'socket' builtin module.
 
+world/		Print mappings between country names and DNS country codes.
+
+
 ChatServer.py   Multi-user chat server, written by Irmen de Jong.
 		The special thing is the mud-like interface.
 

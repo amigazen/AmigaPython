@@ -1,8 +1,8 @@
 """
 AMIGA LIBRARY INTERFACE FOR dos.library
-©1996,1997,1998 Irmen de Jong, disclaimer applies!
+©Irmen de Jong, disclaimer applies!
 
-$VER: Dos.py 1.2 (27.9.98)
+$VER: Dos.py 1.3 (1.10.00)
 """
 
 
@@ -12,6 +12,9 @@ import errno
 
 from Doslib import *
 
+# Modes for SetConsoleMode()
+MODE_CON = 0
+MODE_RAW = 1
 
 # Bits that signal you that a user has issued a break
 SIGBREAKF_CTRL_C = 1<<12

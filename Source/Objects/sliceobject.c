@@ -14,7 +14,6 @@ this type and there is exactly one in existence.
 */
 
 #include "Python.h"
-
 #include "protos/sliceobject.h"
 
 static PyObject *
@@ -59,8 +58,7 @@ PySlice_New(start, stop, step)
 	PyObject *stop;
 	PyObject *step;
 {
-	PySliceObject *obj =
-		(PySliceObject *) PyObject_NEW(PySliceObject, &PySlice_Type);
+	PySliceObject *obj = PyObject_NEW(PySliceObject, &PySlice_Type);
 
 	if (step == NULL) step = Py_None;
 	Py_INCREF(step);
@@ -117,7 +115,7 @@ slice_dealloc(r)
 	Py_DECREF(r->step);
 	Py_DECREF(r->start);
 	Py_DECREF(r->stop);
-	PyMem_DEL(r);
+	PyObject_DEL(r);
 }
 
 static PyObject *

@@ -1,34 +1,3 @@
-/***********************************************************
-Copyright 1991-1995 by Stichting Mathematisch Centrum, Amsterdam,
-The Netherlands.
-
-                        All Rights Reserved
-
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the names of Stichting Mathematisch
-Centrum or CWI or Corporation for National Research Initiatives or
-CNRI not be used in advertising or publicity pertaining to
-distribution of the software without specific, written prior
-permission.
-
-While CWI is the initial source for this software, a modified version
-is made available by the Corporation for National Research Initiatives
-(CNRI) at the Internet address ftp://ftp.python.org.
-
-STICHTING MATHEMATISCH CENTRUM AND CNRI DISCLAIM ALL WARRANTIES WITH
-REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL STICHTING MATHEMATISCH
-CENTRUM OR CNRI BE LIABLE FOR ANY SPECIAL, INDIRECT OR CONSEQUENTIAL
-DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
-PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THIS SOFTWARE.
-
-******************************************************************/
-
 /* Readline interface for tokenizer.c and [raw_]input() in bltinmodule.c.
    By default, or when stdin is not a tty device, we have a super
    simple my_readline function using fgets.
@@ -90,7 +59,7 @@ PyOS_StdioReadline(prompt)
 	int n;
 	char *p;
 	n = 100;
-	if ((p = malloc(n)) == NULL)
+	if ((p = PyMem_MALLOC(n)) == NULL)
 		return NULL;
 	fflush(stdout);
 	if (prompt)
@@ -100,7 +69,7 @@ PyOS_StdioReadline(prompt)
 	case 0: /* Normal case */
 		break;
 	case 1: /* Interrupt */
-		free(p);
+		PyMem_FREE(p);
 		return NULL;
 	case -1: /* EOF */
 	case -2: /* Error */
@@ -118,19 +87,21 @@ PyOS_StdioReadline(prompt)
 	n = strlen(p);
 	while (n > 0 && p[n-1] != '\n') {
 		int incr = n+2;
-		p = realloc(p, n + incr);
+		p = PyMem_REALLOC(p, n + incr);
 		if (p == NULL)
 			return NULL;
 		if (my_fgets(p+n, incr, stdin) != 0)
 			break;
 		n += strlen(p+n);
 	}
-	return realloc(p, n+1);
+	return PyMem_REALLOC(p, n+1);
 }
 
 
 /* By initializing this function pointer, systems embedding Python can
-   override the readline function. */
+   override the readline function.
+
+   Note: Python expects in return a buffer allocated with PyMem_Malloc. */
 
 char *(*PyOS_ReadlineFunctionPointer) Py_PROTO((char *));
 
