@@ -1,12 +1,12 @@
 /*
- *      $Id: netlib.h,v 4.1 1994/09/29 23:09:02 jraja Exp $
- *
  *      netlib.h - common Network Support Library definitions
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
  */
+
+#ifndef _NETLIB_H
+#define _NETLIB_H
 
 /*
  * This is supposed to be compiler-independent error setting interface
@@ -24,3 +24,11 @@ void __set_errno(UBYTE code);
 
 #define set_errno __set_errno
 #define OSERR _OSERR
+
+/*
+ * Usergroup UID/GID converters for MuFS  
+ */
+#define UG2MU(id) ((id == (unsigned short)-1) ? (unsigned short)0 : (unsigned short)(id))
+#define MU2UG(id) ((id == 0) ? (unsigned short)-1 : (unsigned short)(id))
+
+#endif /* _NETLIB_H */ 

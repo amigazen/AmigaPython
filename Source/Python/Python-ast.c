@@ -12,379 +12,379 @@
 #include "Python.h"
 #include "Python-ast.h"
 
-static PyTypeObject AST_type;
-static PyTypeObject *mod_type;
-static PyObject* ast2obj_mod(void*);
-static PyTypeObject *Module_type;
-static char *Module_fields[]={
+ PyTypeObject AST_type;
+ PyTypeObject *mod_type;
+ PyObject* ast2obj_mod(void*);
+ PyTypeObject *Module_type;
+ char *Module_fields[]={
         "body",
 };
-static PyTypeObject *Interactive_type;
-static char *Interactive_fields[]={
+ PyTypeObject *Interactive_type;
+ char *Interactive_fields[]={
         "body",
 };
-static PyTypeObject *Expression_type;
-static char *Expression_fields[]={
+ PyTypeObject *Expression_type;
+ char *Expression_fields[]={
         "body",
 };
-static PyTypeObject *Suite_type;
-static char *Suite_fields[]={
+ PyTypeObject *Suite_type;
+ char *Suite_fields[]={
         "body",
 };
-static PyTypeObject *stmt_type;
-static char *stmt_attributes[] = {
+ PyTypeObject *stmt_type;
+ char *stmt_attributes[] = {
         "lineno",
         "col_offset",
 };
-static PyObject* ast2obj_stmt(void*);
-static PyTypeObject *FunctionDef_type;
-static char *FunctionDef_fields[]={
+ PyObject* ast2obj_stmt(void*);
+ PyTypeObject *FunctionDef_type;
+ char *FunctionDef_fields[]={
         "name",
         "args",
         "body",
         "decorator_list",
 };
-static PyTypeObject *ClassDef_type;
-static char *ClassDef_fields[]={
+ PyTypeObject *ClassDef_type;
+ char *ClassDef_fields[]={
         "name",
         "bases",
         "body",
         "decorator_list",
 };
-static PyTypeObject *Return_type;
-static char *Return_fields[]={
+ PyTypeObject *Return_type;
+ char *Return_fields[]={
         "value",
 };
-static PyTypeObject *Delete_type;
-static char *Delete_fields[]={
+ PyTypeObject *Delete_type;
+ char *Delete_fields[]={
         "targets",
 };
-static PyTypeObject *Assign_type;
-static char *Assign_fields[]={
+ PyTypeObject *Assign_type;
+ char *Assign_fields[]={
         "targets",
         "value",
 };
-static PyTypeObject *AugAssign_type;
-static char *AugAssign_fields[]={
+ PyTypeObject *AugAssign_type;
+ char *AugAssign_fields[]={
         "target",
         "op",
         "value",
 };
-static PyTypeObject *Print_type;
-static char *Print_fields[]={
+ PyTypeObject *Print_type;
+ char *Print_fields[]={
         "dest",
         "values",
         "nl",
 };
-static PyTypeObject *For_type;
-static char *For_fields[]={
+ PyTypeObject *For_type;
+ char *For_fields[]={
         "target",
         "iter",
         "body",
         "orelse",
 };
-static PyTypeObject *While_type;
-static char *While_fields[]={
+ PyTypeObject *While_type;
+ char *While_fields[]={
         "test",
         "body",
         "orelse",
 };
-static PyTypeObject *If_type;
-static char *If_fields[]={
+ PyTypeObject *If_type;
+ char *If_fields[]={
         "test",
         "body",
         "orelse",
 };
-static PyTypeObject *With_type;
-static char *With_fields[]={
+ PyTypeObject *With_type;
+ char *With_fields[]={
         "context_expr",
         "optional_vars",
         "body",
 };
-static PyTypeObject *Raise_type;
-static char *Raise_fields[]={
+ PyTypeObject *Raise_type;
+ char *Raise_fields[]={
         "type",
         "inst",
         "tback",
 };
-static PyTypeObject *TryExcept_type;
-static char *TryExcept_fields[]={
+ PyTypeObject *TryExcept_type;
+ char *TryExcept_fields[]={
         "body",
         "handlers",
         "orelse",
 };
-static PyTypeObject *TryFinally_type;
-static char *TryFinally_fields[]={
+ PyTypeObject *TryFinally_type;
+ char *TryFinally_fields[]={
         "body",
         "finalbody",
 };
-static PyTypeObject *Assert_type;
-static char *Assert_fields[]={
+ PyTypeObject *Assert_type;
+ char *Assert_fields[]={
         "test",
         "msg",
 };
-static PyTypeObject *Import_type;
-static char *Import_fields[]={
+ PyTypeObject *Import_type;
+ char *Import_fields[]={
         "names",
 };
-static PyTypeObject *ImportFrom_type;
-static char *ImportFrom_fields[]={
+ PyTypeObject *ImportFrom_type;
+ char *ImportFrom_fields[]={
         "module",
         "names",
         "level",
 };
-static PyTypeObject *Exec_type;
-static char *Exec_fields[]={
+ PyTypeObject *Exec_type;
+ char *Exec_fields[]={
         "body",
         "globals",
         "locals",
 };
-static PyTypeObject *Global_type;
-static char *Global_fields[]={
+ PyTypeObject *Global_type;
+ char *Global_fields[]={
         "names",
 };
-static PyTypeObject *Expr_type;
-static char *Expr_fields[]={
+ PyTypeObject *Expr_type;
+ char *Expr_fields[]={
         "value",
 };
-static PyTypeObject *Pass_type;
-static PyTypeObject *Break_type;
-static PyTypeObject *Continue_type;
-static PyTypeObject *expr_type;
-static char *expr_attributes[] = {
+ PyTypeObject *Pass_type;
+ PyTypeObject *Break_type;
+ PyTypeObject *Continue_type;
+ PyTypeObject *expr_type;
+ char *expr_attributes[] = {
         "lineno",
         "col_offset",
 };
-static PyObject* ast2obj_expr(void*);
-static PyTypeObject *BoolOp_type;
-static char *BoolOp_fields[]={
+ PyObject* ast2obj_expr(void*);
+ PyTypeObject *BoolOp_type;
+ char *BoolOp_fields[]={
         "op",
         "values",
 };
-static PyTypeObject *BinOp_type;
-static char *BinOp_fields[]={
+ PyTypeObject *BinOp_type;
+ char *BinOp_fields[]={
         "left",
         "op",
         "right",
 };
-static PyTypeObject *UnaryOp_type;
-static char *UnaryOp_fields[]={
+ PyTypeObject *UnaryOp_type;
+ char *UnaryOp_fields[]={
         "op",
         "operand",
 };
-static PyTypeObject *Lambda_type;
-static char *Lambda_fields[]={
+ PyTypeObject *Lambda_type;
+ char *Lambda_fields[]={
         "args",
         "body",
 };
-static PyTypeObject *IfExp_type;
-static char *IfExp_fields[]={
+ PyTypeObject *IfExp_type;
+ char *IfExp_fields[]={
         "test",
         "body",
         "orelse",
 };
-static PyTypeObject *Dict_type;
-static char *Dict_fields[]={
+ PyTypeObject *Dict_type;
+ char *Dict_fields[]={
         "keys",
         "values",
 };
-static PyTypeObject *Set_type;
-static char *Set_fields[]={
+ PyTypeObject *Set_type;
+ char *Set_fields[]={
         "elts",
 };
-static PyTypeObject *ListComp_type;
-static char *ListComp_fields[]={
+ PyTypeObject *ListComp_type;
+ char *ListComp_fields[]={
         "elt",
         "generators",
 };
-static PyTypeObject *SetComp_type;
-static char *SetComp_fields[]={
+ PyTypeObject *SetComp_type;
+ char *SetComp_fields[]={
         "elt",
         "generators",
 };
-static PyTypeObject *DictComp_type;
-static char *DictComp_fields[]={
+ PyTypeObject *DictComp_type;
+ char *DictComp_fields[]={
         "key",
         "value",
         "generators",
 };
-static PyTypeObject *GeneratorExp_type;
-static char *GeneratorExp_fields[]={
+ PyTypeObject *GeneratorExp_type;
+ char *GeneratorExp_fields[]={
         "elt",
         "generators",
 };
-static PyTypeObject *Yield_type;
-static char *Yield_fields[]={
+ PyTypeObject *Yield_type;
+ char *Yield_fields[]={
         "value",
 };
-static PyTypeObject *Compare_type;
-static char *Compare_fields[]={
+ PyTypeObject *Compare_type;
+ char *Compare_fields[]={
         "left",
         "ops",
         "comparators",
 };
-static PyTypeObject *Call_type;
-static char *Call_fields[]={
+ PyTypeObject *Call_type;
+ char *Call_fields[]={
         "func",
         "args",
         "keywords",
         "starargs",
         "kwargs",
 };
-static PyTypeObject *Repr_type;
-static char *Repr_fields[]={
+ PyTypeObject *Repr_type;
+ char *Repr_fields[]={
         "value",
 };
-static PyTypeObject *Num_type;
-static char *Num_fields[]={
+ PyTypeObject *Num_type;
+ char *Num_fields[]={
         "n",
 };
-static PyTypeObject *Str_type;
-static char *Str_fields[]={
+ PyTypeObject *Str_type;
+ char *Str_fields[]={
         "s",
 };
-static PyTypeObject *Attribute_type;
-static char *Attribute_fields[]={
+ PyTypeObject *Attribute_type;
+ char *Attribute_fields[]={
         "value",
         "attr",
         "ctx",
 };
-static PyTypeObject *Subscript_type;
-static char *Subscript_fields[]={
+ PyTypeObject *Subscript_type;
+ char *Subscript_fields[]={
         "value",
         "slice",
         "ctx",
 };
-static PyTypeObject *Name_type;
-static char *Name_fields[]={
+ PyTypeObject *Name_type;
+ char *Name_fields[]={
         "id",
         "ctx",
 };
-static PyTypeObject *List_type;
-static char *List_fields[]={
+ PyTypeObject *List_type;
+ char *List_fields[]={
         "elts",
         "ctx",
 };
-static PyTypeObject *Tuple_type;
-static char *Tuple_fields[]={
+ PyTypeObject *Tuple_type;
+ char *Tuple_fields[]={
         "elts",
         "ctx",
 };
-static PyTypeObject *expr_context_type;
-static PyObject *Load_singleton, *Store_singleton, *Del_singleton,
+ PyTypeObject *expr_context_type;
+ PyObject *Load_singleton, *Store_singleton, *Del_singleton,
 *AugLoad_singleton, *AugStore_singleton, *Param_singleton;
-static PyObject* ast2obj_expr_context(expr_context_ty);
-static PyTypeObject *Load_type;
-static PyTypeObject *Store_type;
-static PyTypeObject *Del_type;
-static PyTypeObject *AugLoad_type;
-static PyTypeObject *AugStore_type;
-static PyTypeObject *Param_type;
-static PyTypeObject *slice_type;
-static PyObject* ast2obj_slice(void*);
-static PyTypeObject *Ellipsis_type;
-static PyTypeObject *Slice_type;
-static char *Slice_fields[]={
+ PyObject* ast2obj_expr_context(expr_context_ty);
+ PyTypeObject *Load_type;
+ PyTypeObject *Store_type;
+ PyTypeObject *Del_type;
+ PyTypeObject *AugLoad_type;
+ PyTypeObject *AugStore_type;
+ PyTypeObject *Param_type;
+ PyTypeObject *slice_type;
+ PyObject* ast2obj_slice(void*);
+ PyTypeObject *Ellipsis_type;
+ PyTypeObject *Slice_type;
+ char *Slice_fields[]={
         "lower",
         "upper",
         "step",
 };
-static PyTypeObject *ExtSlice_type;
-static char *ExtSlice_fields[]={
+ PyTypeObject *ExtSlice_type;
+ char *ExtSlice_fields[]={
         "dims",
 };
-static PyTypeObject *Index_type;
-static char *Index_fields[]={
+ PyTypeObject *Index_type;
+ char *Index_fields[]={
         "value",
 };
-static PyTypeObject *boolop_type;
-static PyObject *And_singleton, *Or_singleton;
-static PyObject* ast2obj_boolop(boolop_ty);
-static PyTypeObject *And_type;
-static PyTypeObject *Or_type;
-static PyTypeObject *operator_type;
-static PyObject *Add_singleton, *Sub_singleton, *Mult_singleton,
+ PyTypeObject *boolop_type;
+ PyObject *And_singleton, *Or_singleton;
+ PyObject* ast2obj_boolop(boolop_ty);
+ PyTypeObject *And_type;
+ PyTypeObject *Or_type;
+ PyTypeObject *operator_type;
+ PyObject *Add_singleton, *Sub_singleton, *Mult_singleton,
 *Div_singleton, *Mod_singleton, *Pow_singleton, *LShift_singleton,
 *RShift_singleton, *BitOr_singleton, *BitXor_singleton, *BitAnd_singleton,
 *FloorDiv_singleton;
-static PyObject* ast2obj_operator(operator_ty);
-static PyTypeObject *Add_type;
-static PyTypeObject *Sub_type;
-static PyTypeObject *Mult_type;
-static PyTypeObject *Div_type;
-static PyTypeObject *Mod_type;
-static PyTypeObject *Pow_type;
-static PyTypeObject *LShift_type;
-static PyTypeObject *RShift_type;
-static PyTypeObject *BitOr_type;
-static PyTypeObject *BitXor_type;
-static PyTypeObject *BitAnd_type;
-static PyTypeObject *FloorDiv_type;
-static PyTypeObject *unaryop_type;
-static PyObject *Invert_singleton, *Not_singleton, *UAdd_singleton,
+ PyObject* ast2obj_operator(operator_ty);
+ PyTypeObject *Add_type;
+ PyTypeObject *Sub_type;
+ PyTypeObject *Mult_type;
+ PyTypeObject *Div_type;
+ PyTypeObject *Mod_type;
+ PyTypeObject *Pow_type;
+ PyTypeObject *LShift_type;
+ PyTypeObject *RShift_type;
+ PyTypeObject *BitOr_type;
+ PyTypeObject *BitXor_type;
+ PyTypeObject *BitAnd_type;
+ PyTypeObject *FloorDiv_type;
+ PyTypeObject *unaryop_type;
+ PyObject *Invert_singleton, *Not_singleton, *UAdd_singleton,
 *USub_singleton;
-static PyObject* ast2obj_unaryop(unaryop_ty);
-static PyTypeObject *Invert_type;
-static PyTypeObject *Not_type;
-static PyTypeObject *UAdd_type;
-static PyTypeObject *USub_type;
-static PyTypeObject *cmpop_type;
-static PyObject *Eq_singleton, *NotEq_singleton, *Lt_singleton, *LtE_singleton,
+ PyObject* ast2obj_unaryop(unaryop_ty);
+ PyTypeObject *Invert_type;
+ PyTypeObject *Not_type;
+ PyTypeObject *UAdd_type;
+ PyTypeObject *USub_type;
+ PyTypeObject *cmpop_type;
+ PyObject *Eq_singleton, *NotEq_singleton, *Lt_singleton, *LtE_singleton,
 *Gt_singleton, *GtE_singleton, *Is_singleton, *IsNot_singleton, *In_singleton,
 *NotIn_singleton;
-static PyObject* ast2obj_cmpop(cmpop_ty);
-static PyTypeObject *Eq_type;
-static PyTypeObject *NotEq_type;
-static PyTypeObject *Lt_type;
-static PyTypeObject *LtE_type;
-static PyTypeObject *Gt_type;
-static PyTypeObject *GtE_type;
-static PyTypeObject *Is_type;
-static PyTypeObject *IsNot_type;
-static PyTypeObject *In_type;
-static PyTypeObject *NotIn_type;
-static PyTypeObject *comprehension_type;
-static PyObject* ast2obj_comprehension(void*);
-static char *comprehension_fields[]={
+ PyObject* ast2obj_cmpop(cmpop_ty);
+ PyTypeObject *Eq_type;
+ PyTypeObject *NotEq_type;
+ PyTypeObject *Lt_type;
+ PyTypeObject *LtE_type;
+ PyTypeObject *Gt_type;
+ PyTypeObject *GtE_type;
+ PyTypeObject *Is_type;
+ PyTypeObject *IsNot_type;
+ PyTypeObject *In_type;
+ PyTypeObject *NotIn_type;
+ PyTypeObject *comprehension_type;
+ PyObject* ast2obj_comprehension(void*);
+ char *comprehension_fields[]={
         "target",
         "iter",
         "ifs",
 };
-static PyTypeObject *excepthandler_type;
-static char *excepthandler_attributes[] = {
+ PyTypeObject *excepthandler_type;
+ char *excepthandler_attributes[] = {
         "lineno",
         "col_offset",
 };
-static PyObject* ast2obj_excepthandler(void*);
-static PyTypeObject *ExceptHandler_type;
-static char *ExceptHandler_fields[]={
+ PyObject* ast2obj_excepthandler(void*);
+ PyTypeObject *ExceptHandler_type;
+ char *ExceptHandler_fields[]={
         "type",
         "name",
         "body",
 };
-static PyTypeObject *arguments_type;
-static PyObject* ast2obj_arguments(void*);
-static char *arguments_fields[]={
+ PyTypeObject *arguments_type;
+ PyObject* ast2obj_arguments(void*);
+ char *arguments_fields[]={
         "args",
         "vararg",
         "kwarg",
         "defaults",
 };
-static PyTypeObject *keyword_type;
-static PyObject* ast2obj_keyword(void*);
-static char *keyword_fields[]={
+ PyTypeObject *keyword_type;
+ PyObject* ast2obj_keyword(void*);
+ char *keyword_fields[]={
         "arg",
         "value",
 };
-static PyTypeObject *alias_type;
-static PyObject* ast2obj_alias(void*);
-static char *alias_fields[]={
+ PyTypeObject *alias_type;
+ PyObject* ast2obj_alias(void*);
+ char *alias_fields[]={
         "name",
         "asname",
 };
 
 
-static int
+ int
 ast_type_init(PyObject *self, PyObject *args, PyObject *kw)
 {
     Py_ssize_t i, numfields = 0;
@@ -436,7 +436,7 @@ ast_type_init(PyObject *self, PyObject *args, PyObject *kw)
 }
 
 /* Pickling support */
-static PyObject *
+ PyObject *
 ast_type_reduce(PyObject *self, PyObject *unused)
 {
     PyObject *res;
@@ -455,12 +455,12 @@ ast_type_reduce(PyObject *self, PyObject *unused)
     return Py_BuildValue("O()", Py_TYPE(self));
 }
 
-static PyMethodDef ast_type_methods[] = {
+ PyMethodDef ast_type_methods[] = {
     {"__reduce__", ast_type_reduce, METH_NOARGS, NULL},
     {NULL}
 };
 
-static PyTypeObject AST_type = {
+ PyTypeObject AST_type = {
     PyVarObject_HEAD_INIT(&PyType_Type, 0)
     "_ast.AST",
     sizeof(PyObject),
@@ -503,7 +503,7 @@ static PyTypeObject AST_type = {
 };
 
 
-static PyTypeObject* make_type(char *type, PyTypeObject* base, char**fields, int num_fields)
+ PyTypeObject* make_type(char *type, PyTypeObject* base, char**fields, int num_fields)
 {
     PyObject *fnames, *result;
     int i;
@@ -523,7 +523,7 @@ static PyTypeObject* make_type(char *type, PyTypeObject* base, char**fields, int
     return (PyTypeObject*)result;
 }
 
-static int add_attributes(PyTypeObject* type, char**attrs, int num_fields)
+ int add_attributes(PyTypeObject* type, char**attrs, int num_fields)
 {
     int i, result;
     PyObject *s, *l = PyTuple_New(num_fields);
@@ -544,7 +544,7 @@ static int add_attributes(PyTypeObject* type, char**attrs, int num_fields)
 
 /* Conversion AST -> Python */
 
-static PyObject* ast2obj_list(asdl_seq *seq, PyObject* (*func)(void*))
+ PyObject* ast2obj_list(asdl_seq *seq, PyObject* (*func)(void*))
 {
     int i, n = asdl_seq_LEN(seq);
     PyObject *result = PyList_New(n);
@@ -562,7 +562,7 @@ static PyObject* ast2obj_list(asdl_seq *seq, PyObject* (*func)(void*))
     return result;
 }
 
-static PyObject* ast2obj_object(void *o)
+ PyObject* ast2obj_object(void *o)
 {
     if (!o)
         o = Py_None;
@@ -571,19 +571,19 @@ static PyObject* ast2obj_object(void *o)
 }
 #define ast2obj_identifier ast2obj_object
 #define ast2obj_string ast2obj_object
-static PyObject* ast2obj_bool(bool b)
+ PyObject* ast2obj_bool(bool b)
 {
     return PyBool_FromLong(b);
 }
 
-static PyObject* ast2obj_int(long b)
+ PyObject* ast2obj_int(long b)
 {
     return PyInt_FromLong(b);
 }
 
 /* Conversion Python -> AST */
 
-static int obj2ast_object(PyObject* obj, PyObject** out, PyArena* arena)
+ int obj2ast_object(PyObject* obj, PyObject** out, PyArena* arena)
 {
     if (obj == Py_None)
         obj = NULL;
@@ -594,7 +594,7 @@ static int obj2ast_object(PyObject* obj, PyObject** out, PyArena* arena)
     return 0;
 }
 
-static int obj2ast_identifier(PyObject* obj, PyObject** out, PyArena* arena)
+ int obj2ast_identifier(PyObject* obj, PyObject** out, PyArena* arena)
 {
     if (!PyString_CheckExact(obj) && obj != Py_None) {
         PyErr_Format(PyExc_TypeError,
@@ -604,7 +604,7 @@ static int obj2ast_identifier(PyObject* obj, PyObject** out, PyArena* arena)
     return obj2ast_object(obj, out, arena);
 }
 
-static int obj2ast_string(PyObject* obj, PyObject** out, PyArena* arena)
+ int obj2ast_string(PyObject* obj, PyObject** out, PyArena* arena)
 {
     if (!PyString_CheckExact(obj) && !PyUnicode_CheckExact(obj)) {
         PyErr_SetString(PyExc_TypeError,
@@ -614,7 +614,7 @@ static int obj2ast_string(PyObject* obj, PyObject** out, PyArena* arena)
     return obj2ast_object(obj, out, arena);
 }
 
-static int obj2ast_int(PyObject* obj, int* out, PyArena* arena)
+ int obj2ast_int(PyObject* obj, int* out, PyArena* arena)
 {
     int i;
     if (!_PyAnyInt_Check(obj)) {
@@ -633,7 +633,7 @@ static int obj2ast_int(PyObject* obj, int* out, PyArena* arena)
     return 0;
 }
 
-static int obj2ast_bool(PyObject* obj, bool* out, PyArena* arena)
+ int obj2ast_bool(PyObject* obj, bool* out, PyArena* arena)
 {
     if (!PyBool_Check(obj)) {
         PyObject *s = PyObject_Repr(obj);
@@ -648,7 +648,7 @@ static int obj2ast_bool(PyObject* obj, bool* out, PyArena* arena)
     return 0;
 }
 
-static int add_ast_fields(void)
+ int add_ast_fields(void)
 {
     PyObject *empty_tuple, *d;
     if (PyType_Ready(&AST_type) < 0)
@@ -666,9 +666,9 @@ static int add_ast_fields(void)
 }
 
 
-static int init_types(void)
+ int init_types(void)
 {
-        static int initialized;
+         int initialized;
         if (initialized) return 1;
         if (add_ast_fields() < 0) return 0;
         mod_type = make_type("mod", &AST_type, NULL, 0);
@@ -966,26 +966,26 @@ static int init_types(void)
         return 1;
 }
 
-static int obj2ast_mod(PyObject* obj, mod_ty* out, PyArena* arena);
-static int obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena);
-static int obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena);
-static int obj2ast_expr_context(PyObject* obj, expr_context_ty* out, PyArena*
+ int obj2ast_mod(PyObject* obj, mod_ty* out, PyArena* arena);
+ int obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena);
+ int obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena);
+ int obj2ast_expr_context(PyObject* obj, expr_context_ty* out, PyArena*
                                 arena);
-static int obj2ast_slice(PyObject* obj, slice_ty* out, PyArena* arena);
-static int obj2ast_boolop(PyObject* obj, boolop_ty* out, PyArena* arena);
-static int obj2ast_operator(PyObject* obj, operator_ty* out, PyArena* arena);
-static int obj2ast_unaryop(PyObject* obj, unaryop_ty* out, PyArena* arena);
-static int obj2ast_cmpop(PyObject* obj, cmpop_ty* out, PyArena* arena);
-static int obj2ast_comprehension(PyObject* obj, comprehension_ty* out, PyArena*
+ int obj2ast_slice(PyObject* obj, slice_ty* out, PyArena* arena);
+ int obj2ast_boolop(PyObject* obj, boolop_ty* out, PyArena* arena);
+ int obj2ast_operator(PyObject* obj, operator_ty* out, PyArena* arena);
+ int obj2ast_unaryop(PyObject* obj, unaryop_ty* out, PyArena* arena);
+ int obj2ast_cmpop(PyObject* obj, cmpop_ty* out, PyArena* arena);
+ int obj2ast_comprehension(PyObject* obj, comprehension_ty* out, PyArena*
                                  arena);
-static int obj2ast_excepthandler(PyObject* obj, excepthandler_ty* out, PyArena*
+ int obj2ast_excepthandler(PyObject* obj, excepthandler_ty* out, PyArena*
                                  arena);
-static int obj2ast_arguments(PyObject* obj, arguments_ty* out, PyArena* arena);
-static int obj2ast_keyword(PyObject* obj, keyword_ty* out, PyArena* arena);
-static int obj2ast_alias(PyObject* obj, alias_ty* out, PyArena* arena);
+ int obj2ast_arguments(PyObject* obj, arguments_ty* out, PyArena* arena);
+ int obj2ast_keyword(PyObject* obj, keyword_ty* out, PyArena* arena);
+ int obj2ast_alias(PyObject* obj, alias_ty* out, PyArena* arena);
 
 mod_ty
-Module(asdl_seq * body, PyArena *arena)
+_Py_Module(asdl_seq * body, PyArena *arena)
 {
         mod_ty p;
         p = (mod_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -997,7 +997,7 @@ Module(asdl_seq * body, PyArena *arena)
 }
 
 mod_ty
-Interactive(asdl_seq * body, PyArena *arena)
+_Py_Interactive(asdl_seq * body, PyArena *arena)
 {
         mod_ty p;
         p = (mod_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1009,7 +1009,7 @@ Interactive(asdl_seq * body, PyArena *arena)
 }
 
 mod_ty
-Expression(expr_ty body, PyArena *arena)
+_Py_Expression(expr_ty body, PyArena *arena)
 {
         mod_ty p;
         if (!body) {
@@ -1026,7 +1026,7 @@ Expression(expr_ty body, PyArena *arena)
 }
 
 mod_ty
-Suite(asdl_seq * body, PyArena *arena)
+_Py_Suite(asdl_seq * body, PyArena *arena)
 {
         mod_ty p;
         p = (mod_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1038,7 +1038,7 @@ Suite(asdl_seq * body, PyArena *arena)
 }
 
 stmt_ty
-FunctionDef(identifier name, arguments_ty args, asdl_seq * body, asdl_seq *
+_Py_FunctionDef(identifier name, arguments_ty args, asdl_seq * body, asdl_seq *
             decorator_list, int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
@@ -1066,7 +1066,7 @@ FunctionDef(identifier name, arguments_ty args, asdl_seq * body, asdl_seq *
 }
 
 stmt_ty
-ClassDef(identifier name, asdl_seq * bases, asdl_seq * body, asdl_seq *
+_Py_ClassDef(identifier name, asdl_seq * bases, asdl_seq * body, asdl_seq *
          decorator_list, int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
@@ -1089,7 +1089,7 @@ ClassDef(identifier name, asdl_seq * bases, asdl_seq * body, asdl_seq *
 }
 
 stmt_ty
-Return(expr_ty value, int lineno, int col_offset, PyArena *arena)
+_Py_Return(expr_ty value, int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
         p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1103,7 +1103,7 @@ Return(expr_ty value, int lineno, int col_offset, PyArena *arena)
 }
 
 stmt_ty
-Delete(asdl_seq * targets, int lineno, int col_offset, PyArena *arena)
+_Py_Delete(asdl_seq * targets, int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
         p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1117,7 +1117,7 @@ Delete(asdl_seq * targets, int lineno, int col_offset, PyArena *arena)
 }
 
 stmt_ty
-Assign(asdl_seq * targets, expr_ty value, int lineno, int col_offset, PyArena
+_Py_Assign(asdl_seq * targets, expr_ty value, int lineno, int col_offset, PyArena
        *arena)
 {
         stmt_ty p;
@@ -1138,7 +1138,7 @@ Assign(asdl_seq * targets, expr_ty value, int lineno, int col_offset, PyArena
 }
 
 stmt_ty
-AugAssign(expr_ty target, operator_ty op, expr_ty value, int lineno, int
+_Py_AugAssign(expr_ty target, operator_ty op, expr_ty value, int lineno, int
           col_offset, PyArena *arena)
 {
         stmt_ty p;
@@ -1170,7 +1170,7 @@ AugAssign(expr_ty target, operator_ty op, expr_ty value, int lineno, int
 }
 
 stmt_ty
-Print(expr_ty dest, asdl_seq * values, bool nl, int lineno, int col_offset,
+_Py_Print(expr_ty dest, asdl_seq * values, bool nl, int lineno, int col_offset,
       PyArena *arena)
 {
         stmt_ty p;
@@ -1187,7 +1187,7 @@ Print(expr_ty dest, asdl_seq * values, bool nl, int lineno, int col_offset,
 }
 
 stmt_ty
-For(expr_ty target, expr_ty iter, asdl_seq * body, asdl_seq * orelse, int
+_Py_For(expr_ty target, expr_ty iter, asdl_seq * body, asdl_seq * orelse, int
     lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
@@ -1215,7 +1215,7 @@ For(expr_ty target, expr_ty iter, asdl_seq * body, asdl_seq * orelse, int
 }
 
 stmt_ty
-While(expr_ty test, asdl_seq * body, asdl_seq * orelse, int lineno, int
+_Py_While(expr_ty test, asdl_seq * body, asdl_seq * orelse, int lineno, int
       col_offset, PyArena *arena)
 {
         stmt_ty p;
@@ -1237,7 +1237,7 @@ While(expr_ty test, asdl_seq * body, asdl_seq * orelse, int lineno, int
 }
 
 stmt_ty
-If(expr_ty test, asdl_seq * body, asdl_seq * orelse, int lineno, int
+_Py_If(expr_ty test, asdl_seq * body, asdl_seq * orelse, int lineno, int
    col_offset, PyArena *arena)
 {
         stmt_ty p;
@@ -1259,7 +1259,7 @@ If(expr_ty test, asdl_seq * body, asdl_seq * orelse, int lineno, int
 }
 
 stmt_ty
-With(expr_ty context_expr, expr_ty optional_vars, asdl_seq * body, int lineno,
+_Py_With(expr_ty context_expr, expr_ty optional_vars, asdl_seq * body, int lineno,
      int col_offset, PyArena *arena)
 {
         stmt_ty p;
@@ -1281,7 +1281,7 @@ With(expr_ty context_expr, expr_ty optional_vars, asdl_seq * body, int lineno,
 }
 
 stmt_ty
-Raise(expr_ty type, expr_ty inst, expr_ty tback, int lineno, int col_offset,
+_Py_Raise(expr_ty type, expr_ty inst, expr_ty tback, int lineno, int col_offset,
       PyArena *arena)
 {
         stmt_ty p;
@@ -1298,7 +1298,7 @@ Raise(expr_ty type, expr_ty inst, expr_ty tback, int lineno, int col_offset,
 }
 
 stmt_ty
-TryExcept(asdl_seq * body, asdl_seq * handlers, asdl_seq * orelse, int lineno,
+_Py_TryExcept(asdl_seq * body, asdl_seq * handlers, asdl_seq * orelse, int lineno,
           int col_offset, PyArena *arena)
 {
         stmt_ty p;
@@ -1315,7 +1315,7 @@ TryExcept(asdl_seq * body, asdl_seq * handlers, asdl_seq * orelse, int lineno,
 }
 
 stmt_ty
-TryFinally(asdl_seq * body, asdl_seq * finalbody, int lineno, int col_offset,
+_Py_TryFinally(asdl_seq * body, asdl_seq * finalbody, int lineno, int col_offset,
            PyArena *arena)
 {
         stmt_ty p;
@@ -1331,7 +1331,7 @@ TryFinally(asdl_seq * body, asdl_seq * finalbody, int lineno, int col_offset,
 }
 
 stmt_ty
-Assert(expr_ty test, expr_ty msg, int lineno, int col_offset, PyArena *arena)
+_Py_Assert(expr_ty test, expr_ty msg, int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
         if (!test) {
@@ -1351,7 +1351,7 @@ Assert(expr_ty test, expr_ty msg, int lineno, int col_offset, PyArena *arena)
 }
 
 stmt_ty
-Import(asdl_seq * names, int lineno, int col_offset, PyArena *arena)
+_Py_Import(asdl_seq * names, int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
         p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1365,7 +1365,7 @@ Import(asdl_seq * names, int lineno, int col_offset, PyArena *arena)
 }
 
 stmt_ty
-ImportFrom(identifier module, asdl_seq * names, int level, int lineno, int
+_Py_ImportFrom(identifier module, asdl_seq * names, int level, int lineno, int
            col_offset, PyArena *arena)
 {
         stmt_ty p;
@@ -1382,7 +1382,7 @@ ImportFrom(identifier module, asdl_seq * names, int level, int lineno, int
 }
 
 stmt_ty
-Exec(expr_ty body, expr_ty globals, expr_ty locals, int lineno, int col_offset,
+_Py_Exec(expr_ty body, expr_ty globals, expr_ty locals, int lineno, int col_offset,
      PyArena *arena)
 {
         stmt_ty p;
@@ -1404,7 +1404,7 @@ Exec(expr_ty body, expr_ty globals, expr_ty locals, int lineno, int col_offset,
 }
 
 stmt_ty
-Global(asdl_seq * names, int lineno, int col_offset, PyArena *arena)
+_Py_Global(asdl_seq * names, int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
         p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1418,7 +1418,7 @@ Global(asdl_seq * names, int lineno, int col_offset, PyArena *arena)
 }
 
 stmt_ty
-Expr(expr_ty value, int lineno, int col_offset, PyArena *arena)
+_Py_Expr(expr_ty value, int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
         if (!value) {
@@ -1437,7 +1437,7 @@ Expr(expr_ty value, int lineno, int col_offset, PyArena *arena)
 }
 
 stmt_ty
-Pass(int lineno, int col_offset, PyArena *arena)
+_Py_Pass(int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
         p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1450,7 +1450,7 @@ Pass(int lineno, int col_offset, PyArena *arena)
 }
 
 stmt_ty
-Break(int lineno, int col_offset, PyArena *arena)
+_Py_Break(int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
         p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1463,7 +1463,7 @@ Break(int lineno, int col_offset, PyArena *arena)
 }
 
 stmt_ty
-Continue(int lineno, int col_offset, PyArena *arena)
+_Py_Continue(int lineno, int col_offset, PyArena *arena)
 {
         stmt_ty p;
         p = (stmt_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1476,7 +1476,7 @@ Continue(int lineno, int col_offset, PyArena *arena)
 }
 
 expr_ty
-BoolOp(boolop_ty op, asdl_seq * values, int lineno, int col_offset, PyArena
+_Py_BoolOp(boolop_ty op, asdl_seq * values, int lineno, int col_offset, PyArena
        *arena)
 {
         expr_ty p;
@@ -1497,7 +1497,7 @@ BoolOp(boolop_ty op, asdl_seq * values, int lineno, int col_offset, PyArena
 }
 
 expr_ty
-BinOp(expr_ty left, operator_ty op, expr_ty right, int lineno, int col_offset,
+_Py_BinOp(expr_ty left, operator_ty op, expr_ty right, int lineno, int col_offset,
       PyArena *arena)
 {
         expr_ty p;
@@ -1529,7 +1529,7 @@ BinOp(expr_ty left, operator_ty op, expr_ty right, int lineno, int col_offset,
 }
 
 expr_ty
-UnaryOp(unaryop_ty op, expr_ty operand, int lineno, int col_offset, PyArena
+_Py_UnaryOp(unaryop_ty op, expr_ty operand, int lineno, int col_offset, PyArena
         *arena)
 {
         expr_ty p;
@@ -1555,7 +1555,7 @@ UnaryOp(unaryop_ty op, expr_ty operand, int lineno, int col_offset, PyArena
 }
 
 expr_ty
-Lambda(arguments_ty args, expr_ty body, int lineno, int col_offset, PyArena
+_Py_Lambda(arguments_ty args, expr_ty body, int lineno, int col_offset, PyArena
        *arena)
 {
         expr_ty p;
@@ -1581,7 +1581,7 @@ Lambda(arguments_ty args, expr_ty body, int lineno, int col_offset, PyArena
 }
 
 expr_ty
-IfExp(expr_ty test, expr_ty body, expr_ty orelse, int lineno, int col_offset,
+_Py_IfExp(expr_ty test, expr_ty body, expr_ty orelse, int lineno, int col_offset,
       PyArena *arena)
 {
         expr_ty p;
@@ -1613,7 +1613,7 @@ IfExp(expr_ty test, expr_ty body, expr_ty orelse, int lineno, int col_offset,
 }
 
 expr_ty
-Dict(asdl_seq * keys, asdl_seq * values, int lineno, int col_offset, PyArena
+_Py_Dict(asdl_seq * keys, asdl_seq * values, int lineno, int col_offset, PyArena
      *arena)
 {
         expr_ty p;
@@ -1629,7 +1629,7 @@ Dict(asdl_seq * keys, asdl_seq * values, int lineno, int col_offset, PyArena
 }
 
 expr_ty
-Set(asdl_seq * elts, int lineno, int col_offset, PyArena *arena)
+_Py_Set(asdl_seq * elts, int lineno, int col_offset, PyArena *arena)
 {
         expr_ty p;
         p = (expr_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1643,7 +1643,7 @@ Set(asdl_seq * elts, int lineno, int col_offset, PyArena *arena)
 }
 
 expr_ty
-ListComp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset,
+_Py_ListComp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset,
          PyArena *arena)
 {
         expr_ty p;
@@ -1664,7 +1664,7 @@ ListComp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset,
 }
 
 expr_ty
-SetComp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset, PyArena
+_Py_SetComp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset, PyArena
         *arena)
 {
         expr_ty p;
@@ -1685,7 +1685,7 @@ SetComp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset, PyArena
 }
 
 expr_ty
-DictComp(expr_ty key, expr_ty value, asdl_seq * generators, int lineno, int
+_Py_DictComp(expr_ty key, expr_ty value, asdl_seq * generators, int lineno, int
          col_offset, PyArena *arena)
 {
         expr_ty p;
@@ -1712,7 +1712,7 @@ DictComp(expr_ty key, expr_ty value, asdl_seq * generators, int lineno, int
 }
 
 expr_ty
-GeneratorExp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset,
+_Py_GeneratorExp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset,
              PyArena *arena)
 {
         expr_ty p;
@@ -1733,7 +1733,7 @@ GeneratorExp(expr_ty elt, asdl_seq * generators, int lineno, int col_offset,
 }
 
 expr_ty
-Yield(expr_ty value, int lineno, int col_offset, PyArena *arena)
+_Py_Yield(expr_ty value, int lineno, int col_offset, PyArena *arena)
 {
         expr_ty p;
         p = (expr_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1747,7 +1747,7 @@ Yield(expr_ty value, int lineno, int col_offset, PyArena *arena)
 }
 
 expr_ty
-Compare(expr_ty left, asdl_int_seq * ops, asdl_seq * comparators, int lineno,
+_Py_Compare(expr_ty left, asdl_int_seq * ops, asdl_seq * comparators, int lineno,
         int col_offset, PyArena *arena)
 {
         expr_ty p;
@@ -1769,7 +1769,7 @@ Compare(expr_ty left, asdl_int_seq * ops, asdl_seq * comparators, int lineno,
 }
 
 expr_ty
-Call(expr_ty func, asdl_seq * args, asdl_seq * keywords, expr_ty starargs,
+_Py_Call(expr_ty func, asdl_seq * args, asdl_seq * keywords, expr_ty starargs,
      expr_ty kwargs, int lineno, int col_offset, PyArena *arena)
 {
         expr_ty p;
@@ -1793,7 +1793,7 @@ Call(expr_ty func, asdl_seq * args, asdl_seq * keywords, expr_ty starargs,
 }
 
 expr_ty
-Repr(expr_ty value, int lineno, int col_offset, PyArena *arena)
+_Py_Repr(expr_ty value, int lineno, int col_offset, PyArena *arena)
 {
         expr_ty p;
         if (!value) {
@@ -1812,7 +1812,7 @@ Repr(expr_ty value, int lineno, int col_offset, PyArena *arena)
 }
 
 expr_ty
-Num(object n, int lineno, int col_offset, PyArena *arena)
+_Py_Num(object n, int lineno, int col_offset, PyArena *arena)
 {
         expr_ty p;
         if (!n) {
@@ -1831,7 +1831,7 @@ Num(object n, int lineno, int col_offset, PyArena *arena)
 }
 
 expr_ty
-Str(string s, int lineno, int col_offset, PyArena *arena)
+_Py_Str(string s, int lineno, int col_offset, PyArena *arena)
 {
         expr_ty p;
         if (!s) {
@@ -1850,7 +1850,7 @@ Str(string s, int lineno, int col_offset, PyArena *arena)
 }
 
 expr_ty
-Attribute(expr_ty value, identifier attr, expr_context_ty ctx, int lineno, int
+_Py_Attribute(expr_ty value, identifier attr, expr_context_ty ctx, int lineno, int
           col_offset, PyArena *arena)
 {
         expr_ty p;
@@ -1882,7 +1882,7 @@ Attribute(expr_ty value, identifier attr, expr_context_ty ctx, int lineno, int
 }
 
 expr_ty
-Subscript(expr_ty value, slice_ty slice, expr_context_ty ctx, int lineno, int
+_Py_Subscript(expr_ty value, slice_ty slice, expr_context_ty ctx, int lineno, int
           col_offset, PyArena *arena)
 {
         expr_ty p;
@@ -1914,7 +1914,7 @@ Subscript(expr_ty value, slice_ty slice, expr_context_ty ctx, int lineno, int
 }
 
 expr_ty
-Name(identifier id, expr_context_ty ctx, int lineno, int col_offset, PyArena
+_Py_Name(identifier id, expr_context_ty ctx, int lineno, int col_offset, PyArena
      *arena)
 {
         expr_ty p;
@@ -1939,8 +1939,8 @@ Name(identifier id, expr_context_ty ctx, int lineno, int col_offset, PyArena
         return p;
 }
 
-expr_ty
-List(asdl_seq * elts, expr_context_ty ctx, int lineno, int col_offset, PyArena
+ expr_ty
+_Py_List(asdl_seq * elts, expr_context_ty ctx, int lineno, int col_offset, PyArena
      *arena)
 {
         expr_ty p;
@@ -1960,8 +1960,8 @@ List(asdl_seq * elts, expr_context_ty ctx, int lineno, int col_offset, PyArena
         return p;
 }
 
-expr_ty
-Tuple(asdl_seq * elts, expr_context_ty ctx, int lineno, int col_offset, PyArena
+ expr_ty
+_Py_Tuple(asdl_seq * elts, expr_context_ty ctx, int lineno, int col_offset, PyArena
       *arena)
 {
         expr_ty p;
@@ -1981,8 +1981,8 @@ Tuple(asdl_seq * elts, expr_context_ty ctx, int lineno, int col_offset, PyArena
         return p;
 }
 
-slice_ty
-Ellipsis(PyArena *arena)
+ slice_ty
+_Py_Ellipsis(PyArena *arena)
 {
         slice_ty p;
         p = (slice_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -1992,8 +1992,8 @@ Ellipsis(PyArena *arena)
         return p;
 }
 
-slice_ty
-Slice(expr_ty lower, expr_ty upper, expr_ty step, PyArena *arena)
+ slice_ty
+_Py_Slice(expr_ty lower, expr_ty upper, expr_ty step, PyArena *arena)
 {
         slice_ty p;
         p = (slice_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -2006,8 +2006,8 @@ Slice(expr_ty lower, expr_ty upper, expr_ty step, PyArena *arena)
         return p;
 }
 
-slice_ty
-ExtSlice(asdl_seq * dims, PyArena *arena)
+ slice_ty
+_Py_ExtSlice(asdl_seq * dims, PyArena *arena)
 {
         slice_ty p;
         p = (slice_ty)PyArena_Malloc(arena, sizeof(*p));
@@ -2018,8 +2018,8 @@ ExtSlice(asdl_seq * dims, PyArena *arena)
         return p;
 }
 
-slice_ty
-Index(expr_ty value, PyArena *arena)
+ slice_ty
+_Py_Index(expr_ty value, PyArena *arena)
 {
         slice_ty p;
         if (!value) {
@@ -2035,8 +2035,8 @@ Index(expr_ty value, PyArena *arena)
         return p;
 }
 
-comprehension_ty
-comprehension(expr_ty target, expr_ty iter, asdl_seq * ifs, PyArena *arena)
+ comprehension_ty
+_Py_comprehension(expr_ty target, expr_ty iter, asdl_seq * ifs, PyArena *arena)
 {
         comprehension_ty p;
         if (!target) {
@@ -2058,8 +2058,8 @@ comprehension(expr_ty target, expr_ty iter, asdl_seq * ifs, PyArena *arena)
         return p;
 }
 
-excepthandler_ty
-ExceptHandler(expr_ty type, expr_ty name, asdl_seq * body, int lineno, int
+ excepthandler_ty
+_Py_ExceptHandler(expr_ty type, expr_ty name, asdl_seq * body, int lineno, int
               col_offset, PyArena *arena)
 {
         excepthandler_ty p;
@@ -2075,8 +2075,8 @@ ExceptHandler(expr_ty type, expr_ty name, asdl_seq * body, int lineno, int
         return p;
 }
 
-arguments_ty
-arguments(asdl_seq * args, identifier vararg, identifier kwarg, asdl_seq *
+ arguments_ty
+_Py_arguments(asdl_seq * args, identifier vararg, identifier kwarg, asdl_seq *
           defaults, PyArena *arena)
 {
         arguments_ty p;
@@ -2090,8 +2090,8 @@ arguments(asdl_seq * args, identifier vararg, identifier kwarg, asdl_seq *
         return p;
 }
 
-keyword_ty
-keyword(identifier arg, expr_ty value, PyArena *arena)
+ keyword_ty
+_Py_keyword(identifier arg, expr_ty value, PyArena *arena)
 {
         keyword_ty p;
         if (!arg) {
@@ -2112,8 +2112,8 @@ keyword(identifier arg, expr_ty value, PyArena *arena)
         return p;
 }
 
-alias_ty
-alias(identifier name, identifier asname, PyArena *arena)
+ alias_ty
+_Py_alias(identifier name, identifier asname, PyArena *arena)
 {
         alias_ty p;
         if (!name) {
@@ -2130,7 +2130,7 @@ alias(identifier name, identifier asname, PyArena *arena)
 }
 
 
-PyObject*
+ PyObject*
 ast2obj_mod(void* _o)
 {
         mod_ty o = (mod_ty)_o;
@@ -2185,7 +2185,7 @@ failed:
         return NULL;
 }
 
-PyObject*
+ PyObject*
 ast2obj_stmt(void* _o)
 {
         stmt_ty o = (stmt_ty)_o;
@@ -2562,7 +2562,7 @@ failed:
         return NULL;
 }
 
-PyObject*
+ PyObject*
 ast2obj_expr(void* _o)
 {
         expr_ty o = (expr_ty)_o;
@@ -2929,7 +2929,8 @@ failed:
         return NULL;
 }
 
-PyObject* ast2obj_expr_context(expr_context_ty o)
+ PyObject*
+ast2obj_expr_context(expr_context_ty o)
 {
         switch(o) {
                 case Load:
@@ -2956,7 +2957,8 @@ PyObject* ast2obj_expr_context(expr_context_ty o)
                         return NULL;
         }
 }
-PyObject*
+
+ PyObject*
 ast2obj_slice(void* _o)
 {
         slice_ty o = (slice_ty)_o;
@@ -3016,7 +3018,7 @@ failed:
         return NULL;
 }
 
-PyObject* ast2obj_boolop(boolop_ty o)
+ PyObject* ast2obj_boolop(boolop_ty o)
 {
         switch(o) {
                 case And:
@@ -3031,7 +3033,7 @@ PyObject* ast2obj_boolop(boolop_ty o)
                         return NULL;
         }
 }
-PyObject* ast2obj_operator(operator_ty o)
+ PyObject* ast2obj_operator(operator_ty o)
 {
         switch(o) {
                 case Add:
@@ -3076,7 +3078,7 @@ PyObject* ast2obj_operator(operator_ty o)
                         return NULL;
         }
 }
-PyObject* ast2obj_unaryop(unaryop_ty o)
+ PyObject* ast2obj_unaryop(unaryop_ty o)
 {
         switch(o) {
                 case Invert:
@@ -3097,7 +3099,7 @@ PyObject* ast2obj_unaryop(unaryop_ty o)
                         return NULL;
         }
 }
-PyObject* ast2obj_cmpop(cmpop_ty o)
+ PyObject* ast2obj_cmpop(cmpop_ty o)
 {
         switch(o) {
                 case Eq:
@@ -3136,7 +3138,7 @@ PyObject* ast2obj_cmpop(cmpop_ty o)
                         return NULL;
         }
 }
-PyObject*
+ PyObject*
 ast2obj_comprehension(void* _o)
 {
         comprehension_ty o = (comprehension_ty)_o;
@@ -3170,7 +3172,7 @@ failed:
         return NULL;
 }
 
-PyObject*
+ PyObject*
 ast2obj_excepthandler(void* _o)
 {
         excepthandler_ty o = (excepthandler_ty)_o;
@@ -3218,7 +3220,7 @@ failed:
         return NULL;
 }
 
-PyObject*
+ PyObject*
 ast2obj_arguments(void* _o)
 {
         arguments_ty o = (arguments_ty)_o;
@@ -3257,7 +3259,7 @@ failed:
         return NULL;
 }
 
-PyObject*
+ PyObject*
 ast2obj_keyword(void* _o)
 {
         keyword_ty o = (keyword_ty)_o;
@@ -3286,7 +3288,7 @@ failed:
         return NULL;
 }
 
-PyObject*
+ PyObject*
 ast2obj_alias(void* _o)
 {
         alias_ty o = (alias_ty)_o;
@@ -3316,7 +3318,7 @@ failed:
 }
 
 
-int
+ int
 obj2ast_mod(PyObject* obj, mod_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -3479,7 +3481,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_stmt(PyObject* obj, stmt_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -4791,7 +4793,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_expr(PyObject* obj, expr_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -5919,7 +5921,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_expr_context(PyObject* obj, expr_context_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -5982,7 +5984,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_slice(PyObject* obj, slice_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -6121,7 +6123,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_boolop(PyObject* obj, boolop_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -6152,7 +6154,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_operator(PyObject* obj, operator_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -6263,7 +6265,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_unaryop(PyObject* obj, unaryop_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -6310,7 +6312,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_cmpop(PyObject* obj, cmpop_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -6405,7 +6407,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_comprehension(PyObject* obj, comprehension_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -6473,7 +6475,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_excepthandler(PyObject* obj, excepthandler_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -6584,7 +6586,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_arguments(PyObject* obj, arguments_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -6680,7 +6682,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_keyword(PyObject* obj, keyword_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;
@@ -6718,7 +6720,7 @@ failed:
         return 1;
 }
 
-int
+ int
 obj2ast_alias(PyObject* obj, alias_ty* out, PyArena* arena)
 {
         PyObject* tmp = NULL;

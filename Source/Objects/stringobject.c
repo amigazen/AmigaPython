@@ -326,9 +326,15 @@ PyString_FromFormatV(const char *format, va_list vargs)
                     sprintf(s, "%" PY_FORMAT_LONG_LONG "d",
                         va_arg(vargs, PY_LONG_LONG));
 #endif
+#ifdef __VBCC__
                 else if (size_tflag)
-                    sprintf(s, "%" PY_FORMAT_SIZE_T "d",
+                    sprintf(s, "%ld",
+                        (long)va_arg(vargs, Py_ssize_t));
+#else
+                else if (size_tflag)
+                    sprintf(s, "%" PY_FORMAT_SIZE_T "ld",
                         va_arg(vargs, Py_ssize_t));
+#endif
                 else
                     sprintf(s, "%d", va_arg(vargs, int));
                 s += strlen(s);
@@ -342,9 +348,15 @@ PyString_FromFormatV(const char *format, va_list vargs)
                     sprintf(s, "%" PY_FORMAT_LONG_LONG "u",
                         va_arg(vargs, PY_LONG_LONG));
 #endif
+#ifdef __VBCC__
+                else if (size_tflag)
+                    sprintf(s, "%lu",
+                        (unsigned long)va_arg(vargs, size_t));
+#else
                 else if (size_tflag)
                     sprintf(s, "%" PY_FORMAT_SIZE_T "u",
                         va_arg(vargs, size_t));
+#endif
                 else
                     sprintf(s, "%u",
                         va_arg(vargs, unsigned int));
@@ -4852,8 +4864,13 @@ void _Py_ReleaseInternedStrings(void)
        the interned dict. */
 
     n = PyList_GET_SIZE(keys);
-    fprintf(stderr, "releasing %" PY_FORMAT_SIZE_T "d interned strings\n",
+#ifdef __VBCC__
+    fprintf(stderr, "releasing %ld interned strings\n",
+        (long)n);
+#else
+    fprintf(stderr, "releasing %" PY_FORMAT_SIZE_T "ld interned strings\n",
         n);
+#endif
     for (i = 0; i < n; i++) {
         s = (PyStringObject *) PyList_GET_ITEM(keys, i);
         switch (s->ob_sstate) {
@@ -4873,9 +4890,15 @@ void _Py_ReleaseInternedStrings(void)
         }
         s->ob_sstate = SSTATE_NOT_INTERNED;
     }
+#ifdef __VBCC__
     fprintf(stderr, "total size of all interned strings: "
-                    "%" PY_FORMAT_SIZE_T "d/%" PY_FORMAT_SIZE_T "d "
+                    "%ld/%ld "
+                    "mortal/immortal\n", (long)mortal_size, (long)immortal_size);
+#else
+    fprintf(stderr, "total size of all interned strings: "
+                    "%" PY_FORMAT_SIZE_T "ld/%" PY_FORMAT_SIZE_T "ld "
                     "mortal/immortal\n", mortal_size, immortal_size);
+#endif
     Py_DECREF(keys);
     PyDict_Clear(interned);
     Py_CLEAR(interned);

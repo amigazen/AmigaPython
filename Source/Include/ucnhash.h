@@ -15,6 +15,17 @@ typedef struct {
     /* Size of this struct */
     int size;
 
+#ifdef _AMIGA
+    /* Get name for a given character code.  Returns non-zero if
+       success, zero if not.  Does not set Python exceptions. 
+       If self is NULL, data come from the default version of the database.
+       If it is not NULL, it should be a unicodedata.ucd_X_Y_Z object */
+    int (*getname)(PyObject *self, unsigned int code, char* buffer, int buflen);
+
+    /* Get character code for a given name.  Same error handling
+       as for getname. */
+    int (*getcode)(PyObject *self, const char* name, int namelen, unsigned int* code);
+#else
     /* Get name for a given character code.  Returns non-zero if
        success, zero if not.  Does not set Python exceptions. 
        If self is NULL, data come from the default version of the database.
@@ -24,6 +35,7 @@ typedef struct {
     /* Get character code for a given name.  Same error handling
        as for getname. */
     int (*getcode)(PyObject *self, const char* name, int namelen, Py_UCS4* code);
+#endif
 
 } _PyUnicode_Name_CAPI;
 

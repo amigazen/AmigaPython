@@ -13,7 +13,9 @@ extern "C" {
    the parser only returns E_EOF when it hits EOF immediately, and it
    never returns E_OK. */
 
+#ifndef E_OK
 #define E_OK		10	/* No error */
+#endif
 #define E_EOF		11	/* End Of File */
 #define E_INTR		12	/* Interrupted */
 #define E_TOKEN		13	/* Bad token */

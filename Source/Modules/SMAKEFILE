@@ -1,0 +1,69 @@
+# SMAKEFILE for Python 2.7.18 Modules
+# Based on Python 2.0 source but updated for 2.7.18
+# Updated to match Setup.amiga configuration and config.c
+
+# Core modules for Amiga Python 2.7.18
+OBJECTS = config.o getpath.o environment.o \
+        arraymodule.o mathmodule.o timemodule.o \
+        binascii.o _codecsmodule.o cStringIO.o cPickle.o \
+        errnomodule.o posixmodule.o operator.o _weakref.o _struct.o \
+        selectmodule.o zlibmodule.o \
+        amigamodule.o amigapathmodule.o socketmodule.o \
+        pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o
+
+Modules.lib: $(OBJECTS)
+	-delete >NIL: Modules.lib
+	oml Modules.lib a <@<
+$(OBJECTS)
+<
+
+# Dependencies
+config.o : config.c
+
+getpath.o : getpath.c ../Include/protos.h ../Include/osdefs.h ../Include/Python.h
+
+environment.o : environment.c ../Include/Python.h
+
+arraymodule.o : arraymodule.c ../Include/Python.h
+
+mathmodule.o : mathmodule.c ../Include/Python.h
+
+timemodule.o : timemodule.c ../Include/Python.h
+
+binascii.o : binascii.c ../Include/Python.h
+
+_codecsmodule.o: _codecsmodule.c ../Include/Python.h
+
+cStringIO.o : cStringIO.c ../Include/cStringIO.h ../Include/import.h ../Include/Python.h
+
+cPickle.o : cPickle.c ../Include/cStringIO.h ../Include/Python.h
+
+errnomodule.o : errnomodule.c ../Include/Python.h
+
+posixmodule.o : posixmodule.c ../Include/Python.h
+
+operator.o : operator.c ../Include/Python.h
+
+_weakref.o : _weakref.c ../Include/Python.h
+
+_struct.o : _struct.c ../Include/Python.h
+
+selectmodule.o : selectmodule.c ../Include/Python.h
+
+zlibmodule.o : zlibmodule.c ../Include/Python.h
+
+amigamodule.o : amiga/amigamodule.c ../Include/Python.h
+
+amigapathmodule.o : amiga/amigapathmodule.c ../Include/Python.h
+
+socketmodule.o : socketmodule.c ../Include/Python.h
+
+pwdmodule.o : pwdmodule.c ../Include/Python.h
+
+grpmodule.o : grpmodule.c ../Include/Python.h
+
+cryptmodule.o : cryptmodule.c ../Include/Python.h
+
+syslogmodule.o : syslogmodule.c ../Include/Python.h
+
+# --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS PRECEDE --- 

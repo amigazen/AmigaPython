@@ -963,10 +963,17 @@ static PyMethodDef complex_methods[] = {
 };
 
 static PyMemberDef complex_members[] = {
+#ifdef _AMIGA
+    {"real", T_DOUBLE, 0x10, READONLY, /* Hardcoded offset for VBCC compatibility */
+     "the real part of a complex number"},
+    {"imag", T_DOUBLE, 0x18, READONLY, /* Hardcoded offset for VBCC compatibility */
+     "the imaginary part of a complex number"},
+#else
     {"real", T_DOUBLE, offsetof(PyComplexObject, cval.real), READONLY,
      "the real part of a complex number"},
     {"imag", T_DOUBLE, offsetof(PyComplexObject, cval.imag), READONLY,
      "the imaginary part of a complex number"},
+#endif
     {0},
 };
 

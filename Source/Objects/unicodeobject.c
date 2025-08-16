@@ -89,16 +89,29 @@ NOTE: In the interpreter's initialization phase, some globals are currently
 */
 
 
-#ifdef __cplusplus
-extern "C" {
+/* No extern C block needed - this is a C file */
+
+#ifdef _AMIGA
+/* VBCC compatibility: define Py_UNICODE as unsigned short */
+typedef unsigned short Py_UNICODE;
 #endif
 
 /* Free list for Unicode objects */
+#ifdef _AMIGA
+/* VBCC compatibility: forward declare the struct */
+struct PyUnicodeObject;
+static struct PyUnicodeObject *free_list = NULL;
+#else
 static PyUnicodeObject *free_list = NULL;
+#endif
 static int numfree = 0;
 
 /* The empty Unicode object is shared to improve performance. */
+#ifdef _AMIGA
+static struct PyUnicodeObject *unicode_empty = NULL;
+#else
 static PyUnicodeObject *unicode_empty = NULL;
+#endif
 
 #define _Py_RETURN_UNICODE_EMPTY()                      \
     do {                                                \
@@ -114,7 +127,11 @@ static PyUnicodeObject *unicode_empty = NULL;
 
 /* Single character Unicode strings in the Latin-1 range are being
    shared as well. */
+#ifdef _AMIGA
+static struct PyUnicodeObject *unicode_latin1[256] = {NULL};
+#else
 static PyUnicodeObject *unicode_latin1[256] = {NULL};
+#endif
 
 /* Default encoding to use and assume when NULL is passed as encoding
    parameter; it is initialized by _PyUnicode_Init().
@@ -226,7 +243,11 @@ static BLOOM_MASK bloom_linebreak = ~(BLOOM_MASK)0;
     ((ch) < 128U ? ascii_linebreak[(ch)] :                              \
      (BLOOM(bloom_linebreak, (ch)) && Py_UNICODE_ISLINEBREAK(ch)))
 
+#ifdef _AMIGA
+static BLOOM_MASK make_bloom_mask(Py_UNICODE* ptr, Py_ssize_t len)
+#else
 Py_LOCAL_INLINE(BLOOM_MASK) make_bloom_mask(Py_UNICODE* ptr, Py_ssize_t len)
+#endif
 {
     /* calculate simple bloom-style bitmask for a given unicode string */
 
@@ -240,7 +261,11 @@ Py_LOCAL_INLINE(BLOOM_MASK) make_bloom_mask(Py_UNICODE* ptr, Py_ssize_t len)
     return mask;
 }
 
+#ifdef _AMIGA
+static int unicode_member(Py_UNICODE chr, Py_UNICODE* set, Py_ssize_t setlen)
+#else
 Py_LOCAL_INLINE(int) unicode_member(Py_UNICODE chr, Py_UNICODE* set, Py_ssize_t setlen)
+#endif
 {
     Py_ssize_t i;
 
@@ -3038,9 +3063,15 @@ PyObject *PyUnicode_DecodeUnicodeEscape(const char *s,
 
 */
 
+#ifdef _AMIGA
+static const Py_UNICODE * findchar(const Py_UNICODE *s,
+                                             Py_ssize_t size,
+                                             Py_UNICODE ch)
+#else
 Py_LOCAL_INLINE(const Py_UNICODE *) findchar(const Py_UNICODE *s,
                                              Py_ssize_t size,
                                              Py_UNICODE ch)
+#endif
 {
     /* like wcschr, but doesn't stop at NULL characters */
 
@@ -9018,6 +9049,4 @@ _PyUnicode_Fini(void)
     (void)PyUnicode_ClearFreeList();
 }
 
-#ifdef __cplusplus
-}
-#endif
+/* End of file */

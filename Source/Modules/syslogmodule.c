@@ -52,7 +52,12 @@ Revision history:
 #include "Python.h"
 #include "osdefs.h"
 
+#ifdef _AMIGA
+#include <sys/syslog.h>
+#include "syslog.h"
+#else
 #include <syslog.h>
+#endif
 
 /*  only one instance, only one syslog, so globals should be ok  */
 static PyObject *S_ident_o = NULL;                      /*  identifier, held by openlog()  */

@@ -81,7 +81,7 @@ static size_t count_reuse = 0;
 static void
 show_alloc(void)
 {
-    fprintf(stderr, "List allocations: %" PY_FORMAT_SIZE_T "d\n",
+    fprintf(stderr, "List allocations: %" PY_FORMAT_SIZE_T "ld\n",
         count_alloc);
     fprintf(stderr, "List reuse through freelist: %" PY_FORMAT_SIZE_T
         "d\n", count_reuse);

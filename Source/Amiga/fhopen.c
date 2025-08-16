@@ -1,10 +1,8 @@
-RCS_ID_C="$Id: fhopen.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 /*
- *      fhopen.c - open level 1 file from an AmigaDOS file handle (SAS/C)
+ *      fhopen.c - open level 1 file from an AmigaDOS file handle
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
  */
 
 #include <ios1.h>
@@ -20,6 +18,9 @@ RCS_ID_C="$Id: fhopen.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 
 extern int (*__closefunc)(int);
 
+/*
+ * Open a standard I/O file from an AmigaDOS file handle
+ */
 int
 fhopen(long file, int mode)
 {
@@ -31,10 +32,12 @@ fhopen(long file, int mode)
    * Set up __closefunc (which is used at cleanup)
    */
   __closefunc = __close;
+  
   /*
    * Check for the break signals
    */
   __chkabort();
+  
   /*
    * find first free ufb
    */
@@ -67,6 +70,7 @@ fhopen(long file, int mode)
     flags |= UFB_APP;
   if (mode & O_XLATE)
     flags |= UFB_XLAT;
+    
   /*
    * All done!
    */
@@ -74,10 +78,5 @@ fhopen(long file, int mode)
   ufb->ufbfh = (long)file;
   ufb->ufbfn = NULL;
 
-#if 0
-  if (Dup2Socket(-1, fd) < 0)	/* mark the fd as used in the AmiTCP's dTable */
-    perror("Dup2Socket failed on " __FILE__);
-#endif
-
   return fd;
-}
+} 

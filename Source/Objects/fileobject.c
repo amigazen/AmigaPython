@@ -2358,7 +2358,15 @@ file_iternext(PyFileObject *f)
           cache the file buffer state locally and only set it back on the file
           object when we're done.
         */
+#ifdef _AMIGA
+        /* AmigaOS vbcc compiler requires individual field assignments */
+        readaheadbuffer rab;
+        rab.buf = f->f_buf;
+        rab.bufptr = f->f_bufptr;
+        rab.bufend = f->f_bufend;
+#else
         readaheadbuffer rab = {f->f_buf, f->f_bufptr, f->f_bufend};
+#endif
         f->f_buf = NULL;
         l = readahead_get_line_skip(f, &rab, 0, READAHEAD_BUFSIZE);
         /*

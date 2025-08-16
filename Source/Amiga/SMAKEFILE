@@ -1,3 +1,6 @@
+# SMAKEFILE for Python 2.7.18 Amiga directory
+# Based on Python 2.0 source but updated for 2.7.18
+
 AMITCPOBJ= getopt.o timerinit.o gettimeofday.o utime.o envvars.o fmod.o \
 	rexxvars.o crc32.o wbargs.o unixemul.o strerror.o perror.o syslog.o \
 	chmod.o chown.o printuserfault.o dosio_init.o iomode.o isatty.o \
@@ -6,16 +9,12 @@ AMITCPOBJ= getopt.o timerinit.o gettimeofday.o utime.o envvars.o fmod.o \
 	strftime.o sleep.o usleep.o \
 	stackinit.o CheckStack.o
 
-
 INET225OBJ = timerinit.o gettimeofday.o utime.o envvars.o fmod.o \
 	rexxvars.o crc32.o wbargs.o unixemul.o sleep.o usleep.o \
 	strftime.o stackinit.o CheckStack.o
 
-
 OBJ = envvars.o fmod.o getopt.o \
 	rexxvars.o crc32.o wbargs.o unixemul.o strftime.o stackinit.o CheckStack.o
-
-
 
 amigapythonamitcp.lib: $(AMITCPOBJ)
 	-delete >NIL: $@
@@ -35,15 +34,14 @@ amigapython.lib: $(OBJ)
 $(OBJ)
 <
 
-
 clean:
 	-delete \#?.lib \#?.o
 
-
-
+# Special compilation rules
 stackinit.o: stackinit.c
 	sc stackinit.c DATA=FAR
 
 crc32.o: crc32.asm
-	sc CRC32.asm DEFINE=M68030	;; XXX change to M68000 if compiling for 68000!
+	sc CRC32.asm DEFINE=M68020	;; XXX change to M68000 if compiling for 68000!
 
+# --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS PRECEDE --- 

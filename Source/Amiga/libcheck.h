@@ -1,8 +1,14 @@
 #ifndef _LIBCHECK_H
 #define _LIBCHECK_H
 
-extern int checkusergrouplib(void);     /* in main.c */
-extern int checksocketlib(void);     /* in main.c */
+/* Library availability checks for Amiga */
+
+#ifdef AMITCP
+extern int checkusergrouplib(void);
+extern int checkutilitylib(void);
+extern int checksocketlib(void);
+#endif
+
 extern void PyErr_Clear(void);
 
-#endif
+#endif /* _LIBCHECK_H */ 

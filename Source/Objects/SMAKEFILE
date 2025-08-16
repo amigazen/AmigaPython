@@ -1,0 +1,79 @@
+# SMAKEFILE for Python 2.7.18 Objects directory
+# Based on Python 2.0 source but updated for 2.7.18
+
+# Core object files for Python 2.7.18
+OBJECTS = abstract.o fileobject.o floatobject.o bufferobject.o \
+        funcobject.o intobject.o listobject.o longobject.o \
+        dictobject.o methodobject.o moduleobject.o object.o \
+        rangeobject.o stringobject.o tupleobject.o typeobject.o \
+        classobject.o frameobject.o sliceobject.o complexobject.o cobject.o \
+	unicodeobject.o unicodectype.o boolobject.o \
+	exceptions.o codeobject.o cellobject.o iterobject.o \
+	weakrefobject.o
+
+Objects.lib: $(OBJECTS)
+	-delete >NIL: Objects.lib
+	oml Objects.lib a <@<
+$(OBJECTS)
+<
+
+# Dependencies
+abstract.o : abstract.c ../Include/Python.h
+
+bufferobject.o: bufferobject.c ../Include/Python.h
+
+boolobject.o : boolobject.c ../Include/Python.h
+
+classobject.o : classobject.c ../Include/structmember.h ../Include/Python.h
+
+cobject.o : cobject.c ../Include/Python.h
+
+complexobject.o : complexobject.c ../Include/Python.h
+
+dictobject.o : dictobject.c ../Include/Python.h
+
+exceptions.o : exceptions.c ../Include/Python.h
+
+fileobject.o : fileobject.c ../Include/structmember.h ../Include/Python.h
+
+floatobject.o : floatobject.c ../Include/Python.h
+
+frameobject.o : frameobject.c ../Include/structmember.h ../Include/opcode.h ../Include/frameobject.h ../Include/compile.h ../Include/Python.h
+
+funcobject.o : funcobject.c ../Include/structmember.h ../Include/compile.h ../Include/Python.h
+
+intobject.o : intobject.c ../Include/Python.h
+
+iterobject.o : iterobject.c ../Include/Python.h
+
+listobject.o : listobject.c ../Include/Python.h
+
+longobject.o : longobject.c ../Include/longintrepr.h ../Include/Python.h
+
+methodobject.o : methodobject.c ../Include/token.h ../Include/Python.h
+
+moduleobject.o : moduleobject.c ../Include/Python.h
+
+object.o : object.c ../Include/Python.h
+
+rangeobject.o : rangeobject.c ../Include/Python.h
+
+sliceobject.o : sliceobject.c ../Include/Python.h
+
+stringobject.o : stringobject.c ../Include/Python.h
+
+tupleobject.o : tupleobject.c ../Include/Python.h
+
+typeobject.o : typeobject.c ../Include/Python.h
+
+unicodectype.o: unicodectype.c
+
+unicodeobject.o: unicodeobject.c
+
+weakrefobject.o : weakrefobject.c ../Include/Python.h
+
+codeobject.o : codeobject.c ../Include/Python.h
+
+cellobject.o : cellobject.c ../Include/Python.h
+
+# --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS PRECEDE --- 

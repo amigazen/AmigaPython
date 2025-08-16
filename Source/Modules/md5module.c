@@ -235,7 +235,7 @@ copy() -- return a copy of the current md5 object");
 
 static PyTypeObject MD5type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "_md5.md5",                   /*tp_name*/
+    "md5.md5",                   /*tp_name*/
     sizeof(md5object),            /*tp_basicsize*/
     0,                            /*tp_itemsize*/
     /* methods */
@@ -329,7 +329,7 @@ init_md5(void)
     Py_TYPE(&MD5type) = &PyType_Type;
     if (PyType_Ready(&MD5type) < 0)
         return;
-    m = Py_InitModule3("_md5", md5_functions, module_doc);
+    m = Py_InitModule3("md5", md5_functions, module_doc);
     if (m == NULL)
         return;
     d = PyModule_GetDict(m);

@@ -1,10 +1,10 @@
-RCS_ID_C="$Id: _close.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 /*
- *      _close.c - close a file (SAS/C)
+ *      _close.c - close a file descriptor
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
+ *
+ *      DEPRECATED: This file is deprecated in Amiga Python 2.7.18 in favour of vbcc PosixLib
  */
 
 #include <ios1.h>
@@ -13,7 +13,14 @@ RCS_ID_C="$Id: _close.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 #include <dos.h>
 #include <proto/dos.h>
 #include <errno.h>
-#include <bsdsocket.h>
+
+#ifdef AMITCP
+#include <proto/socket.h>
+extern struct Library *SocketBase;
+#endif
+
+#include "Python.h"
+#include "protos.h"
 #include "libcheck.h"
 
 int 
@@ -27,11 +34,11 @@ __close(int fd)
   __chkabort();
 
   /*
-   * Find the ufb *
+   * Find the ufb
    */
   if ((ufb = __chkufb(fd)) == NULL) {
-	/* __chkufb sets the errno to EBADF */
-	return -1;
+    /* __chkufb sets the errno to EBADF */
+    return -1;
   }
 
   /*
@@ -39,35 +46,34 @@ __close(int fd)
    */
   if ((ufb->ufbflg & (UFB_NC | UFB_CLO)) != UFB_NC) {
 
-	/*
-	 * Empty flags mean empty ufb
-	 */
-	if (ufb->ufbflg == 0) {
-	  errno = EBADF;
-	  return -1;
-	}
+    /*
+     * Empty flags mean empty ufb
+     */
+    if (ufb->ufbflg == 0) {
+      errno = EBADF;
+      return -1;
+    }
 
-	/*
-	 * Close the file
-	 */
-	if (!(ufb->ufbflg & UFB_SOCK) && ufb->ufbfh != NULL) {
-	  Close(ufb->ufbfh);
-	  
-	  /*
-	   * Remove the file if it was temporary
-	   */
-	  if (ufb->ufbflg & UFB_TEMP && ufb->ufbfn != NULL) 
-	remove(ufb->ufbfn);
-	}
-
+    /*
+     * Close the file
+     */
+    if (!(ufb->ufbflg & UFB_SOCK) && ufb->ufbfh != NULL) {
+      Close((BPTR)ufb->ufbfh);
+      
+      /*
+       * Remove the file if it was temporary
+       */
+      if (ufb->ufbflg & UFB_TEMP && ufb->ufbfn != NULL) 
+        remove(ufb->ufbfn);
+    }
   }
 
   /*
    * Free the file name
    */
   if (ufb->ufbfn != NULL) {
-	free(ufb->ufbfn);
-	ufb->ufbfn = NULL;
+    free(ufb->ufbfn);
+    ufb->ufbfn = NULL;
   }
 
   /*
@@ -76,17 +82,16 @@ __close(int fd)
   ufb->ufbflg = 0;
   ufb->ufbfh = NULL; /* just in case */
 
+#ifdef AMITCP
   /* 
-   * closes the socket OR the file mark
+   * Close the socket if applicable
+   * Can safely assume it is opened at the time we need to do a
+   * CloseSocket() call (how could you create a socket otherwise?),
+   * so a call to checksocketlib() is not needed.
    */
-
-  /* needs bsdsocket.library for CloseSocket call -- I.J. */
-  /* Can safely assume it is opened at the time we need to do a */
-  /* CloseSocket() call (how could you create a socket otherwise?), */
-  /* so a call to checksocketlib() is not needed. */
-  /* THIS IS VERY IMPORTANT OTHERWISE IMPORTANT ERROR DATA IS DISCARDED. */
-  if(SocketBase) CloseSocket(fd);
+  if (SocketBase) 
+    CloseSocket(fd);
+#endif
   
   return 0;
-}
-
+} 

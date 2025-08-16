@@ -1,10 +1,10 @@
-RCS_ID_C="$Id: utime.c,v 4.2 1994/09/29 23:09:02 jraja Exp $"
 /*
  *      utime.c - set the modification date of the file
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
+ *
+ *      DEPRECATED: This file is deprecated in Amiga Python 2.7.18 in favour of vbcc PosixLib
  */
 
 #include <sys/param.h>
@@ -18,64 +18,18 @@ RCS_ID_C="$Id: utime.c,v 4.2 1994/09/29 23:09:02 jraja Exp $"
 
 #include "netlib.h"
 
-/****** net.lib/utime *********************************************
-
-    NAME
-	utime - set file access and modification times
-
-    SYNOPSIS
-	#include <utime.h>
-
-	int error = utime(const char *name, const struct utimbuf *times)
-
-    FUNCTION
-	The access and modification times for the file 'name' are modified
-	according to the 'times'. If 'times' is NULL, the times are set to
-	systems current time.
-
-    PORTABILITY
-	UNIX
-
-    INPUTS
-	'name'  - the name of the file to be affected.
-
-	'times' - pointer to a structure containing the time values,
-		  defined in <utime.h> as:
-
-		      struct utimbuf {
-			  time_t actime;	\* Access time *\
-			  time_t modtime;	\* Modification time *\
-		      };
-
-		  Both times are in units of seconds since Jan. 1, 1970,
-		  Greenwich Mean Time.
-
-		  If the 'times' is given as the NULL pointer, the current
-		  time is used.
-
-    RESULT
-	Returns 0 when successful and -1 with specific error code in errno in
-	case of an error.
-
-    NOTES
-	Since AmigaDOS files have only one time stamp, both access and
-	modification times cannot be supported. Since the AmigaDOS file date
-	is the modification time, only the 'modtime' field of the 'times' is
-	used.
-
-	The conversion from 1.1.1970 based GMT to 1.1.1978 based local time is
-	done with external long __local_to_GMT, which is defined and
-	initialized by the timerinit.c module included in the net.lib.
-
-    SEE ALSO
-	dos.library/DateStamp(), dos.library/SetFileDate(), net.lib/timerinit
-
-*****************************************************************************
-*
-*/
-
+/*
+ * See timerinit.c for comments on this
+ */
 extern long __local_to_GMT; /* defined and initialized in timerinit.c */
 
+/*
+ * Set file access and modification times
+ * 
+ * Since AmigaDOS files have only one timestamp, both access and
+ * modification times cannot be supported. Since the AmigaDOS file date
+ * is the modification time, only the 'modtime' field of the 'times' is used.
+ */
 int
 utime(const char *name, const struct utimbuf *times)
 {
@@ -104,9 +58,9 @@ utime(const char *name, const struct utimbuf *times)
   }
 
   if (!SetFileDate((STRPTR)name, &stamp)) {
-    set_errno(IoErr());
+    errno = __io2errno(IoErr());
     return -1;
   }
 
   return 0;
-}
+} 

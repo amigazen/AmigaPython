@@ -1,3 +1,6 @@
+# SMAKEFILE for Python 2.7.18 expat directory
+# Based on Python 2.0 source but updated for 2.7.18
+
 CC=sc
 # If you know what your system's byte order is, define XML_BYTE_ORDER:
 # use -DXML_BYTE_ORDER=12 for little-endian byte order;
@@ -44,3 +47,5 @@ xmltok/xmltok.o: xmltok/nametab.h
 
 .c.o:
 	$(CC) $(CFLAGS) NOLINK OBJNAME $@ $<
+
+# --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS PRECEDE --- 

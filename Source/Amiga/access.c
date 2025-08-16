@@ -1,10 +1,10 @@
-RCS_ID_C="$Id: access.c,v 4.2 1994/09/29 23:09:02 jraja Exp $"
 /*
- *      access.c - check access to a file or a directory
+ *      access.c - check access to a file or a directory on Amiga
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
+ *
+ *      DEPRECATED: This file is deprecated in Amiga Python 2.7.18 in favour of vbcc PosixLib
  */
 
 #include <stdio.h>
@@ -20,8 +20,7 @@ RCS_ID_C="$Id: access.c,v 4.2 1994/09/29 23:09:02 jraja Exp $"
 #include <bsdsocket.h>
 
 /*
- * I know, the goto's are ugly, but they make the code smaller and help
- * to prevent duplicating code.
+ * Checks if the user has the specified access to the file
  */
 int
 access(const char *name, int mode)
@@ -76,9 +75,9 @@ access(const char *name, int mode)
     if (fib->fib_DirEntryType >= 0) { /* lock is a directory */
       parentLock = ParentDir(lock);
       if (parentLock != NULL)
-	UnLock(parentLock); /* not the root, prot is valid */
+        UnLock(parentLock); /* not the root, prot is valid */
       else
-	prot &= ~FIBF_WRITE; /* the root, force writing to be allowed */
+        prot &= ~FIBF_WRITE; /* the root, force writing to be allowed */
     }
     if (prot & FIBF_WRITE) {
       errno = EACCES;
@@ -96,15 +95,11 @@ access(const char *name, int mode)
   return 0;
   
  osfail:
-#if __SASC
   errno = __io2errno(_OSERR = IoErr());
-#else
-  _ug_set_errno(IoErr());
-#endif
 
  fail:
   if (lock != NULL)
     UnLock(lock);
 
   return -1;
-}
+} 

@@ -1,0 +1,212 @@
+# vmakefile.modules for Python 2.7.18 Modules directory using VBCC
+# Based on the original SMAKEFILE but adapted for VBCC toolchain
+
+# VBCC toolchain
+CC=vc
+VLINK=vlink
+MKDIR=MakeDir ALL
+CONFIG=+aos68k_posix
+CFLAGS=-c -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -I$(SRCDIR) -cpu=68020 -fpu=soft -stack-check
+
+# Source directory
+SRCDIR=Modules
+
+# Core modules for Amiga Python 2.7.18
+OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
+    arraymodule.o mathmodule.o timemodule.o \
+    binascii.o _codecsmodule.o cStringIO.o cPickle.o \
+    errnomodule.o operator.o _weakref.o _struct.o \
+    selectmodule.o zlibmodule.o \
+    amigamodule.o amigapathmodule.o socketmodule.o \
+	pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o syslog.o \
+    gcmodule.o \
+    _sre.o \
+    md5.o \
+    md5module.o \
+    cmathmodule.o \
+    shamodule.o \
+    Doslibmodule.o \
+    stropmodule.o \
+    posix_helpers.o \
+    _math.o
+
+# Convert to full paths
+OBJ=$(patsubst %,$(ODIR)/%,$(OBJECTS))
+
+# Default target - build zlib first, then compile all .c files
+all: zlib $(OBJ)
+
+$(ODIR)/%.o: $(SRCDIR)/%.c
+	@$(MKDIR) $(ODIR)
+	@echo "Compiling $< to $@"
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+	@echo "Compilation of $< completed"
+
+$(ODIR)/config.o: $(SRCDIR)/config.c
+	@$(MKDIR) $(ODIR)
+	@echo "Compiling config.c to config.o"
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+	@echo "Config compilation completed"
+
+$(ODIR)/getbuildinfo.o: $(SRCDIR)/getbuildinfo.c
+	@$(MKDIR) $(ODIR)
+	@echo "Compiling getbuildinfo.c to getbuildinfo.o"
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+	@echo "getbuildinfo compilation completed"
+
+$(ODIR)/getpath.o: $(SRCDIR)/getpath.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/arraymodule.o: $(SRCDIR)/arraymodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/mathmodule.o: $(SRCDIR)/mathmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/timemodule.o: $(SRCDIR)/timemodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/binascii.o: $(SRCDIR)/binascii.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_codecsmodule.o: $(SRCDIR)/_codecsmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/cStringIO.o: $(SRCDIR)/cStringIO.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/cPickle.o: $(SRCDIR)/cPickle.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/errnomodule.o: $(SRCDIR)/errnomodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/operator.o: $(SRCDIR)/operator.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_weakref.o: $(SRCDIR)/_weakref.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_struct.o: $(SRCDIR)/_struct.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/selectmodule.o: $(SRCDIR)/selectmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+# Build zlib library
+zlib:
+	@echo "Building zlib library..."
+	$(MAKE) -C $(SRCDIR)/zlib -f vmakefile
+	@echo "zlib library built"
+
+# Link all objects into a static library for modules
+# $(ODIR)/pythonmodules.a: $(OBJ) Modules/zlib/build-vbcc/libz.a
+#	@echo "Creating pythonmodules.a static library..."
+#	$(VLINK) -r -o $@ $(OBJ) Modules/zlib/build-vbcc/libz.a
+#	@echo "Python modules library created: $@"
+
+$(ODIR)/zlibmodule.o: $(SRCDIR)/zlibmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -I$(SRCDIR)/zlib -o $@ $<
+
+$(ODIR)/amigamodule.o: $(SRCDIR)/amiga/amigamodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $< -lamiga
+
+$(ODIR)/amigapathmodule.o: $(SRCDIR)/amiga/amigapathmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/socketmodule.o: $(SRCDIR)/socketmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $< -lamiga
+
+$(ODIR)/pwdmodule.o: $(SRCDIR)/pwdmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/grpmodule.o: $(SRCDIR)/grpmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/cryptmodule.o: $(SRCDIR)/cryptmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/syslogmodule.o: $(SRCDIR)/syslogmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $<
+
+$(ODIR)/syslog.o: $(SRCDIR)/syslog.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $<
+
+$(ODIR)/gcmodule.o: $(SRCDIR)/gcmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/environment.o: $(SRCDIR)/environment.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_sre.o: $(SRCDIR)/_sre.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/md5.o: $(SRCDIR)/md5.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/md5module.o: $(SRCDIR)/md5module.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/cmathmodule.o: $(SRCDIR)/cmathmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/shamodule.o: $(SRCDIR)/shamodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+# $(ODIR)/unicodedata.o: $(SRCDIR)/unicodedata.c
+#	@$(MKDIR) $(ODIR)
+#	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+# $(ODIR)/ARexxmodule.o: $(SRCDIR)/ARexxmodule.c
+#	@$(MKDIR) $(ODIR)
+#	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/Doslibmodule.o: $(SRCDIR)/Doslibmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/stropmodule.o: $(SRCDIR)/stropmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/posix_helpers.o: $(SRCDIR)/posix_helpers.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_math.o: $(SRCDIR)/_math.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+clean:
+	delete $(ODIR)/*.o
+
+.PHONY: clean zlib 

@@ -6,6 +6,10 @@
 #include <fenv.h>
 #endif
 
+/* Amiga constructor function declarations */
+extern int WBArgParse_constructor(void);
+extern int dosio_init_constructor(void);
+
 int
 main(int argc, char **argv)
 {
@@ -17,5 +21,12 @@ main(int argc, char **argv)
 #ifdef __FreeBSD__
 	fedisableexcept(FE_OVERFLOW);
 #endif
+
+	/* Call Amiga constructor functions before Python initialization */
+#ifdef _AMIGA
+	WBArgParse_constructor();
+	dosio_init_constructor();
+#endif
+
 	return Py_Main(argc, argv);
 }

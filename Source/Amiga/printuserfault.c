@@ -1,39 +1,9 @@
-RCS_ID_C="$Id: printuserfault.c,v 4.2 1994/09/29 23:09:02 jraja Exp $";
 /* 
- *      printuserfault.c - Print a usergroup error message (DOS)
+ *      printuserfault.c - Print a usergroup error message for Amiga
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
  */
-
-/****** net.lib/PrintUserFault ************************************************
-
-    NAME
-        PrintUserFault - socket error messages
-
-    SYNOPSIS
-        PrintUserFault(code, banner)
-        void PrintUserFault(LONG, const UBYTE *)
-
-    FUNCTION
-        The PrintUserFault() function finds the error message corresponding to
-        the code and writes it, followed by a newline, to the standard error
-        or Output() filehandle. If the argument string is non-NULL it is
-        preappended to the message string and separated from it by a colon and
-        space (`: '). If string is NULL only the error message string is
-        printed.
-
-    NOTES
-        The PrintUserFault() function used the DOS io functions.  It is
-        recommended to use PrintUserFault() when the standard C IO functions
-        are not otherwise in use.
-
-    SEE ALSO
-        strerror(), perror(), <netinclude:sys/errno.h>
-
-******************************************************************************
-*/
 
 #include <errno.h>
 
@@ -42,14 +12,13 @@ extern struct ExecBase *SysBase;
 
 #include <dos/dos.h>
 #include <dos/dosextens.h>
-
-#if __SASC
 #include <proto/dos.h>
 #include <proto/usergroup.h>
-#elif __GNUC__
-#include <inline/dos.h>
-#endif
 
+/*
+ * Print a detailed error message to the standard error output
+ * If banner is not NULL, it is printed before the error message, separated by a colon
+ */
 void PrintUserFault(LONG code, const UBYTE *banner)
 {
   struct Process *p = (struct Process *)SysBase->ThisTask;
@@ -59,8 +28,9 @@ void PrintUserFault(LONG code, const UBYTE *banner)
     FPuts(Stderr, (STRPTR)banner);
     FPuts(Stderr, ": ");
   }
+  
+  /* Use usergroup library's ug_StrError to get detailed error messages */
   FPuts(Stderr, (STRPTR)ug_StrError(code));
   FPuts(Stderr, "\n");
   Flush(Stderr);
-}
-
+} 

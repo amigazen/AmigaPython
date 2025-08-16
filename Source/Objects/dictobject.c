@@ -171,7 +171,7 @@ static size_t count_reuse = 0;
 static void
 show_alloc(void)
 {
-    fprintf(stderr, "Dict allocations: %" PY_FORMAT_SIZE_T "d\n",
+    fprintf(stderr, "Dict allocations: %" PY_FORMAT_SIZE_T "ld\n",
         count_alloc);
     fprintf(stderr, "Dict reuse through freelist: %" PY_FORMAT_SIZE_T
         "d\n", count_reuse);
@@ -188,7 +188,7 @@ static Py_ssize_t count_tracked = 0;
 static void
 show_track(void)
 {
-    fprintf(stderr, "Dicts created: %" PY_FORMAT_SIZE_T "d\n",
+    fprintf(stderr, "Dicts created: %" PY_FORMAT_SIZE_T "ld\n",
         count_tracked + count_untracked);
     fprintf(stderr, "Dicts tracked by the GC: %" PY_FORMAT_SIZE_T
         "d\n", count_tracked);

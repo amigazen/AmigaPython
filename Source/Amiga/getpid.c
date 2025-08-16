@@ -1,18 +1,19 @@
-RCS_ID_C="$Id: getpid.c,v 4.1 1994/09/29 23:09:02 jraja Exp $";
 /*
- *      getpid() - stub for the FindTask(NULL)
+ *      getpid.c - get process ID (stub for FindTask(NULL))
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
  */
 
 #include <sys/types.h>
 #include <exec/execbase.h>
 extern struct ExecBase *SysBase;
 
+/*
+ * Get the process ID - on Amiga this is the pointer to the current task
+ */
 pid_t
 getpid(void)
 {
   return (pid_t)SysBase->ThisTask;
-}
+} 

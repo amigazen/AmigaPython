@@ -1,0 +1,116 @@
+# vmakefile.amiga for Python 2.7.18 Amiga directory using VBCC
+# Based on the original SMAKEFILE but adapted for VBCC toolchain
+
+# VBCC toolchain
+CC=vc
+VASM=vasmm68k_mot
+VLINK=vlink
+MKDIR=MakeDir ALL
+CONFIG=+aos68k_posix
+CFLAGS=-c -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -stack-check
+
+# Source directory
+SRCDIR=Amiga
+
+# Amiga objects for different configurations - only truly Amiga-specific files
+# Note: POSIX functions are provided by vbcc PosixLib, so we exclude duplicated functions to avoid conflicts
+AMITCPOBJ= fmod.o \
+	rexxvars.o crc32.o wbargs.o printuserfault.o dosio_init.o \
+	strftime.o \
+	stackinit.o CheckStack.o envvars.o finite.o vbcc_runtime.o libcheck.o io2errno.o int64_ops.o
+
+#INET225OBJ = fmod.o \
+#	rexxvars.o crc32.o wbargs.o \
+#	strftime.o stackinit.o CheckStack.o
+
+OBJ = envvars.o fmod.o \
+	rexxvars.o crc32.o wbargs.o printuserfault.o strftime.o stackinit.o CheckStack.o finite.o vbcc_runtime.o libcheck.o io2errno.o int64_ops.o
+
+# Library name
+AMIGAPYTHONLIBNAM=amigapythonamitcp.lib
+
+# Convert to full paths
+AMITCPOBJ_FULL=$(patsubst %,$(ODIR)/%,$(AMITCPOBJ))
+OBJ_FULL=$(patsubst %,$(ODIR)/%,$(OBJ))
+
+# Default target - build the objects
+all: $(AMITCPOBJ_FULL)
+
+# Create the library using ar (commented out for now)
+# $(ODIR)/$(AMIGAPYTHONLIBNAM): $(AMITCPOBJ_FULL)
+#	@$(MKDIR) $(ODIR)
+#	-$(RM) >NIL: $@
+#	$(AR) r $@ $(AMITCPOBJ_FULL)
+
+# Generic rule for .c files
+$(ODIR)/%.o: $(SRCDIR)/%.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+# Special compilation rules
+$(ODIR)/stackinit.o: $(SRCDIR)/stackinit.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -D__DATA_FAR__ -o $@ $<
+
+$(ODIR)/crc32.o: $(SRCDIR)/crc32.asm
+	@$(MKDIR) $(ODIR)
+	$(VASM) -quiet -m68000 -Fhunk -linedebug -o $@ $<
+
+# Individual object rules for all files
+
+$(ODIR)/fmod.o: $(SRCDIR)/fmod.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/rexxvars.o: $(SRCDIR)/rexxvars.asm
+	@$(MKDIR) $(ODIR)
+	$(VASM) -quiet -m68000 -Fhunk -linedebug -o $@ $<
+
+$(ODIR)/wbargs.o: $(SRCDIR)/wbargs.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $< -lamiga
+
+$(ODIR)/printuserfault.o: $(SRCDIR)/printuserfault.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $< -lamiga
+
+$(ODIR)/dosio_init.o: $(SRCDIR)/dosio_init.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/strftime.o: $(SRCDIR)/strftime.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/CheckStack.o: $(SRCDIR)/CheckStack.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/envvars.o: $(SRCDIR)/envvars.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/finite.o: $(SRCDIR)/finite.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/vbcc_runtime.o: $(SRCDIR)/vbcc_runtime.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $< 
+
+$(ODIR)/libcheck.o: $(SRCDIR)/libcheck.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $<
+
+$(ODIR)/io2errno.o: $(SRCDIR)/io2errno.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/int64_ops.o: $(SRCDIR)/int64_ops.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+clean:
+	delete $(ODIR)/*.o $(ODIR)/$(AMIGAPYTHONLIBNAM)
+
+.PHONY: clean all 

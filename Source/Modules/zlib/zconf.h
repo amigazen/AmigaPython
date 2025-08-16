@@ -495,9 +495,21 @@ typedef uLong FAR uLongf;
 #endif
 
 #if !defined(SEEK_SET) && !defined(Z_SOLO)
-#  define SEEK_SET        0       /* Seek from beginning of file.  */
-#  define SEEK_CUR        1       /* Seek from current position.  */
-#  define SEEK_END        2       /* Set file pointer to EOF plus "offset" */
+#  ifdef _AMIGA
+#    ifdef __VBCC__
+#      define SEEK_SET    (-1)    /* Amiga/vbcc: Seek from beginning of file */
+#      define SEEK_CUR     0      /* Amiga/vbcc: Seek from current position */
+#      define SEEK_END     1      /* Amiga/vbcc: Set file pointer to EOF plus "offset" */
+#    else
+#      define SEEK_SET     0      /* Amiga/other: Seek from beginning of file */
+#      define SEEK_CUR     1      /* Amiga/other: Seek from current position */
+#      define SEEK_END     2      /* Amiga/other: Set file pointer to EOF plus "offset" */
+#    endif
+#  else
+#    define SEEK_SET        0       /* Seek from beginning of file.  */
+#    define SEEK_CUR        1       /* Seek from current position.  */
+#    define SEEK_END        2       /* Set file pointer to EOF plus "offset" */
+#  endif
 #endif
 
 #ifndef z_off_t

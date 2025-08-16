@@ -64,6 +64,76 @@ Used in:  PY_LONG_LONG
  * integral synonyms.  Only define the ones we actually need.
  */
 
+/* Custom long long implementation for AmigaOS using two longs */
+#ifdef _AMIGA
+#ifndef HAVE_LONG_LONG
+#define HAVE_LONG_LONG 1
+#endif
+
+/* Define amiga_int64_t as our custom long long type */
+/* For vbcc compatibility, use a simpler approach */
+typedef struct {
+    unsigned long high;
+    unsigned long low;
+} amiga_int64_t;
+
+typedef amiga_int64_t amiga_uint64_t;
+
+/* For AmigaOS, temporarily disable long long support */
+#ifndef PY_LONG_LONG
+#ifdef _AMIGA
+/* Temporarily use long instead of amiga_int64_t to avoid compilation errors */
+#define PY_LONG_LONG long
+#else
+#define PY_LONG_LONG long long
+#endif
+#endif
+
+/* For AmigaOS, we need to handle unsigned PY_LONG_LONG specially */
+#ifdef _AMIGA
+/* Temporarily use unsigned long instead of amiga_uint64_t */
+#define unsigned_PY_LONG_LONG unsigned long
+#else
+#define unsigned_PY_LONG_LONG unsigned PY_LONG_LONG
+#endif
+
+/* Helper macros for working with our custom long long */
+#define AMIGA_INT64_HIGH(x) ((x).high)
+#define AMIGA_INT64_LOW(x) ((x).low)
+#define AMIGA_MAKE_INT64(high, low) (amiga_make_int64((high), (low)))
+
+/* Helper macros for shifting operations */
+#define AMIGA_INT64_SHR(x, shift) amiga_int64_shr((x), (shift))
+#define AMIGA_INT64_SHL(x, shift) amiga_int64_shl((x), (shift))
+
+/* Basic arithmetic operations for amiga_int64_t using macros */
+#define AMIGA_INT64_ADD(a, b) amiga_int64_add((a), (b))
+#define AMIGA_INT64_SUB(a, b) amiga_int64_sub((a), (b))
+#define AMIGA_INT64_CMP(a, b) amiga_int64_cmp((a), (b))
+#define AMIGA_LONG_TO_INT64(val) amiga_long_to_int64((val))
+#define AMIGA_INT64_TO_LONG(val) amiga_int64_to_long((val))
+
+/* Function declarations for external use */
+amiga_int64_t amiga_int64_add(amiga_int64_t a, amiga_int64_t b);
+amiga_int64_t amiga_int64_sub(amiga_int64_t a, amiga_int64_t b);
+int amiga_int64_cmp(amiga_int64_t a, amiga_int64_t b);
+amiga_int64_t amiga_long_to_int64(long val);
+long amiga_int64_to_long(amiga_int64_t val);
+amiga_int64_t amiga_make_int64(unsigned long high, unsigned long low);
+amiga_int64_t amiga_int64_shr(amiga_int64_t val, int shift);
+amiga_int64_t amiga_int64_shl(amiga_int64_t val, int shift);
+
+/* Define limits for our custom long long */
+#define AMIGA_PY_LLONG_MAX AMIGA_MAKE_INT64(0x7FFFFFFF, 0xFFFFFFFF)
+#define AMIGA_PY_LLONG_MIN AMIGA_MAKE_INT64(0x80000000, 0x00000000)
+#define AMIGA_PY_ULLONG_MAX AMIGA_MAKE_INT64(0xFFFFFFFF, 0xFFFFFFFF)
+
+#ifndef SIZEOF_LONG_LONG
+#define SIZEOF_LONG_LONG 8
+#endif
+
+#endif /* _AMIGA */
+
 #ifdef HAVE_LONG_LONG
 #ifndef PY_LONG_LONG
 #define PY_LONG_LONG long long
@@ -179,12 +249,16 @@ typedef PY_LONG_LONG            Py_intptr_t;
  * sizeof(size_t).  C99 doesn't define such a thing directly (size_t is an
  * unsigned integral type).  See PEP 353 for details.
  */
+#ifdef __SASC
+typedef int Py_ssize_t;
+#else
 #ifdef HAVE_SSIZE_T
 typedef ssize_t         Py_ssize_t;
 #elif SIZEOF_VOID_P == SIZEOF_SIZE_T
 typedef Py_intptr_t     Py_ssize_t;
 #else
 #   error "Python needs a typedef for Py_ssize_t in pyport.h."
+#endif
 #endif
 
 /* Largest possible value of size_t.

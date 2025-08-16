@@ -1,0 +1,196 @@
+# vmakefile.objects for Python 2.7.18 Objects directory using VBCC
+# Based on the original SMAKEFILE but adapted for VBCC toolchain
+
+# VBCC toolchain
+CC=vc
+VLINK=vlink
+MKDIR=MakeDir ALL
+CONFIG=+aos68k_posix
+CFLAGS=-c -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -stack-check
+
+# Source directory
+SRCDIR=Objects
+
+# Core object files for Python 2.7.18
+OBJECTS = abstract.o fileobject.o floatobject.o bufferobject.o \
+    funcobject.o intobject.o listobject.o longobject.o \
+    dictobject.o methodobject.o moduleobject.o object.o \
+    rangeobject.o stringobject.o tupleobject.o typeobject.o \
+    classobject.o frameobject.o sliceobject.o complexobject.o cobject.o \
+	boolobject.o \
+	exceptions.o codeobject.o cellobject.o iterobject.o \
+	weakrefobject.o \
+	bytearrayobject.o bytes_methods.o capsule.o descrobject.o \
+	enumobject.o genobject.o memoryobject.o obmalloc.o \
+	setobject.o structseq.o
+
+# Convert to full paths
+OBJ=$(patsubst %,$(ODIR)/%,$(OBJECTS))
+
+# Default target - just compile all .c files
+all: $(OBJ)
+
+# Generic rule for .c files
+$(ODIR)/%.o: $(SRCDIR)/%.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+# Special rules for specific files
+$(ODIR)/abstract.o: $(SRCDIR)/abstract.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/bufferobject.o: $(SRCDIR)/bufferobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/boolobject.o: $(SRCDIR)/boolobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/classobject.o: $(SRCDIR)/classobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/cobject.o: $(SRCDIR)/cobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/complexobject.o: $(SRCDIR)/complexobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/dictobject.o: $(SRCDIR)/dictobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/exceptions.o: $(SRCDIR)/exceptions.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/fileobject.o: $(SRCDIR)/fileobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/floatobject.o: $(SRCDIR)/floatobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/frameobject.o: $(SRCDIR)/frameobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/funcobject.o: $(SRCDIR)/funcobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/intobject.o: $(SRCDIR)/intobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/iterobject.o: $(SRCDIR)/iterobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/listobject.o: $(SRCDIR)/listobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/longobject.o: $(SRCDIR)/longobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/methodobject.o: $(SRCDIR)/methodobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/moduleobject.o: $(SRCDIR)/moduleobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/object.o: $(SRCDIR)/object.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/rangeobject.o: $(SRCDIR)/rangeobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/sliceobject.o: $(SRCDIR)/sliceobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/stringobject.o: $(SRCDIR)/stringobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/tupleobject.o: $(SRCDIR)/tupleobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/typeobject.o: $(SRCDIR)/typeobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+
+
+$(ODIR)/weakrefobject.o: $(SRCDIR)/weakrefobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/codeobject.o: $(SRCDIR)/codeobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/cellobject.o: $(SRCDIR)/cellobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/bytearrayobject.o: $(SRCDIR)/bytearrayobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/bytes_methods.o: $(SRCDIR)/bytes_methods.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/capsule.o: $(SRCDIR)/capsule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/descrobject.o: $(SRCDIR)/descrobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/enumobject.o: $(SRCDIR)/enumobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/genobject.o: $(SRCDIR)/genobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/memoryobject.o: $(SRCDIR)/memoryobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/obmalloc.o: $(SRCDIR)/obmalloc.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/setobject.o: $(SRCDIR)/setobject.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/structseq.o: $(SRCDIR)/structseq.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/int64_ops.o: $(SRCDIR)/int64_ops.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+clean:
+	delete $(ODIR)/*.o
+
+.PHONY: clean 

@@ -1,0 +1,46 @@
+# vmakefile for zlib library using VBCC
+# Based on the original Makefile but adapted for VBCC toolchain
+
+# VBCC toolchain
+CC=vc
+VLINK=vlink
+MKDIR=MakeDir ALL
+CONFIG=+aos68k_posix
+CFLAGS=-c -O2 -D_AMIGA -DHAVE_CONFIG_H -I. -stack-check
+
+# Source directory
+SRCDIR=.
+
+# zlib source files
+ZLIB_SOURCES = adler32.c compress.c crc32.c deflate.c gzclose.c gzlib.c \
+               gzread.c gzwrite.c infback.c inffast.c inflate.c \
+               inftrees.c trees.c uncompr.c zutil.c
+
+# Convert to object files
+ZLIB_OBJECTS = $(ZLIB_SOURCES:.c=.o)
+
+# Output directory (unified with main build)
+ODIR=//build-vbcc/Modules/zlib
+
+# Default target
+all: $(ODIR)/libz.a
+
+# Create static library
+$(ODIR)/libz.a: $(addprefix $(ODIR)/,$(ZLIB_OBJECTS))
+	@echo "Creating zlib static library..."
+	$(VLINK) -r -o $@ $^
+	@echo "zlib library created: $@"
+
+# Compile zlib source files
+$(ODIR)/%.o: $(SRCDIR)/%.c
+	@$(MKDIR) $(ODIR)
+	@echo "Compiling $< to $@"
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+	@echo "Compilation of $< completed"
+
+# Clean target
+clean:
+	delete $(ODIR)/*.o
+	delete $(ODIR)/libz.a
+
+.PHONY: clean all 

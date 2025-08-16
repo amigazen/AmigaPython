@@ -1,10 +1,10 @@
-RCS_ID_C="$Id: stat.c,v 4.2 1994/09/29 23:09:02 jraja Exp $";
 /*
- *      stat.c - stat() for the netlib
+ *      stat.c - stat() for Amiga
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
+ *
+ *      DEPRECATED: This file is deprecated in Amiga Python 2.7.18 in favour of vbcc PosixLib
  */
 
 #include <sys/types.h>
@@ -16,10 +16,12 @@ RCS_ID_C="$Id: stat.c,v 4.2 1994/09/29 23:09:02 jraja Exp $";
 
 /* DOS 3.0 and MuFS extensions to file info block */
 #include "fibex.h"
-#include "netlib.h"
 #include <proto/dos.h>
 #include <proto/utility.h>
 
+/*
+ * Get file status information
+ */
 int stat(const char *name, struct stat *st)
 {
   short found;
@@ -33,7 +35,7 @@ int stat(const char *name, struct stat *st)
 
   lock = Lock((STRPTR)name, SHARED_LOCK);
 
-  if (found = lock != NULL) {
+  if ((found = lock != NULL)) {
     if (Examine(lock, __dostat_fib)) {
       __dostat(__dostat_fib, st);
       st->st_dev = (dev_t)((struct FileLock *)BADDR(lock))->fl_Task;
@@ -47,7 +49,7 @@ int stat(const char *name, struct stat *st)
     if (errcode == ERROR_OBJECT_IN_USE) {
       rc = lstat(name, st);
     } else {
-      set_errno(errcode);
+      errno = __io2errno(errcode);
     }
   }
 
@@ -57,6 +59,9 @@ int stat(const char *name, struct stat *st)
   return rc;
 }
 
+/*
+ * Get symbolic link status information
+ */
 int lstat(const char *name, struct stat *st)
 {
   /* Cannot lock - do examine via Examine()/ExNext() */
@@ -75,26 +80,26 @@ int lstat(const char *name, struct stat *st)
     char *pp = PathPart(strcpy(cname, name));
     *pp = '\0';
 
-    if (lock = Lock(cname, SHARED_LOCK)) {
+    if ((lock = Lock(cname, SHARED_LOCK))) {
       pp = FilePart((STRPTR)name);
       
       if (Examine(lock, __dostat_fib)) {
-	while (ExNext(lock, __dostat_fib)) {
-	  if (Stricmp(pp, __dostat_fib->fib_FileName) == 0) {
-	    __dostat(__dostat_fib, st);
-	    st->st_dev = (dev_t)((struct FileLock *)BADDR(lock))->fl_Task;
-	    rc = 0;
-	    break;
-	  }
-	}
+        while (ExNext(lock, __dostat_fib)) {
+          if (Stricmp(pp, __dostat_fib->fib_FileName) == 0) {
+            __dostat(__dostat_fib, st);
+            st->st_dev = (dev_t)((struct FileLock *)BADDR(lock))->fl_Task;
+            rc = 0;
+            break;
+          }
+        }
       } 
       if (rc != 0)
-	errno = ENOENT;
+        errno = ENOENT;
     } else {
-      set_errno(IoErr());
+      errno = __io2errno(IoErr());
     }
 
-    if(lock) UnLock(lock);		/* I.J. 13-Apr-96 */
+    if(lock) UnLock(lock);
 
     free(cname);
   } else {
@@ -102,5 +107,4 @@ int lstat(const char *name, struct stat *st)
   }
 
   return rc;
-}
-
+} 

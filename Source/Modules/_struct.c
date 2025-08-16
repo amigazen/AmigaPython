@@ -1384,10 +1384,16 @@ s_init(PyObject *self, PyObject *args, PyObject *kwds)
         Py_XSETREF(soself->s_format, o_format);
     }
     else if (PyUnicode_Check(o_format)) {
+#ifdef _AMIGA
+        /* VBCC doesn't handle PyUnicode_AsEncodedString well on Amiga */
+        PyErr_SetString(PyExc_TypeError, "Unicode format strings not supported on Amiga");
+        return -1;
+#else
         PyObject *str = PyUnicode_AsEncodedString(o_format, "ascii", NULL);
         if (str == NULL)
             return -1;
         Py_XSETREF(soself->s_format, str);
+#endif
     }
     else {
         PyErr_Format(PyExc_TypeError,

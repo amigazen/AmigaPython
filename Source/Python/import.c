@@ -128,9 +128,80 @@ static int isdir(char *path) {
 }
 #else
 #ifdef HAVE_STAT
+#ifdef _AMIGA
+/* Convert Amiga path to POSIX path for stat() calls */
+static void
+amiga_to_posix_path(char *posix_path, const char *amiga_path)
+{
+    char *colon;
+    char *slash;
+    
+    /* Handle volume:folder/file */
+    colon = strchr(amiga_path, ':');
+    if (colon) {
+        /* Get the folder/file part after the colon */
+        slash = colon + 1;
+        
+        /* Skip leading slashes */
+        while (*slash == '/') {
+            slash++;
+        }
+        
+        /* Check if this is the current working directory volume */
+        if (strncmp(amiga_path, "Python:", 7) == 0) {
+            /* We're already in Python: directory, use relative path */
+            if (*slash) {
+                strcpy(posix_path, slash);
+            } else {
+                strcpy(posix_path, ".");
+            }
+        } else {
+            /* For other volumes, use absolute path */
+            posix_path[0] = '/';
+            strncpy(posix_path + 1, amiga_path, colon - amiga_path);
+            posix_path[colon - amiga_path + 1] = '\0';
+            
+            /* Add the folder/file part */
+            if (*slash) {
+                strcat(posix_path, "/");
+                strcat(posix_path, slash);
+            }
+        }
+    } else {
+        /* Handle relative paths */
+        if (amiga_path[0] == '/') {
+            /* /path/file -> ../path/file */
+            posix_path[0] = '.';
+            posix_path[1] = '.';
+            posix_path[2] = '/';
+            strcpy(posix_path + 3, amiga_path + 1);
+        } else {
+            /* path/file -> ./path/file */
+            posix_path[0] = '.';
+            posix_path[1] = '/';
+            strcpy(posix_path + 2, amiga_path);
+        }
+    }
+    
+    /* Debug logging for path conversion */
+    fprintf(stderr, "DEBUG: amiga_to_posix_path: '%s' -> '%s'\n", amiga_path, posix_path);
+}
+#endif
+
 static int isdir(char *path) {
     struct stat statbuf;
-    return stat(path, &statbuf) == 0 && S_ISDIR(statbuf.st_mode);
+    int result;
+#ifdef _AMIGA
+    char posix_path[MAXPATHLEN];
+    amiga_to_posix_path(posix_path, path);
+    result = stat(posix_path, &statbuf);
+    fprintf(stderr, "DEBUG: isdir stat('%s') -> %d (errno=%d)\n", posix_path, result, errno);
+    return result == 0 && S_ISDIR(statbuf.st_mode);
+#else
+    result = stat(path, &statbuf);
+    fprintf(stderr, "DEBUG: isdir stat('%s') -> %d (errno=%d)\n", path, result, errno);
+    return result == 0 && S_ISDIR(statbuf.st_mode);
+#endif
 }
 #else
 #ifdef RISCOS
@@ -812,9 +883,13 @@ check_compiled_module(char *pathname, time_t mtime, char *cpathname)
     long magic;
     long pyc_mtime;
 
+    fprintf(stderr, "DEBUG: check_compiled_module fopen('%s', 'rb') -> ", cpathname);
     fp = fopen(cpathname, "rb");
-    if (fp == NULL)
+    if (fp == NULL) {
+        fprintf(stderr, "NULL (errno=%d)\n", errno);
         return NULL;
+    }
+    fprintf(stderr, "SUCCESS\n");
     magic = PyMarshal_ReadLongFromFile(fp);
     if (magic != pyc_magic) {
         if (Py_VerboseFlag)
@@ -937,7 +1012,10 @@ open_exclusive(char *filename, mode_t mode)
     return fdopen(fd, "wb");
 #else
     /* Best we can do -- on Windows this can't happen anyway */
-    return fopen(filename, "wb");
+    FILE *fp = fopen(filename, "wb");
+    fprintf(stderr, "DEBUG: open_exclusive fopen('%s', 'wb') -> %s (errno=%d)\n", 
+            filename, fp ? "SUCCESS" : "NULL", errno);
+    return fp;
 #endif
 }
 
@@ -1083,12 +1161,31 @@ load_source_module(char *name, char *pathname, FILE *fp)
     PyObject *m;
     time_t mtime;
 
+    fprintf(stderr, "DEBUG: load_source_module: loading '%s'\n", pathname);
+#ifdef _AMIGA
+    {
+        char posix_pathname[MAXPATHLEN];
+        amiga_to_posix_path(posix_pathname, pathname);
+        fprintf(stderr, "DEBUG: load_source_module: trying stat() on POSIX path '%s'\n", posix_pathname);
+        if (stat(posix_pathname, &st) != 0) {
+            fprintf(stderr, "DEBUG: load_source_module: stat() failed, errno=%d\n", errno);
+            PyErr_Format(PyExc_RuntimeError,
+                         "unable to get file status from '%s' (POSIX: '%s')",
+                         pathname, posix_pathname);
+            return NULL;
+        }
+        fprintf(stderr, "DEBUG: load_source_module: stat() succeeded\n");
+    }
+#else
     if (fstat(fileno(fp), &st) != 0) {
+        fprintf(stderr, "DEBUG: load_source_module: fstat() failed, errno=%d\n", errno);
         PyErr_Format(PyExc_RuntimeError,
                      "unable to get file status from '%s'",
                      pathname);
         return NULL;
     }
+    fprintf(stderr, "DEBUG: load_source_module: fstat() succeeded\n");
+#endif
 
 #ifdef MS_WINDOWS
     mtime = win32_mtime(fp, pathname);
@@ -1346,6 +1443,9 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
     static struct filedescr fd_builtin = {"", "", C_BUILTIN};
     static struct filedescr fd_package = {"", "", PKG_DIRECTORY};
     char *name;
+#ifdef _AMIGA
+    char posix_path[MAXPATHLEN];
+#endif
 #if defined(PYOS_OS2)
     size_t saved_len;
     size_t saved_namelen;
@@ -1597,7 +1697,18 @@ find_module(char *fullname, char *subname, PyObject *path, char *buf,
             filemode = fdp->mode;
             if (filemode[0] == 'U')
                 filemode = "r" PY_STDIOTEXTMODE;
+#ifdef _AMIGA
+            amiga_to_posix_path(posix_path, buf);
+            fprintf(stderr, "[DEBUG] import: Converting '%s' to '%s'\n", buf, posix_path);
+            fp = fopen(posix_path, filemode);
+            if (fp == NULL) {
+                fprintf(stderr, "[DEBUG] import: fopen() failed for '%s', errno=%d\n", posix_path, errno);
+            } else {
+                fprintf(stderr, "[DEBUG] import: fopen() succeeded for '%s'\n", posix_path);
+            }
+#else
             fp = fopen(buf, filemode);
+#endif
             if (fp != NULL) {
                 if (case_ok(buf, len, namelen, name))
                     break;
@@ -1765,7 +1876,13 @@ case_ok(char *buf, Py_ssize_t len, Py_ssize_t namelen, char *name)
         dirname[dirlen] = '\0';
     }
     /* Open the directory and search the entries for an exact match. */
+#ifdef _AMIGA
+    char posix_dirname[MAXPATHLEN + 1];
+    amiga_to_posix_path(posix_dirname, dirname);
+    dirp = opendir(posix_dirname);
+#else
     dirp = opendir(dirname);
+#endif
     if (dirp) {
         char *nameWithExt = buf + len - namelen;
         while ((dp = readdir(dirp)) != NULL) {
@@ -1847,6 +1964,9 @@ find_init_module(char *buf)
     size_t i = save_len;
     char *pname;  /* pointer to start of __init__ */
     struct stat statbuf;
+#ifdef _AMIGA
+    char posix_path[MAXPATHLEN];
+#endif
 
 /*      For calling case_ok(buf, len, namelen, name):
  *      /a/b/c/d/e/f/g/h/i/j/k/some_long_module_name.py\0
@@ -1861,7 +1981,16 @@ find_init_module(char *buf)
     buf[i++] = SEP;
     pname = buf + i;
     strcpy(pname, "__init__.py");
+#ifdef _AMIGA
+    amiga_to_posix_path(posix_path, buf);
+    fprintf(stderr, "DEBUG: find_init_module stat('%s') -> ", posix_path);
+    if (stat(posix_path, &statbuf) == 0) {
+        fprintf(stderr, "SUCCESS\n");
+#else
+    fprintf(stderr, "DEBUG: find_init_module stat('%s') -> ", buf);
     if (stat(buf, &statbuf) == 0) {
+        fprintf(stderr, "SUCCESS\n");
+#endif
         if (case_ok(buf,
                     save_len + 9,               /* len("/__init__") */
                 8,                              /* len("__init__") */
@@ -1872,7 +2001,16 @@ find_init_module(char *buf)
     }
     i += strlen(pname);
     strcpy(buf+i, Py_OptimizeFlag ? "o" : "c");
+#ifdef _AMIGA
+    amiga_to_posix_path(posix_path, buf);
+    fprintf(stderr, "DEBUG: find_init_module stat('%s') -> ", posix_path);
+    if (stat(posix_path, &statbuf) == 0) {
+        fprintf(stderr, "SUCCESS\n");
+#else
+    fprintf(stderr, "DEBUG: find_init_module stat('%s') -> ", buf);
     if (stat(buf, &statbuf) == 0) {
+        fprintf(stderr, "SUCCESS\n");
+#endif
         if (case_ok(buf,
                     save_len + 9,               /* len("/__init__") */
                 8,                              /* len("__init__") */
@@ -3111,9 +3249,14 @@ get_file(char *pathname, PyObject *fob, char *mode)
     if (fob == NULL) {
         if (mode[0] == 'U')
             mode = "r" PY_STDIOTEXTMODE;
+        fprintf(stderr, "DEBUG: get_file fopen('%s', '%s') -> ", pathname, mode);
         fp = fopen(pathname, mode);
-        if (fp == NULL)
+        if (fp == NULL) {
+            fprintf(stderr, "NULL (errno=%d)\n", errno);
             PyErr_SetFromErrno(PyExc_IOError);
+        } else {
+            fprintf(stderr, "SUCCESS\n");
+        }
     }
     else {
         fp = PyFile_AsFile(fob);

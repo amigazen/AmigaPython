@@ -1,264 +1,125 @@
-RCS_ID_C="$Id: timerinit.c,v 4.3 1994/10/04 07:43:47 jraja Exp $";
-/*
- *      timerinit.c - SAS C auto initialization functions for timer device
+/***********************************************************************
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
- */
+ * Timer init and timer related functions for Amiga. Timer is important
+ * for Python's time module and other time-related functions.
+ *
+ * Based on the original Amiga port by Irmen de Jong.
+ * Updated for Python 2.7.18.
+ *
+ ***********************************************************************/
 
-/****** net.lib/autoinit_timer.device *****************************************
-
-    NAME
-        timerinit - SAS C Autoinitialization Functions for timer.device
-
-    SYNOPSIS
-        #include <time.h>
-    
-        int daylight;
-        long timezone;
-        char *tzname[2];
-
-        void tzset(void);
-
-        #include <sys/time.h>
-
-        struct Device *TimerBase;
-
-        LONG _STI_200_openTimer(void);
-        void _STD_200_closeTimer(void);
-        
-    FUNCTION
-        These functions open and close the timer.device at the startup and
-        exit of the program, respectively. For a program to use these
-        functions, it must be linked with netlib:net.lib.
-
-        The opened device base is stored in the TimerBase global variable.
-
-        If the device can be opened, the _STIopenTimer() sets up the time zone
-        information, which is used by the gettimeofday() function and the time
-        conversion routines of the C-library.
-
-    NOTES
-        The time zone information is got from the environment variable named
-        TZ. The format for this variable is:
-
-            zzznnnddd
-
-        where zzz is three letter identifier for the time zone (for example
-        GMT), and the nnn is hours west from Greenwich on range [-23,24]
-        (negative values are to east).  The last field is the abbreviation for
-        the local daylight saving time zone (which is not interpreted by this
-        version).
-
-        If the TZ environment variable cannot be found, Greenwich Mean Time
-        (GMT) is used instead.
-
-        The autoinitialization and autotermination functions are features
-        specific to the SAS C6.  However, these functions can be used with
-        other (ANSI) C compilers, too.  Example follows:
-
-        \* at start of main() *\
-
-        atexit(_STD_200_closeTimer);
-        _STI_200_openTimer();
-
-	The tzset() does nothing. All the necessary initialization is done at
-        the autoinit function.
-
-    BUGS
-        TZ "hours west from GMT" should be interpreted as float.
-
-        The same autoinitialization won't work for both SAS C 6.3 and SAS C
-        6.50 or latter.  Only way to terminate an initialization function is
-        by exit() call with SAS C 6.3 binary.  If an autoinitialization
-        function is terminated by exit() call with SAS C 6.50 binary, the
-        autotermination functions won't be called.  Due this braindamage
-        these compilers require separate net.lib libraries.
-
-    SEE ALSO
-        net.lib/gettimeofday(),
-        SAS/C 6 User's Guide p. 145 for details of autoinitialization and
-        autotermination functions.
-*****************************************************************************
-*
-*/
-
-#include <exec/types.h>
-#include <exec/devices.h>
-#include <dos/dos.h>
-#include <devices/timer.h>
+#include <proto/timer.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <devices/timer.h>
+#include <exec/types.h>
 #include <time.h>
 
-#include "config.h"
+/* Keep track of timer state */
+static struct MsgPort *TimerMP = NULL;
+static struct timerequest *TimerIO = NULL;
+static int timer_open = 0;
 
-#include <sys/time.h>
-
-#include <constructor.h>
-
-/* SAS C 6.50 kludge */
-#if __VERSION__ > 6 || __REVISION__ >= 50
-#define exit(x) return(x)
-#endif
-
-struct Device *TimerBase = 0L;
-static void *unit;
-
-/*
- * Time zone support for the gettimeofday. Zeroes default to the GMT
- * without daylight saving.
- */
-struct timezone __time_zone = {0,0};
-
-/*
- * Seconds to to the system time (seconds from 00:00 1.1.1978) 
- * to the GMT (seconds from 00:00 1.1.1970).
- * _STIopenTimer() adds the local time seconds west from GMT to this
- * value, so the local time gets converted to the GMT.
- */
-long __local_to_GMT = ((8L*365 + 8/4)*24*60*60);
-
-int  __daylight = 0;
-long __timezone = 0;
-char *__tzname[2] = { 0 };
-char *_TZ = NULL;
-
-char __zone_string[12] = "GMT0";
-
-/* 
- * Locale information is included here, since the 2.1 includes may be hard 
- * to find.
- */
-
-/* This structure must only be allocated by locale.library and is READ-ONLY! */
-struct Locale
+/* Open the timer device */
+int init_timer(void)
 {
-    STRPTR	loc_LocaleName;	  /* locale's name		 */
-    STRPTR	loc_LanguageName;	  /* language of this locale	 */
-    STRPTR	loc_PrefLanguages[10];	  /* preferred languages	 */
-    ULONG	loc_Flags;		  /* always 0 for now		 */
+    if (timer_open) 
+        return 1;  /* Already initialized */
 
-    ULONG	loc_CodeSet;		  /* always 0 for now		 */
-    ULONG	loc_CountryCode;	  /* user's country code	 */
-    ULONG	loc_TelephoneCode;	  /* country's telephone code	 */
-    LONG	loc_GMTOffset;		  /* minutes from GMT		 */
+    /* Create the message port */
+    TimerMP = CreateMsgPort();
+    if (!TimerMP)
+        return 0;
 
-/* deleted the rest to save space */
-};
-
-void CloseLocale( struct Locale *locale );
-struct Locale *OpenLocale( STRPTR name );
-
-#pragma libcall LocaleBase CloseLocale 2A 801
-#pragma libcall LocaleBase OpenLocale 9C 801
-
-//LONG __stdargs
-//_STI_200_openTimer(void)
-CONSTRUCTOR_P(openTimer,200)
-{
-  struct timerequest dummyTimer = { 0 };
-
-  if (!TimerBase && !OpenDevice("timer.device", UNIT_VBLANK, 
-				(struct IORequest *)&dummyTimer, 0L)) {
-    TimerBase = dummyTimer.tr_node.io_Device;
-    unit = dummyTimer.tr_node.io_Unit;
-    if (TimerBase->dd_Library.lib_Version >= 36) {
-      /*
-       * Initialize time zone information for the gettimeofday()
-       * First try to open locale (2.1 and up), and if that fails,
-       * try to read environment variable TZ.
-       */
-      void *LocaleBase;
-      struct Locale *thisLocale = NULL;
-      short dstoff = 0;
-
-      if ((LocaleBase = OpenLibrary("locale.library", 38)) != NULL) {
-	if ((thisLocale = OpenLocale(NULL)) != NULL) {
-	  /*
-	   * Update time zone minutes west from GMT.
-	   */
-	  strcpy(__zone_string,""); /* unknown timezone name */
-	  __time_zone.tz_minuteswest = thisLocale->loc_GMTOffset;
-	  CloseLocale(thisLocale);
-	}
-	CloseLibrary(LocaleBase);
-      }
-      if (!thisLocale) { /* if locale information was not available */
-	short len, i;
-	long value;
-	BPTR file = Open("ENV:TZ", MODE_OLDFILE);
-	if (file) {
-	  len = Read(file, __zone_string, sizeof(__zone_string) - 1);
-	  if (len > 3) {
-	    /*
-	     * make sure the string is 0 terminated and does not have the
-	     * newline at the end
-	     */
-	    for (i = 0; i < len; i++)
-	      if (__zone_string[i] < ' ')
-		break;
-	    __zone_string[i] = '\0';
-
-	    /* should interpret floats as well! */
-	    if ((dstoff = StrToLong(__zone_string+3, &value)) > 0) {
-	      /*
-	       * Update time zone minutes west from GMT.
-	       */
-	      __time_zone.tz_minuteswest = (short)value * (short)60;
-	      /*
-	       * Set the offset to the possible DST zone name
-	       */
-	      dstoff += 3;
-	    }
-	  }
-	  Close(file);
-	}
-      }
-
-      /*
-       * Update local time seconds to GMT translation
-       */
-      __timezone = (short)__time_zone.tz_minuteswest * (short)60;
-      __local_to_GMT += __timezone;
-
-      /*
-       * tzset() stuff
-       */
-      if (dstoff > 3) {
-	__daylight = 1;
-      }
-      else
-	dstoff = 3;
-
-      __zone_string[3] = '\0'; /* terminate time zone name */
-      __tzname[0] = __zone_string;
-      __tzname[1] = __zone_string + dstoff;
-
-      return 0;
+    /* Create the timerequest */
+    TimerIO = (struct timerequest *)CreateIORequest(TimerMP, sizeof(struct timerequest));
+    if (!TimerIO) {
+        DeleteMsgPort(TimerMP);
+        TimerMP = NULL;
+        return 0;
     }
-  }
-  exit(20);
+
+    /* Open the timer device */
+    if (OpenDevice(TIMERNAME, UNIT_MICROHZ, (struct IORequest *)TimerIO, 0) != 0) {
+        DeleteIORequest((struct IORequest *)TimerIO);
+        TimerIO = NULL;
+        DeleteMsgPort(TimerMP);
+        TimerMP = NULL;
+        return 0;
+    }
+
+    timer_open = 1;
+    return 1;
 }
 
-//void __stdargs
-//_STD_200_closeTimer(void)
-DESTRUCTOR_P(closeTimer,200)
+/* Close the timer device */
+void done_timer(void)
 {
-  struct timerequest dummyTimer = { 0 };
-  if (!TimerBase)
-    return;
+    if (!timer_open)
+        return;
 
-  dummyTimer.tr_node.io_Device = TimerBase;
-  dummyTimer.tr_node.io_Unit = unit;
-  CloseDevice((struct IORequest*)&dummyTimer);
+    CloseDevice((struct IORequest *)TimerIO);
+    DeleteIORequest((struct IORequest *)TimerIO);
+    DeleteMsgPort(TimerMP);
+
+    TimerIO = NULL;
+    TimerMP = NULL;
+    timer_open = 0;
 }
 
-void
-tzset(void)
+/* Get current system time in seconds and microseconds */
+int gettimeofday(struct timeval *tp, void *tzp)
 {
+    if (!timer_open && !init_timer())
+        return -1;
+
+    /* Get the current time */
+    TimerIO->tr_node.io_Command = TR_GETSYSTIME;
+    DoIO((struct IORequest *)TimerIO);
+    
+    tp->tv_secs = TimerIO->tr_time.tv_secs;
+    tp->tv_micro = TimerIO->tr_time.tv_micro;
+
+    /* Ignore timezone information */
+    if (tzp) {
+        struct timezone *tz = (struct timezone *)tzp;
+        tz->tz_minuteswest = 0;
+        tz->tz_dsttime = 0;
+    }
+
+    return 0;
 }
+
+/* Sleep for a specified number of seconds */
+int sleep(unsigned int seconds)
+{
+    if (!timer_open && !init_timer())
+        return -1;
+
+    /* Set up delay time */
+    TimerIO->tr_node.io_Command = TR_ADDREQUEST;
+    TimerIO->tr_time.tv_secs = seconds;
+    TimerIO->tr_time.tv_micro = 0;
+
+    /* Wait for the timer to complete */
+    DoIO((struct IORequest *)TimerIO);
+
+    return 0;
+}
+
+/* Sleep for a specified number of microseconds */
+int usleep(unsigned long microseconds)
+{
+    if (!timer_open && !init_timer())
+        return -1;
+
+    /* Set up delay time */
+    TimerIO->tr_node.io_Command = TR_ADDREQUEST;
+    TimerIO->tr_time.tv_secs = microseconds / 1000000;
+    TimerIO->tr_time.tv_micro = microseconds % 1000000;
+
+    /* Wait for the timer to complete */
+    DoIO((struct IORequest *)TimerIO);
+
+    return 0;
+} 

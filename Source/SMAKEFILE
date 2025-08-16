@@ -1,55 +1,40 @@
-
 #
-#	Toplevel SMakefile for AmigaPython.
+#	Toplevel SMakefile for AmigaPython 2.7.18
 #
-#	Made by Irmen de Jong, 10 nov. 1995.
-#		updated: 25 march 1996 for use with AmiTCP
-#		updated: 7 may 1996, now uses 4 intermediate link libs 
-#		updated: 27 aug 1996, AMITCP and AMITCP_NET defines
-#		updated: 8 dec 1996, for Python 1.4
-#		updated: 12 jan 1998, for Python 1.5
-#			  (partitioned into 5 parts)
-#		updated: 25 dec 1998, added support for I-Net 225
-#		updated: 10 sep 2000, Python 1.6
-#		updated: 23 okt 2000, Python 2.0
-#
-#	
-#
-#	THIS IS THE MAKEFILE FOR AMITCP !!!!
-#
+#	Based on Irmen de Jong's Python port
+#	Updated for Python 2.7.18
 #
 
-
-# ye old progname:
-PROGRAM = Python20
-
+# Program name
+PROGRAM = Python27
 
 all: $(PROGRAM)
-
 
 #
 # define to use mempools library
 # (use mempools39 to link with V39+ only pools lib => shorter & faster)
 #
-MEMPOOLSLIB=LIB:mempoolsnb.lib
-STARTUP=LIB:c_mempools.o
+#MEMPOOLSLIB=LIB:mempools39nb.lib
+#STARTUP=LIB:c_mempools.o
+
+# make sure to include the appropriate math library here
+# For VBCC with PosixLib, we need the IEEE math library
+MLIB=LIB:scmieee.lib
 
 #
 # define if NOT using mempools library
 #
-#MEMPOOLSLIB=
-#STARTUP=LIB:c.o
+MEMPOOLSLIB=
+STARTUP=LIB:c.o
 #
 
 #
 # AMIGA EXTENSIONS defines
-# AmiTCP uses 'amigapythonamitcp.lib'
-# I-Net225 uses 'amigapythoninet225.lib'
-# Not using one of them? Choose 'amigapython.lib'
+# bsdsocket.library networking uses 'amigapythonamitcp.lib'
+# Not using networking? Choose 'amigapython.lib'
 #
-## AMIGAPYTHONLIBNAM=amigapython.lib
 AMIGAPYTHONLIBNAM=amigapythonamitcp.lib
-## AMIGAPYTHONLIBNAM=amigapythoninet225.lib
+## AMIGAPYTHONLIBNAM=amigapython.lib
 AMIGAPYTHONLIB=Amiga/$(AMIGAPYTHONLIBNAM)
 
 #
@@ -60,47 +45,29 @@ NEWMODULES =
 
 #
 # Network Protocol Stack link library
-# (AmiTCP needs nothing, I-Net225 needs INET:lib/unixS.lib)
 #
 TCPSTACKLIB=
-## TCPSTACKLIB=INET:lib/unixS.lib
-
-#
-# Expat XML parser lib
-#
-EXPATLIB = expat/lib/expat.lib
 
 #
 # Link library configuration. Change to reflect correct math options etc.
 #
-CLIBS = $(AMIGAPYTHONLIB) $(MEMPOOLSLIB) $(TCPSTACKLIB) LIB:scm881nb.lib LIB:scnb.lib
+CLIBS = $(AMIGAPYTHONLIB) $(MEMPOOLSLIB) $(TCPSTACKLIB) $(MLIB) LIB:scnb.lib LIB:z.lib
 
 # Set link options to thy likes.
-# (compiler options can be changed using scopts)
+# (compiler options can be changed using SCOPTIONS)
 LINKOPTS = SC BATCH NOICONS
 
-LIBS = Modules/Modules.lib Parser/Parser.lib Python/Python.lib Objects/Objects.lib Expat/lib/expat.lib $(CLIBS)
+LIBS = Modules/Modules.lib Parser/Parser.lib Python/Python.lib Objects/Objects.lib $(CLIBS)
 
-OBJECTS=Modules/python.o Modules/main.o $(NEWMODULES)
-
-Python.GST: amiga/make_gst.c Include/Python.h Include/config.h Include/protos.h SCOPTIONS
-	-delete >NIL: Python.GST
-	-GST >NIL: Python.GST unload
-	-SC amiga/make_gst.c MKGST Python.GST NOOBJNAME DEFINE=PROTO_TIMER_H
+OBJECTS = Modules/python.o Modules/main.o $(NEWMODULES)
 
 newbuild:
 	@eval `type buildno` + 1 >buildno1
 	-@delete >NIL: buildno
 	-@rename buildno1 buildno
 	@echo "Build number is now `type buildno`"
-		
-#$(PROGRAM): Python.GST $(OBJECTS) $(LIBS) buildno
-#	@echo "Build number is `type buildno` (use 'make newbuild' to increase)"
-#	@SC Modules/getbuildinfo.c DEFINE=BUILD=`type buildno`
-#	phxlnk FROM $(STARTUP) @objects.txt TO $(PROGRAM) $(CLIBS) NODEBUG SMALLCODE 
-#delete >NIL: \#?.tmp 
 
-$(PROGRAM): Python.GST $(OBJECTS) $(LIBS) buildno
+$(PROGRAM): $(OBJECTS) $(LIBS) buildno
 	@echo "Build number is `type buildno` (use 'make newbuild' to increase)"
 	@SC Modules/getbuildinfo.c DEFINE=BUILD=`type buildno`
 	SLINK WITH <<
@@ -112,8 +79,6 @@ $(LINKOPTS)
 STRIPDEBUG
 LIB $(LIBS)
 <<
-#	-delete >NIL: \#?.tmp 
-
 
 buildno:
 	echo 0 >buildno
@@ -127,8 +92,8 @@ debug:
 	$(LINKOPTS)
 	LIB $(LIBS)
 	<<
-	-delete >NIL: \#?.tmp 
-	
+	-delete >NIL: \#?.tmp
+
 clean:
 	-delete Parser/\#?.(o|lib) quiet
 	-delete Objects/\#?.(o|lib) quiet
@@ -136,54 +101,44 @@ clean:
 	-delete Python/\#?.(o|lib) quiet
 	-delete $(PROGRAM) \#?.tmp QUIET
 	-delete $(AMIGAPYTHONLIB)
-	-delete $(EXPATLIB) Expat/\#?/\#?.o 
 	-delete Amiga/\#?.(o|lib)
-	-delete Python.GST >NIL:
-
 
 Modules/Modules.lib: Modules
-	@echo "******************** ENTERING MODULES/ *********************N"
+	@echo "******************** ENTERING MODULES/ "
 	execute <<
 cd Modules
 smake Modules.lib
 <<
-	@echo "******************** LEAVING MODULES/  *********************N"
+	@echo "******************** LEAVING MODULES/  "
 
 Parser/Parser.lib: Parser
-	@echo "******************** ENTERING PARSER/ *********************N"
+	@echo "******************** ENTERING PARSER/ "
 	execute <<
 cd Parser
 smake Parser.lib
 <<
-	@echo "******************** LEAVING PARSER/  *********************N"
+	@echo "******************** LEAVING PARSER/  "
+
 Python/Python.lib: Python
-	@echo "******************** ENTERING PYTHON/ *********************N"
+	@echo "******************** ENTERING PYTHON/ "
 	execute <<
 cd Python
 smake Python.lib
 <<
-	@echo "******************** LEAVING PYTHON/  *********************N"
+	@echo "******************** LEAVING PYTHON/  "
+
 Objects/Objects.lib: Objects
-	@echo "******************** ENTERING OBJECTS/ *********************N"
+	@echo "******************** ENTERING OBJECTS/ "
 	execute <<
 cd Objects
 smake Objects.lib
 <<
-	@echo "******************** LEAVING OBJECTS/  *********************N"
+	@echo "******************** LEAVING OBJECTS/  "
 
 $(AMIGAPYTHONLIB): Amiga
-	@echo "******************** ENTERING Amiga/ *********************N"
+	@echo "******************** ENTERING Amiga/ "
 	execute <<
 cd Amiga
 smake $(AMIGAPYTHONLIBNAM)
 <<
-	@echo "******************** LEAVING Amiga/  *********************N"
-
-$(EXPATLIB): Expat
-	@echo "******************** ENTERING Expat/ *********************N"
-	execute <<
-cd Expat
-smake
-<<
-	@echo "******************** LEAVING Expat/  *********************N"
-
+	@echo "******************** LEAVING Amiga/  " 

@@ -1,10 +1,8 @@
-RCS_ID_C="$Id: dosio_init.c,v 4.2 1994/09/29 23:09:02 jraja Exp $";
 /*
  *      dosio_init.c - SAS C auto initialization functions for DOSIO
  *
- *      Copyright © 1994 AmiTCP/IP Group, 
- *                       Network Solutions Development Inc.
- *                       All rights reserved.
+ *      Based on Irmen de Jong's original Amiga port
+ *      Updated for Python 2.7.18
  */
 
 #include <exec/execbase.h>
@@ -12,85 +10,19 @@ extern struct ExecBase *SysBase;
 
 #include <dos/dos.h>
 #include <dos/dosextens.h>
-
-#if __SASC
 #include <proto/dos.h>
-#elif __GNUC__
-#include <inline/dos.h>
-#else
-#include <clib/dos_protos.h>
-#endif
-
 #include <constructor.h>
 
-
-/****** netd.lib/dosio_init *********************************************
-
-    NAME
-        dosio_init - (std) io macros to dos.library V37 or newer
-
-    SYNOPSIS
-        long _STI_500_dosio_init(void)
-
-    FUNCTION
-        This function initializes the file table used by the stdio
-        look-a-like macros defined in <netinclude:stdio.h>.
-
-        These macros are taken in to use by defining the symbol
-        `USE_DOSIO' before including any include files.  When this is
-        done, the normal stdio prototypes are replaced with macros,
-        which call the corresponding dos.library functions.  The
-        netd.lib provides the initialization function mentioned above
-        and the functions VSPrintf(), SPrintf(), VCSPrintf() and
-        CSPrintf(), which are not found from the dos.library.
-
-        The stdio macros provided are suitable for stdin, stdout and
-        stderr usage. No file opening function (fopen()) is provided,
-        so the use is quite limited.
-
-        The netd.lib version of the net.lib is compiled with this
-        USE_DOSIO, so you will want to use that instead of the
-        net.lib to make your executable smaller if your own program
-        does not use stdio of the C runtime library.
-
-    NOTES
-        The stdio macros rely on dos.library 37 or newer being present.
-
-        The autoinitialization and autotermination functions are features
-        specific to the SAS C6.  However, these functions can be used with
-        other (ANSI) C compilers, too. Example follows:
-
-        \* at start of main() *\
-
-        if (_STI_500_dosio_init() != 0)
-	   exit(20);
-
-    BUGS
-        The same autoinitialization won't work for both SAS C 6.3 and SAS C
-        6.50 or latter.  Only way to terminate an initialization function is
-        by exit() call with SAS C 6.3 binary.  If an autoinitialization
-        function is terminated by exit() call with SAS C 6.50 binary, the
-        autotermination functions won't be called.  Due this braindamage
-        the libraries must be separately compiled for each compiler version.
-
-    SEE ALSO
-
-
-*****************************************************************************
-*/
-
+/*
+ * File table used by the stdio look-a-like macros
+ */
 BPTR __dosio_files[3];
 
 /*
- * Using __stdargs prevents creation of register arguments entry point.
- * If both stack args and reg. args entry points are created, this
- * function is called _twice_, which is not wanted.
- *
- * The number 500 in the function names is the priority assigned to
- * stdio autoinitialization functions by SAS/C 6.50.
+ * Initialize the file table used by the stdio look-a-like macros.
+ * The stdio macros provided are suitable for stdin, stdout and
+ * stderr usage.
  */
-// long __stdargs
-// _STI_500_dosio_init(void)
 STDIO_CONSTRUCTOR(dosio_init)
 {
   struct Process *p = (struct Process *)SysBase->ThisTask;
@@ -103,4 +35,4 @@ STDIO_CONSTRUCTOR(dosio_init)
     __dosio_files[2] = __dosio_files[1];
 
   return 0;
-}
+} 

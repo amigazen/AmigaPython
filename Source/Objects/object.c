@@ -92,19 +92,19 @@ dump_counts(FILE* f)
     PyTypeObject *tp;
 
     for (tp = type_list; tp; tp = tp->tp_next)
-        fprintf(f, "%s alloc'd: %" PY_FORMAT_SIZE_T "d, "
-            "freed: %" PY_FORMAT_SIZE_T "d, "
-            "max in use: %" PY_FORMAT_SIZE_T "d\n",
+        fprintf(f, "%s alloc'd: %" PY_FORMAT_SIZE_T "ld, "
+            "freed: %" PY_FORMAT_SIZE_T "ld, "
+            "max in use: %" PY_FORMAT_SIZE_T "ld\n",
             tp->tp_name, tp->tp_allocs, tp->tp_frees,
             tp->tp_maxalloc);
-    fprintf(f, "fast tuple allocs: %" PY_FORMAT_SIZE_T "d, "
-        "empty: %" PY_FORMAT_SIZE_T "d\n",
+    fprintf(f, "fast tuple allocs: %" PY_FORMAT_SIZE_T "ld, "
+        "empty: %" PY_FORMAT_SIZE_T "ld\n",
         fast_tuple_allocs, tuple_zero_allocs);
-    fprintf(f, "fast int allocs: pos: %" PY_FORMAT_SIZE_T "d, "
-        "neg: %" PY_FORMAT_SIZE_T "d\n",
+    fprintf(f, "fast int allocs: pos: %" PY_FORMAT_SIZE_T "ld, "
+        "neg: %" PY_FORMAT_SIZE_T "ld\n",
         quick_int_allocs, quick_neg_int_allocs);
-    fprintf(f, "null strings: %" PY_FORMAT_SIZE_T "d, "
-        "1-strings: %" PY_FORMAT_SIZE_T "d\n",
+    fprintf(f, "null strings: %" PY_FORMAT_SIZE_T "ld, "
+        "1-strings: %" PY_FORMAT_SIZE_T "ld\n",
         null_strings, one_strings);
 }
 

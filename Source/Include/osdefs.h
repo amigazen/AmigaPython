@@ -29,6 +29,19 @@ extern "C" {
 #define DELIM ','
 #endif
 
+#ifdef _AMIGA
+#define SEP '/'
+#define MAXPATHLEN 256
+#define DELIM ';'
+#endif
+
+
+#ifdef RISCOS
+#define SEP '.'
+#define MAXPATHLEN 256
+#define DELIM ','
+#endif
+
 
 /* Filename separator */
 #ifndef SEP
@@ -55,6 +68,16 @@ extern "C" {
 /* Search path entry delimiter */
 #ifndef DELIM
 #define DELIM ':'
+#endif
+
+/* Python installation configuration for AmigaOS */
+#ifdef _AMIGA
+#define PREFIX "Python:"
+#define EXEC_PREFIX "Python:"
+#define VERSION "2.7.18"
+#define VPATH "."
+/* Use Amiga-style paths for PYTHONPATH */
+#define PYTHONPATH "Python:Lib;Python:Lib/site-packages"
 #endif
 
 #ifdef __cplusplus

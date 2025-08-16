@@ -5,6 +5,13 @@
 #include "structseq.h"
 #include "timefuncs.h"
 
+/* Amiga-specific timezone variables */
+#ifdef _AMIGA
+extern char *tzname[2];
+extern long timezone;
+extern int daylight;
+#endif
+
 #ifdef __APPLE__
 #if defined(HAVE_GETTIMEOFDAY) && defined(HAVE_FTIME)
   /*
@@ -253,6 +260,17 @@ tmtotuple(struct tm *p)
 
 #define SET(i,val) PyStructSequence_SET_ITEM(v, i, PyInt_FromLong((long) val))
 
+#ifdef _AMIGA
+    SET(0, (long)(p->tm_year + 1900));
+    SET(1, (long)(p->tm_mon + 1));         /* Want January == 1 */
+    SET(2, (long)p->tm_mday);
+    SET(3, (long)p->tm_hour);
+    SET(4, (long)p->tm_min);
+    SET(5, (long)p->tm_sec);
+    SET(6, (long)((p->tm_wday + 6) % 7)); /* Want Monday == 0 */
+    SET(7, (long)(p->tm_yday + 1));        /* Want January, 1 == 1 */
+    SET(8, (long)p->tm_isdst);
+#else
     SET(0, p->tm_year + 1900);
     SET(1, p->tm_mon + 1);         /* Want January == 1 */
     SET(2, p->tm_mday);
@@ -262,6 +280,7 @@ tmtotuple(struct tm *p)
     SET(6, (p->tm_wday + 6) % 7); /* Want Monday == 0 */
     SET(7, p->tm_yday + 1);        /* Want January, 1 == 1 */
     SET(8, p->tm_isdst);
+#endif
 #undef SET
     if (PyErr_Occurred()) {
         Py_XDECREF(v);
@@ -644,6 +663,22 @@ _asctime(struct tm *timeptr)
     };
     PyObject *unicode, *str;
     /* PyString_FromString() cannot be used because it doesn't support %3d */
+#ifdef _AMIGA
+    {
+        const char *wday = (const char *)wday_name[(int)timeptr->tm_wday];
+        const char *mon = (const char *)mon_name[(int)timeptr->tm_mon];
+        int mday = (int)timeptr->tm_mday;
+        int hour = (int)timeptr->tm_hour;
+        int min = (int)timeptr->tm_min;
+        int sec = (int)timeptr->tm_sec;
+        int year = (int)(1900 + timeptr->tm_year);
+        /* Use PyString_FromFormat for VBCC compatibility */
+        str = PyString_FromFormat(
+            "%s %s%3d %.2d:%.2d:%.2d %d",
+            wday, mon, mday, hour, min, sec, year);
+        return str;
+    }
+#else
     unicode = PyUnicode_FromFormat(
         "%s %s%3d %.2d:%.2d:%.2d %d",
         wday_name[timeptr->tm_wday],
@@ -651,13 +686,16 @@ _asctime(struct tm *timeptr)
         timeptr->tm_mday, timeptr->tm_hour,
         timeptr->tm_min, timeptr->tm_sec,
         1900 + timeptr->tm_year);
+#endif
     if (unicode == NULL) {
         return NULL;
     }
 
+#ifndef _AMIGA
     str = PyUnicode_AsASCIIString(unicode);
     Py_DECREF(unicode);
     return str;
+#endif
 }
 
 static PyObject *
@@ -814,9 +852,13 @@ inittimezone(PyObject *m) {
     PyModule_AddIntConstant(m, "altzone", altzone);
 #else
 #ifdef PYOS_OS2
-    PyModule_AddIntConstant(m, "altzone", _timezone-3600);
+    PyModule_AddIntConstant(m, "altzone", (long)(_timezone-3600));
 #else /* !PYOS_OS2 */
+#ifdef _AMIGA
+    PyModule_AddIntConstant(m, "altzone", (long)(timezone-3600));
+#else
     PyModule_AddIntConstant(m, "altzone", timezone-3600);
+#endif
 #endif /* PYOS_OS2 */
 #endif
     PyModule_AddIntConstant(m, "daylight", daylight);
@@ -865,7 +907,11 @@ inittimezone(PyObject *m) {
 #ifdef __CYGWIN__
     tzset();
     PyModule_AddIntConstant(m, "timezone", _timezone);
+#ifdef _AMIGA
+    PyModule_AddIntConstant(m, "altzone", (long)(_timezone-3600));
+#else
     PyModule_AddIntConstant(m, "altzone", _timezone-3600);
+#endif
     PyModule_AddIntConstant(m, "daylight", _daylight);
     PyModule_AddObject(m, "tzname",
                        Py_BuildValue("(zz)", _tzname[0], _tzname[1]));

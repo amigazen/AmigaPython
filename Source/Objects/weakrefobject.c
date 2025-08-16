@@ -448,12 +448,21 @@ proxy_checkref(PyWeakReference *proxy)
         return generic(proxy, v, w); \
     }
 
+#ifdef _AMIGA
+#define WRAP_METHOD(method, special) \
+    static PyObject * \
+    method(PyObject *proxy) { \
+        UNWRAP(proxy); \
+        return PyObject_CallMethod(proxy, special, ""); \
+    }
+#else
 #define WRAP_METHOD(method, special) \
     static PyObject * \
     method(PyObject *proxy) { \
             UNWRAP(proxy); \
                 return PyObject_CallMethod(proxy, special, ""); \
         }
+#endif
 
 
 /* direct slots */
@@ -615,7 +624,15 @@ proxy_iternext(PyWeakReference *proxy)
 }
 
 
+#ifdef _AMIGA
+static PyObject *
+proxy_unicode(PyObject *proxy) {
+    UNWRAP(proxy);
+    return PyObject_CallMethod(proxy, "__unicode__", "");
+}
+#else
 WRAP_METHOD(proxy_unicode, "__unicode__");
+#endif
 
 
 static PyMethodDef proxy_methods[] = {

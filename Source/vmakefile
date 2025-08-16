@@ -1,0 +1,96 @@
+# vmakefile for Python 2.7.18 on AmigaOS 3.2 using VBCC
+# Based on the original SMAKEFILE but adapted for VBCC toolchain
+
+# VBCC toolchain
+CC=vc
+VASM=vasmm68k_mot
+VLINK=vlink
+AR=ar
+MKDIR=MakeDir ALL
+
+# VBCC configuration for AmigaOS 3.2 with PosixLib (softfloat for maximum compatibility)
+CONFIG=+aos68k_posix
+CFLAGS=-c -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data -stack-check
+ODIR=build-vbcc
+
+# Program name
+PROGRAM=Python27
+
+# Libraries
+AMIGAPYTHONLIBNAM=amigapythonamitcp.lib
+AMIGAPYTHONLIB=$(ODIR)/Amiga/$(AMIGAPYTHONLIBNAM)
+
+# Link libraries - VBCC provides system libraries
+CLIBS=-lamiga -lmieee build-vbcc/Modules/zlib/libz.a
+
+# Main objects
+OBJECTS=$(ODIR)/Modules/python.o $(ODIR)/Modules/main.o $(ODIR)/Amiga/finite.o
+
+# All the individual object files from each directory
+MODULES_OBJECTS=$(ODIR)/Modules/config.o $(ODIR)/Modules/getpath.o $(ODIR)/Modules/environment.o $(ODIR)/Modules/getbuildinfo.o $(ODIR)/Modules/arraymodule.o $(ODIR)/Modules/mathmodule.o $(ODIR)/Modules/timemodule.o $(ODIR)/Modules/binascii.o $(ODIR)/Modules/_codecsmodule.o $(ODIR)/Modules/cStringIO.o $(ODIR)/Modules/cPickle.o $(ODIR)/Modules/errnomodule.o $(ODIR)/Modules/operator.o $(ODIR)/Modules/_weakref.o $(ODIR)/Modules/_struct.o $(ODIR)/Modules/selectmodule.o $(ODIR)/Modules/zlibmodule.o $(ODIR)/Modules/amigamodule.o $(ODIR)/Modules/amigapathmodule.o $(ODIR)/Modules/socketmodule.o $(ODIR)/Modules/pwdmodule.o $(ODIR)/Modules/grpmodule.o $(ODIR)/Modules/cryptmodule.o $(ODIR)/Modules/syslogmodule.o $(ODIR)/Modules/syslog.o $(ODIR)/Modules/gcmodule.o $(ODIR)/Modules/_sre.o $(ODIR)/Modules/md5.o $(ODIR)/Modules/md5module.o $(ODIR)/Modules/cmathmodule.o $(ODIR)/Modules/shamodule.o $(ODIR)/Modules/stropmodule.o $(ODIR)/Modules/Doslibmodule.o $(ODIR)/Modules/posix_helpers.o $(ODIR)/Modules/_math.o
+
+PARSER_OBJECTS=$(ODIR)/Parser/acceler.o $(ODIR)/Parser/grammar1.o $(ODIR)/Parser/myreadline.o $(ODIR)/Parser/node.o $(ODIR)/Parser/parser.o $(ODIR)/Parser/parsetok.o $(ODIR)/Parser/tokenizer.o $(ODIR)/Parser/intrcheck.o
+
+PYTHON_OBJECTS=$(ODIR)/Python/modsupport.o $(ODIR)/Python/pythonrun.o $(ODIR)/Python/errors.o $(ODIR)/Python/bltinmodule.o $(ODIR)/Python/ceval.o $(ODIR)/Python/compile.o $(ODIR)/Python/frozen.o $(ODIR)/Python/getargs.o $(ODIR)/Python/getcompiler.o $(ODIR)/Python/getcopyright.o $(ODIR)/Python/getversion.o $(ODIR)/Python/getplatform.o $(ODIR)/Python/graminit.o $(ODIR)/Python/import.o $(ODIR)/Python/importdl.o $(ODIR)/Python/marshal.o $(ODIR)/Python/structmember.o $(ODIR)/Python/sysmodule.o $(ODIR)/Python/traceback.o $(ODIR)/Python/sigcheck.o $(ODIR)/Python/pystate.o $(ODIR)/Python/codecs.o $(ODIR)/Python/dynload_stub.o $(ODIR)/Python/ast.o $(ODIR)/Python/asdl.o $(ODIR)/Python/_warnings.o $(ODIR)/Python/getopt.o $(ODIR)/Python/random.o $(ODIR)/Python/mysnprintf.o $(ODIR)/Python/pystrtod.o $(ODIR)/Python/pyfpe.o $(ODIR)/Python/pymath.o $(ODIR)/Python/Python-ast.o $(ODIR)/Python/pyarena.o $(ODIR)/Python/pyctype.o $(ODIR)/Python/symtable.o $(ODIR)/Python/mystrtoul.o $(ODIR)/Python/pystrcmp.o $(ODIR)/Python/future.o $(ODIR)/Python/peephole.o $(ODIR)/Python/formatter_string.o
+
+OBJECTS_OBJECTS=$(ODIR)/Objects/abstract.o $(ODIR)/Objects/fileobject.o $(ODIR)/Objects/floatobject.o $(ODIR)/Objects/bufferobject.o $(ODIR)/Objects/funcobject.o $(ODIR)/Objects/intobject.o $(ODIR)/Objects/listobject.o $(ODIR)/Objects/longobject.o $(ODIR)/Objects/dictobject.o $(ODIR)/Objects/methodobject.o $(ODIR)/Objects/moduleobject.o $(ODIR)/Objects/object.o $(ODIR)/Objects/rangeobject.o $(ODIR)/Objects/stringobject.o $(ODIR)/Objects/tupleobject.o $(ODIR)/Objects/typeobject.o $(ODIR)/Objects/classobject.o $(ODIR)/Objects/frameobject.o $(ODIR)/Objects/sliceobject.o $(ODIR)/Objects/complexobject.o $(ODIR)/Objects/cobject.o $(ODIR)/Objects/boolobject.o $(ODIR)/Objects/exceptions.o $(ODIR)/Objects/codeobject.o $(ODIR)/Objects/cellobject.o $(ODIR)/Objects/iterobject.o $(ODIR)/Objects/weakrefobject.o $(ODIR)/Objects/bytearrayobject.o $(ODIR)/Objects/bytes_methods.o $(ODIR)/Objects/capsule.o $(ODIR)/Objects/descrobject.o $(ODIR)/Objects/enumobject.o $(ODIR)/Objects/genobject.o $(ODIR)/Objects/memoryobject.o $(ODIR)/Objects/obmalloc.o $(ODIR)/Objects/setobject.o $(ODIR)/Objects/structseq.o
+
+AMIGA_OBJECTS=$(ODIR)/Amiga/envvars.o $(ODIR)/Amiga/fmod.o $(ODIR)/Amiga/rexxvars.o $(ODIR)/Amiga/crc32.o $(ODIR)/Amiga/wbargs.o $(ODIR)/Amiga/printuserfault.o $(ODIR)/Amiga/dosio_init.o $(ODIR)/Amiga/strftime.o $(ODIR)/Amiga/stackinit.o $(ODIR)/Amiga/CheckStack.o $(ODIR)/Amiga/vbcc_runtime.o $(ODIR)/Amiga/libcheck.o $(ODIR)/Amiga/io2errno.o $(ODIR)/Amiga/int64_ops.o
+
+# All objects together
+ALL_OBJECTS=$(OBJECTS) $(MODULES_OBJECTS) $(PARSER_OBJECTS) $(PYTHON_OBJECTS) $(OBJECTS_OBJECTS) $(AMIGA_OBJECTS)
+
+# Prepare variables for target 'clean'
+RM=Delete ALL
+
+all: $(PROGRAM)
+
+$(PROGRAM): $(OBJECTS) modules $(PARSER_OBJECTS) $(PYTHON_OBJECTS) $(OBJECTS_OBJECTS) $(AMIGA_OBJECTS)
+	$(CC) $(CONFIG) -o $(PROGRAM) $(ALL_OBJECTS) $(CLIBS)
+
+$(ODIR)/Modules/python.o: Modules/python.c
+	@$(MKDIR) $(ODIR)/Modules
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/Modules/main.o: Modules/main.c
+	@$(MKDIR) $(ODIR)/Modules
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/Amiga/finite.o: Amiga/finite.c
+	@$(MKDIR) $(ODIR)/Amiga
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+# Build all individual object files
+modules: Modules
+	@echo "******************** ENTERING MODULES/ "
+	$(MAKE) -f vmakefile.modules ODIR=$(ODIR)/Modules
+	@echo "******************** LEAVING MODULES/ "
+
+$(PARSER_OBJECTS): Parser
+	@echo "******************** ENTERING PARSER/ "
+	$(MAKE) -f vmakefile.parser ODIR=$(ODIR)/Parser
+	@echo "******************** LEAVING PARSER/ "
+
+$(PYTHON_OBJECTS): Python
+	@echo "******************** ENTERING PYTHON/ "
+	$(MAKE) -f vmakefile.python ODIR=$(ODIR)/Python
+	@echo "******************** LEAVING PYTHON/ "
+
+$(OBJECTS_OBJECTS): Objects
+	@echo "******************** ENTERING OBJECTS/ "
+	$(MAKE) -f vmakefile.objects ODIR=$(ODIR)/Objects
+	@echo "******************** LEAVING OBJECTS/ "
+
+$(AMIGA_OBJECTS): Amiga
+	@echo "******************** ENTERING Amiga/ "
+	$(MAKE) -f vmakefile.amiga ODIR=$(ODIR)/Amiga
+	@echo "******************** LEAVING Amiga/ "
+
+debug:
+	$(CC) $(CONFIG) -g -o$(PROGRAM)_debug $(ALL_OBJECTS)
+
+clean:
+	-$(RM) $(ODIR)
+	-$(RM) $(PROGRAM) $(PROGRAM)_debug
+
+.PHONY: all clean debug modules 

@@ -35,7 +35,7 @@ static Py_ssize_t count_tracked = 0;
 static void
 show_track(void)
 {
-    fprintf(stderr, "Tuples created: %" PY_FORMAT_SIZE_T "d\n",
+    fprintf(stderr, "Tuples created: %" PY_FORMAT_SIZE_T "ld\n",
         count_tracked + count_untracked);
     fprintf(stderr, "Tuples tracked by the GC: %" PY_FORMAT_SIZE_T
         "d\n", count_tracked);

@@ -60,6 +60,8 @@
 
 #include "pyport.h"
 
+
+
 /* pyconfig.h or pyport.h may or may not define DL_IMPORT */
 #ifndef DL_IMPORT	/* declarations for DLL import/export */
 #define DL_IMPORT(RTYPE) RTYPE

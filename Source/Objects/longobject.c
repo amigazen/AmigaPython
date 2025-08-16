@@ -845,6 +845,13 @@ PyLong_AsVoidPtr(PyObject *vv)
 PyObject *
 PyLong_FromLongLong(PY_LONG_LONG ival)
 {
+#ifdef _AMIGA
+    /* For AmigaOS, temporarily disable long long support */
+    PyErr_SetString(PyExc_NotImplementedError, 
+                    "long long not supported on this platform");
+    return NULL;
+#else
+    /* Original implementation for systems with native long long */
     PyLongObject *v;
     unsigned PY_LONG_LONG abs_ival;
     unsigned PY_LONG_LONG t;  /* unsigned so >> doesn't propagate sign bit */
@@ -881,13 +888,21 @@ PyLong_FromLongLong(PY_LONG_LONG ival)
         }
     }
     return (PyObject *)v;
+#endif
 }
 
 /* Create a new long int object from a C unsigned PY_LONG_LONG int. */
 
 PyObject *
-PyLong_FromUnsignedLongLong(unsigned PY_LONG_LONG ival)
+PyLong_FromUnsignedLongLong(unsigned_PY_LONG_LONG ival)
 {
+#ifdef _AMIGA
+    /* For AmigaOS, temporarily disable long long support */
+    PyErr_SetString(PyExc_NotImplementedError, 
+                    "long long not supported on this platform");
+    return NULL;
+#else
+    /* Original implementation for systems with native long long */
     PyLongObject *v;
     unsigned PY_LONG_LONG t;
     int ndigits = 0;
@@ -908,6 +923,7 @@ PyLong_FromUnsignedLongLong(unsigned PY_LONG_LONG ival)
         }
     }
     return (PyObject *)v;
+#endif
 }
 
 /* Create a new long int object from a C Py_ssize_t. */
@@ -938,6 +954,13 @@ PyLong_FromSize_t(size_t ival)
 PY_LONG_LONG
 PyLong_AsLongLong(PyObject *vv)
 {
+#ifdef _AMIGA
+    /* For AmigaOS, temporarily disable long long support */
+    PyErr_SetString(PyExc_NotImplementedError, 
+                    "long long not supported on this platform");
+    return (PY_LONG_LONG)-1;
+#else
+    /* Original implementation for systems with native long long */
     PY_LONG_LONG bytes;
     int one = 1;
     int res;
@@ -982,6 +1005,7 @@ PyLong_AsLongLong(PyObject *vv)
         return (PY_LONG_LONG)-1;
     else
         return bytes;
+#endif
 }
 
 /* Get a C unsigned PY_LONG_LONG int from a long int object.
@@ -990,6 +1014,13 @@ PyLong_AsLongLong(PyObject *vv)
 unsigned PY_LONG_LONG
 PyLong_AsUnsignedLongLong(PyObject *vv)
 {
+#ifdef _AMIGA
+    /* For AmigaOS, temporarily disable long long support */
+    PyErr_SetString(PyExc_NotImplementedError, 
+                    "long long not supported on this platform");
+    return (unsigned PY_LONG_LONG)-1;
+#else
+    /* Original implementation for systems with native long long */
     unsigned PY_LONG_LONG bytes;
     int one = 1;
     int res;
@@ -1007,6 +1038,7 @@ PyLong_AsUnsignedLongLong(PyObject *vv)
         return (unsigned PY_LONG_LONG)res;
     else
         return bytes;
+#endif
 }
 
 /* Get a C unsigned long int from a long int object, ignoring the high bits.
@@ -1015,6 +1047,13 @@ PyLong_AsUnsignedLongLong(PyObject *vv)
 unsigned PY_LONG_LONG
 PyLong_AsUnsignedLongLongMask(PyObject *vv)
 {
+#ifdef _AMIGA
+    /* For AmigaOS, temporarily disable long long support */
+    PyErr_SetString(PyExc_NotImplementedError, 
+                    "long long not supported on this platform");
+    return (unsigned PY_LONG_LONG)-1;
+#else
+    /* Original implementation for systems with native long long */
     register PyLongObject *v;
     unsigned PY_LONG_LONG x;
     Py_ssize_t i;
@@ -1036,6 +1075,7 @@ PyLong_AsUnsignedLongLongMask(PyObject *vv)
         x = (x << PyLong_SHIFT) | v->ob_digit[i];
     }
     return x * sign;
+#endif
 }
 
 /* Get a C long long int from a Python long or Python int object.
@@ -1049,7 +1089,13 @@ PyLong_AsUnsignedLongLongMask(PyObject *vv)
 PY_LONG_LONG
 PyLong_AsLongLongAndOverflow(PyObject *vv, int *overflow)
 {
-    /* This version by Tim Peters */
+#ifdef _AMIGA
+    /* For AmigaOS, temporarily disable long long support */
+    PyErr_SetString(PyExc_NotImplementedError, 
+                    "long long not supported on this platform");
+    return (PY_LONG_LONG)-1;
+#else
+    /* Original implementation for systems with native long long */
     register PyLongObject *v;
     unsigned PY_LONG_LONG x, prev;
     PY_LONG_LONG res;
@@ -1138,6 +1184,7 @@ PyLong_AsLongLongAndOverflow(PyObject *vv, int *overflow)
         Py_DECREF(vv);
     }
     return res;
+#endif
 }
 
 #undef IS_LITTLE_ENDIAN
