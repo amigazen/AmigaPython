@@ -133,4 +133,7 @@ Also on Aminet, where you got this:  dev/lang/Python20_Src.lha.
 ## Acknowledgements
 
 *Amiga* is a trademark of **Amiga Inc**. 
+
 Original Amiga Python by Irmen de Jong
+
+Python is a product of the Python Software Foundation, see LICENSE.md
