@@ -1,28 +1,14 @@
-
 /* Return the initial module search path. */
 
 #include "Python.h"
 #include "osdefs.h"
-#include "protos.h"
 
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <string.h>
 
-#ifdef _AMIGA
-#include <proto/dos.h>
-#endif
-
-#if HAVE_UNISTD_H
-#include <unistd.h>
-#endif /* HAVE_UNISTD_H */
-
-#ifdef WITH_NEXT_FRAMEWORK
+#ifdef __APPLE__
 #include <mach-o/dyld.h>
 #endif
-
-static int isxfile ( char *filename );	// FWD
-
 
 /* Search in some common locations for the associated Python libraries.
  *
@@ -40,7 +26,7 @@ static int isxfile ( char *filename );	// FWD
  * as best as is possible, but most imports will fail.
  *
  * Before any searches are done, the location of the executable is
- * determined.  If argv[0] has one or more slashs in it, it is used
+ * determined.  If argv[0] has one or more slashes in it, it is used
  * unchanged.  Otherwise, it must have been invoked from the shell's path,
  * so we search $PATH for the named executable and use that.  If the
  * executable was not found on $PATH (or there was no $PATH environment
@@ -105,117 +91,24 @@ static int isxfile ( char *filename );	// FWD
  * process to find the installed Python tree.
  */
 
-#ifndef VERSION
-#define VERSION "2.0"
+#ifdef __cplusplus
+ extern "C" {
 #endif
 
-#ifndef VPATH
-#define VPATH "."
-#endif
 
-#ifndef PREFIX
-#define PREFIX "/usr/local"
-#endif
-
-#ifndef EXEC_PREFIX
-#define EXEC_PREFIX PREFIX
-#endif
-
-#ifndef PYTHONPATH
-#ifdef _AMIGA
-#define PYTHONPATH PREFIX "lib/python" VERSION ";" EXEC_PREFIX "lib/python" VERSION "/lib-dynload"
-#else /* !_AMIGA */
-/* I know this isn't K&R C, but the Makefile specifies it anyway */
-#define PYTHONPATH PREFIX "/lib/python" VERSION ":" \
-	      EXEC_PREFIX "/lib/python" VERSION "/lib-dynload"
-#endif
+#if !defined(PREFIX) || !defined(EXEC_PREFIX) || !defined(VERSION) || !defined(VPATH)
+#error "PREFIX, EXEC_PREFIX, VERSION, and VPATH must be constant defined"
 #endif
 
 #ifndef LANDMARK
 #define LANDMARK "os.py"
 #endif
- 
+
 static char prefix[MAXPATHLEN+1];
 static char exec_prefix[MAXPATHLEN+1];
 static char progpath[MAXPATHLEN+1];
 static char *module_search_path = NULL;
 static char lib_python[] = "lib/python" VERSION;
-
-
-#ifdef _AMIGA
-/* determine full program path */
-extern void Py_GetArgcArgv Py_PROTO((int *argc, char ***argv));	/* in main.c */
-
-static const char *fullprogpath(void)
-{
-	static char path[MAXPATHLEN*2];
-	static char prog[MAXPATHLEN];
-
-	BPTR dir;
-
-	extern BOOL from_WB;	/* in main.c */
-
-	// If the program name contains ':' or '/' it's not in the user's path
-	// and probably set by using Py_SetProgramName. In that case, just
-	// use this. If it exists!
-	strcpy(path,Py_GetProgramName());
-	if(strchr(path,':') || strchr(path,'/'))
-	{
-		if(!isxfile(path))
-		{
-			// Error; the specified file does not exist or is no exe
-			path[0]='\0';
-		}
-		return path;
-	}
-
-	// Construct the full path of our executable program.
-	if(from_WB)
-	{
-		/* We're launced from WB, GetProgramName() won't work */
-		/* Use WB's argv[0] as the executable path */
-		int argc;
-		char **argv;
-		Py_GetArgcArgv(&argc, &argv);
-		if(argc>0)
-			strcpy(path,argv[0]);
-		else
-			strcpy(path,"!error!");
-	}
-	else
-	{
-		/* Launced from CLI, use GetProgramName */
-
-		/* However, first check if the specified name exists */
-		if(!isxfile(path))
-		{
-			path[0]='\0';
-			return path;
-		}
-
-		path[0]=0;
-		if(dir=GetProgramDir())
-		{
-			(void)NameFromLock(dir,path,MAXPATHLEN);
-			if(!GetProgramName(prog,MAXPATHLEN))	// this is a dos.library function!
-				strcpy(prog,"!error!");
-			if(!AddPart(path,prog,MAXPATHLEN*2))
-				strcpy(path,"!error!");
-		}	
-	}
-	return path;
-}
-
-static void reduce( char *dir)
-{
-	int i = strlen(dir);
-	if(i>0 && dir[i-1]==':') dir[--i]=0;
-	while (i > 0 && dir[i] != SEP && dir[i] != ':') --i;
-	if(dir[i]!=':') dir[i] = '\0';
-	else dir[i+1]='\0';
-}
-
-#else /*! AMIGA */
 
 static void
 reduce(char *dir)
@@ -226,18 +119,9 @@ reduce(char *dir)
     dir[i] = '\0';
 }
 
-#endif /* _AMIGA */
-
-#ifndef S_ISREG
-#define S_ISREG(x) (((x) & S_IFMT) == S_IFREG)
-#endif
-
-#ifndef S_ISDIR
-#define S_ISDIR(x) (((x) & S_IFMT) == S_IFDIR)
-#endif
 
 static int
-isfile(char *filename)		/* Is file, not directory */
+isfile(char *filename)          /* Is file, not directory */
 {
     struct stat buf;
     if (stat(filename, &buf) != 0)
@@ -249,7 +133,7 @@ isfile(char *filename)		/* Is file, not directory */
 
 
 static int
-ismodule(char *filename)	/* Is module -- check for .pyc/.pyo too */
+ismodule(char *filename)        /* Is module -- check for .pyc/.pyo too */
 {
     if (isfile(filename))
         return 1;
@@ -265,7 +149,7 @@ ismodule(char *filename)	/* Is module -- check for .pyc/.pyo too */
 
 
 static int
-isxfile(char *filename)		/* Is executable file */
+isxfile(char *filename)         /* Is executable file */
 {
     struct stat buf;
     if (stat(filename, &buf) != 0)
@@ -279,7 +163,7 @@ isxfile(char *filename)		/* Is executable file */
 
 
 static int
-isdir(char *filename)			/* Is directory */
+isdir(char *filename)                   /* Is directory */
 {
     struct stat buf;
     if (stat(filename, &buf) != 0)
@@ -290,13 +174,14 @@ isdir(char *filename)			/* Is directory */
 }
 
 
-#ifdef _AMIGA
-#define joinpath(buffer,stuff) AddPart(buffer,stuff,MAXPATHLEN)
-#else
-/* joinpath requires that any buffer argument passed to it has at
-   least MAXPATHLEN + 1 bytes allocated.  If this requirement is met,
-   it guarantees that it will never overflow the buffer.  If stuff
-   is too long, buffer will contain a truncated copy of stuff.
+/* Add a path component, by appending stuff to buffer.
+   buffer must have at least MAXPATHLEN + 1 bytes allocated, and contain a
+   NUL-terminated string with no more than MAXPATHLEN characters (not counting
+   the trailing NUL).  It's a fatal error if it contains a string longer than
+   that (callers must be careful!).  If these requirements are met, it's
+   guaranteed that buffer will still be a NUL-terminated string with no more
+   than MAXPATHLEN characters at exit.  If stuff is too long, only as much of
+   stuff as fits will be appended.
 */
 static void
 joinpath(char *buffer, char *stuff)
@@ -309,38 +194,47 @@ joinpath(char *buffer, char *stuff)
         if (n > 0 && buffer[n-1] != SEP && n < MAXPATHLEN)
             buffer[n++] = SEP;
     }
+    if (n > MAXPATHLEN)
+        Py_FatalError("buffer overflow in getpath.c's joinpath()");
     k = strlen(stuff);
     if (n + k > MAXPATHLEN)
         k = MAXPATHLEN - n;
     strncpy(buffer+n, stuff, k);
     buffer[n+k] = '\0';
 }
-#endif
 
-
-/* init_path_from_argv0 requirs that path be allocated at least
-   MAXPATHLEN + 1 bytes and that argv0_path be no more than MAXPATHLEN
-   bytes. 
-*/
+/* copy_absolute requires that path be allocated at least
+   MAXPATHLEN + 1 bytes and that p be no more than MAXPATHLEN bytes. */
 static void
-init_path_from_argv0(char *path, char *argv0_path)
+copy_absolute(char *path, char *p)
 {
-    if (argv0_path[0] == '/')
-	strcpy(path, argv0_path);
-    else if (argv0_path[0] == '.') {
-	getcwd(path, MAXPATHLEN);
-	if (argv0_path[1] == '/') 
-	    joinpath(path, argv0_path + 2);
-	else
-	    joinpath(path, argv0_path);
-    }
+    if (p[0] == SEP)
+        strcpy(path, p);
     else {
-	getcwd(path, MAXPATHLEN);
-	joinpath(path, argv0_path);
+        if (!getcwd(path, MAXPATHLEN)) {
+            /* unable to get the current directory */
+            strcpy(path, p);
+            return;
+        }
+        if (p[0] == '.' && p[1] == SEP)
+            p += 2;
+        joinpath(path, p);
     }
 }
 
-/* search_for_prefix requires that argv0_path be no more than MAXPATHLEN 
+/* absolutize() requires that path be allocated at least MAXPATHLEN+1 bytes. */
+static void
+absolutize(char *path)
+{
+    char buffer[MAXPATHLEN + 1];
+
+    if (path[0] == SEP)
+        return;
+    copy_absolute(buffer, path);
+    strcpy(path, buffer);
+}
+
+/* search_for_prefix requires that argv0_path be no more than MAXPATHLEN
    bytes long.
 */
 static int
@@ -365,21 +259,10 @@ search_for_prefix(char *argv0_path, char *home)
     strcpy(prefix, argv0_path);
     joinpath(prefix, "Modules/Setup");
     if (isfile(prefix)) {
-        /* Check VPATH to see if argv0_path is in the build directory.
-         * Complication: the VPATH passed in is relative to the
-         * Modules build directory and points to the Modules source
-         * directory; we need it relative to the build tree and
-         * pointing to the source tree.  Solution: chop off a leading
-         * ".." (but only if it's there -- it could be an absolute
-         * path) and chop off the final component (assuming it's
-         * "Modules").
-         */
+        /* Check VPATH to see if argv0_path is in the build directory. */
         vpath = VPATH;
-        if (vpath[0] == '.' && vpath[1] == '.' && vpath[2] == '/')
-            vpath += 3;
         strcpy(prefix, argv0_path);
         joinpath(prefix, vpath);
-        reduce(prefix);
         joinpath(prefix, "Lib");
         joinpath(prefix, LANDMARK);
         if (ismodule(prefix))
@@ -387,7 +270,7 @@ search_for_prefix(char *argv0_path, char *home)
     }
 
     /* Search from argv0_path, until root is found */
-    init_path_from_argv0(prefix, argv0_path);
+    copy_absolute(prefix, argv0_path);
     do {
         n = strlen(prefix);
         joinpath(prefix, lib_python);
@@ -411,7 +294,7 @@ search_for_prefix(char *argv0_path, char *home)
 
 
 /* search_for_exec_prefix requires that argv0_path be no more than
-   MAXPATHLEN bytes long.  
+   MAXPATHLEN bytes long.
 */
 static int
 search_for_exec_prefix(char *argv0_path, char *home)
@@ -431,16 +314,29 @@ search_for_exec_prefix(char *argv0_path, char *home)
         return 1;
     }
 
-    /* Check to see if argv[0] is in the build directory */
+    /* Check to see if argv[0] is in the build directory. "pybuilddir.txt"
+       is written by setup.py and contains the relative path to the location
+       of shared library modules. */
     strcpy(exec_prefix, argv0_path);
-    joinpath(exec_prefix, "Modules/Setup");
+    joinpath(exec_prefix, "pybuilddir.txt");
     if (isfile(exec_prefix)) {
-        reduce(exec_prefix);
-        return -1;
+      FILE *f = fopen(exec_prefix, "r");
+      if (f == NULL)
+	errno = 0;
+      else {
+	char rel_builddir_path[MAXPATHLEN+1];
+	size_t n;
+	n = fread(rel_builddir_path, 1, MAXPATHLEN, f);
+	rel_builddir_path[n] = '\0';
+	fclose(f);
+	strcpy(exec_prefix, argv0_path);
+	joinpath(exec_prefix, rel_builddir_path);
+	return -1;
+      }
     }
 
     /* Search from argv0_path, until root is found */
-    init_path_from_argv0(exec_prefix, argv0_path);
+    copy_absolute(exec_prefix, argv0_path);
     do {
         n = strlen(exec_prefix);
         joinpath(exec_prefix, lib_python);
@@ -471,13 +367,12 @@ calculate_path(void)
     static char delimiter[2] = {DELIM, '\0'};
     static char separator[2] = {SEP, '\0'};
     char *pythonpath = PYTHONPATH;
-    char *rtpypath = getenv("PYTHONPATH");
+    char *rtpypath = Py_GETENV("PYTHONPATH");
     char *home = Py_GetPythonHome();
-#ifndef _AMIGA
     char *path = getenv("PATH");
     char *prog = Py_GetProgramName();
-#endif
     char argv0_path[MAXPATHLEN+1];
+    char zip_path[MAXPATHLEN+1];
     int pfound, efound; /* 1 if found; -1 if found build directory */
     char *buf;
     size_t bufsz;
@@ -486,70 +381,101 @@ calculate_path(void)
 #ifdef WITH_NEXT_FRAMEWORK
     NSModule pythonModule;
 #endif
-	
+#ifdef __APPLE__
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_4
+    uint32_t nsexeclength = MAXPATHLEN;
+#else
+    unsigned long nsexeclength = MAXPATHLEN;
+#endif
+#endif
+
+        /* If there is no slash in the argv0 path, then we have to
+         * assume python is on the user's $PATH, since there's no
+         * other way to find a directory to start the search from.  If
+         * $PATH isn't exported, you lose.
+         */
+        if (strchr(prog, SEP))
+                strncpy(progpath, prog, MAXPATHLEN);
+#ifdef __APPLE__
+     /* On Mac OS X, if a script uses an interpreter of the form
+      * "#!/opt/python2.3/bin/python", the kernel only passes "python"
+      * as argv[0], which falls through to the $PATH search below.
+      * If /opt/python2.3/bin isn't in your path, or is near the end,
+      * this algorithm may incorrectly find /usr/bin/python. To work
+      * around this, we can use _NSGetExecutablePath to get a better
+      * hint of what the intended interpreter was, although this
+      * will fail if a relative path was used. but in that case,
+      * absolutize() should help us out below
+      */
+     else if(0 == _NSGetExecutablePath(progpath, &nsexeclength) && progpath[0] == SEP)
+       ;
+#endif /* __APPLE__ */
+        else if (path) {
+                while (1) {
+                        char *delim = strchr(path, DELIM);
+
+                        if (delim) {
+                                size_t len = delim - path;
+                                if (len > MAXPATHLEN)
+                                        len = MAXPATHLEN;
+                                strncpy(progpath, path, len);
+                                *(progpath + len) = '\0';
+                        }
+                        else
+                                strncpy(progpath, path, MAXPATHLEN);
+
+                        joinpath(progpath, prog);
+                        if (isxfile(progpath))
+                                break;
+
+                        if (!delim) {
+                                progpath[0] = '\0';
+                                break;
+                        }
+                        path = delim + 1;
+                }
+        }
+        else
+                progpath[0] = '\0';
+        if (progpath[0] != SEP && progpath[0] != '\0')
+                absolutize(progpath);
+        strncpy(argv0_path, progpath, MAXPATHLEN);
+        argv0_path[MAXPATHLEN] = '\0';
+
 #ifdef WITH_NEXT_FRAMEWORK
-    /* XXX Need to check this code for buffer overflows */
+        /* On Mac OS X we have a special case if we're running from a framework.
+        ** This is because the python home should be set relative to the library,
+        ** which is in the framework, not relative to the executable, which may
+        ** be outside of the framework. Except when we're in the build directory...
+        */
     pythonModule = NSModuleForSymbol(NSLookupAndBindSymbol("_Py_Initialize"));
     /* Use dylib functions to find out where the framework was loaded from */
-    buf = NSLibraryNameForModule(pythonModule);
+    buf = (char *)NSLibraryNameForModule(pythonModule);
     if (buf != NULL) {
         /* We're in a framework. */
-        strcpy(progpath, buf);
-
-        /* Frameworks have support for versioning */
-        strcpy(lib_python, "lib");
-    }
-    else {
-        /* If we're not in a framework, fall back to the old way
-           (even though NSNameOfModule() probably does the same thing.) */
-#endif
-	
-#ifdef _AMIGA
-	strcpy(progpath,fullprogpath());
-#else /* !_AMIGA */
-	/* If there is no slash in the argv0 path, then we have to
-	 * assume python is on the user's $PATH, since there's no
-	 * other way to find a directory to start the search from.  If
-	 * $PATH isn't exported, you lose.
-	 */
-	if (strchr(prog, SEP))
-            strncpy(progpath, prog, MAXPATHLEN);
-	else if (path) {
-	    int bufspace = MAXPATHLEN;
-            while (1) {
-                char *delim = strchr(path, DELIM);
-
-                if (delim) {
-                    size_t len = delim - path;
-		    if (len > bufspace)
-			len = bufspace;
-                    strncpy(progpath, path, len);
-                    *(progpath + len) = '\0';
-		    bufspace -= len;
-                }
-                else
-                    strncpy(progpath, path, bufspace);
-
-                joinpath(progpath, prog);
-                if (isxfile(progpath))
-                    break;
-
-                if (!delim) {
-                    progpath[0] = '\0';
-                    break;
-                }
-                path = delim + 1;
-            }
-	}
-	else
-            progpath[0] = '\0';
-#ifdef WITH_NEXT_FRAMEWORK
+        /* See if we might be in the build directory. The framework in the
+        ** build directory is incomplete, it only has the .dylib and a few
+        ** needed symlinks, it doesn't have the Lib directories and such.
+        ** If we're running with the framework from the build directory we must
+        ** be running the interpreter in the build directory, so we use the
+        ** build-directory-specific logic to find Lib and such.
+        */
+        strncpy(argv0_path, buf, MAXPATHLEN);
+        reduce(argv0_path);
+        joinpath(argv0_path, lib_python);
+        joinpath(argv0_path, LANDMARK);
+        if (!ismodule(argv0_path)) {
+                /* We are in the build directory so use the name of the
+                   executable - we know that the absolute path is passed */
+                strncpy(argv0_path, progpath, MAXPATHLEN);
+        }
+        else {
+                /* Use the location of the library as the progpath */
+                strncpy(argv0_path, buf, MAXPATHLEN);
+        }
     }
 #endif
-#endif /* !_AMIGA */
 
-    strncpy(argv0_path, progpath, MAXPATHLEN);
-	
 #if HAVE_READLINK
     {
         char tmpbuffer[MAXPATHLEN+1];
@@ -557,14 +483,10 @@ calculate_path(void)
         while (linklen != -1) {
             /* It's not null terminated! */
             tmpbuffer[linklen] = '\0';
-#ifdef _AMIGA
-			if (NULL==strchr(tmpbuffer,':'))
-#else
             if (tmpbuffer[0] == SEP)
-#endif
-		/* tmpbuffer should never be longer than MAXPATHLEN,
-		   but extra check does not hurt */
-                strncpy(argv0_path, tmpbuffer, MAXPATHLEN);
+                /* tmpbuffer should never be longer than MAXPATHLEN,
+                   but extra check does not hurt */
+                strncpy(argv0_path, tmpbuffer, MAXPATHLEN + 1);
             else {
                 /* Interpret relative to progpath */
                 reduce(argv0_path);
@@ -583,17 +505,30 @@ calculate_path(void)
     if (!(pfound = search_for_prefix(argv0_path, home))) {
         if (!Py_FrozenFlag)
             fprintf(stderr,
-                    "Could not find platform independent libraries <prefix>\n");
+                "Could not find platform independent libraries <prefix>\n");
         strncpy(prefix, PREFIX, MAXPATHLEN);
         joinpath(prefix, lib_python);
     }
     else
         reduce(prefix);
-	
+
+    strncpy(zip_path, prefix, MAXPATHLEN);
+    zip_path[MAXPATHLEN] = '\0';
+    if (pfound > 0) { /* Use the reduced prefix returned by Py_GetPrefix() */
+        reduce(zip_path);
+        reduce(zip_path);
+    }
+    else
+        strncpy(zip_path, PREFIX, MAXPATHLEN);
+    joinpath(zip_path, "lib/python00.zip");
+    bufsz = strlen(zip_path);   /* Replace "00" with version */
+    zip_path[bufsz - 6] = VERSION[0];
+    zip_path[bufsz - 5] = VERSION[2];
+
     if (!(efound = search_for_exec_prefix(argv0_path, home))) {
         if (!Py_FrozenFlag)
             fprintf(stderr,
-                    "Could not find platform dependent libraries <exec_prefix>\n");
+                "Could not find platform dependent libraries <exec_prefix>\n");
         strncpy(exec_prefix, EXEC_PREFIX, MAXPATHLEN);
         joinpath(exec_prefix, "lib/lib-dynload");
     }
@@ -615,11 +550,7 @@ calculate_path(void)
     while (1) {
         char *delim = strchr(defpath, DELIM);
 
-#ifdef _AMIGA
-		if (NULL==strchr(defpath,':'))
-#else
         if (defpath[0] != SEP)
-#endif
             /* Paths are relative to prefix */
             bufsz += prefixsz;
 
@@ -632,10 +563,11 @@ calculate_path(void)
         defpath = delim + 1;
     }
 
+    bufsz += strlen(zip_path) + 1;
     bufsz += strlen(exec_prefix) + 1;
 
     /* This is the only malloc call in this file */
-    buf = PyMem_Malloc(bufsz);
+    buf = (char *)PyMem_Malloc(bufsz);
 
     if (buf == NULL) {
         /* We can't exit, so print a warning and limp along */
@@ -652,6 +584,10 @@ calculate_path(void)
         else
             buf[0] = '\0';
 
+        /* Next is the default zip path */
+        strcat(buf, zip_path);
+        strcat(buf, delimiter);
+
         /* Next goes merge of compile-time $PYTHONPATH with
          * dynamically located prefix.
          */
@@ -659,13 +595,12 @@ calculate_path(void)
         while (1) {
             char *delim = strchr(defpath, DELIM);
 
-#ifdef _AMIGA
-			if (NULL==strchr(defpath,':')) {
-#else
             if (defpath[0] != SEP) {
-#endif
                 strcat(buf, prefix);
-                strcat(buf, separator);
+                if (prefixsz >= 2 && prefix[prefixsz - 2] != SEP &&
+                    defpath[0] != (delim ? DELIM : L'\0')) {  /* not empty */
+                    strcat(buf, separator);
+                }
             }
 
             if (delim) {
@@ -697,6 +632,10 @@ calculate_path(void)
     if (pfound > 0) {
         reduce(prefix);
         reduce(prefix);
+        /* The prefix is the root directory, but reduce() chopped
+         * off the "/". */
+        if (!prefix[0])
+                strcpy(prefix, separator);
     }
     else
         strncpy(prefix, PREFIX, MAXPATHLEN);
@@ -705,6 +644,8 @@ calculate_path(void)
         reduce(exec_prefix);
         reduce(exec_prefix);
         reduce(exec_prefix);
+        if (!exec_prefix[0])
+                strcpy(exec_prefix, separator);
     }
     else
         strncpy(exec_prefix, EXEC_PREFIX, MAXPATHLEN);
@@ -744,3 +685,9 @@ Py_GetProgramFullPath(void)
         calculate_path();
     return progpath;
 }
+
+
+#ifdef __cplusplus
+}
+#endif
+

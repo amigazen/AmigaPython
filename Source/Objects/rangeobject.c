@@ -1,236 +1,345 @@
-
 /* Range object implementation */
 
 #include "Python.h"
 
 typedef struct {
-	PyObject_HEAD
-	long	start;
-	long	step;
-	long	len;
-	int	reps;
+    PyObject_HEAD
+    long        start;
+    long        step;
+    long        len;
 } rangeobject;
 
-
-PyObject *
-PyRange_New(long start, long len, long step, int reps)
+/* Return number of items in range (lo, hi, step).  step != 0
+ * required.  The result always fits in an unsigned long.
+ */
+static unsigned long
+get_len_of_range(long lo, long hi, long step)
 {
-	rangeobject *obj = PyObject_NEW(rangeobject, &PyRange_Type);
-
-	obj->start = start;
-	obj->len   = len;
-	obj->step  = step;
-	obj->reps  = reps;
-
-	return (PyObject *) obj;
+    /* -------------------------------------------------------------
+    If step > 0 and lo >= hi, or step < 0 and lo <= hi, the range is empty.
+    Else for step > 0, if n values are in the range, the last one is
+    lo + (n-1)*step, which must be <= hi-1.  Rearranging,
+    n <= (hi - lo - 1)/step + 1, so taking the floor of the RHS gives
+    the proper value.  Since lo < hi in this case, hi-lo-1 >= 0, so
+    the RHS is non-negative and so truncation is the same as the
+    floor.  Letting M be the largest positive long, the worst case
+    for the RHS numerator is hi=M, lo=-M-1, and then
+    hi-lo-1 = M-(-M-1)-1 = 2*M.  Therefore unsigned long has enough
+    precision to compute the RHS exactly.  The analysis for step < 0
+    is similar.
+    ---------------------------------------------------------------*/
+    assert(step != 0);
+    if (step > 0 && lo < hi)
+        return 1UL + (hi - 1UL - lo) / step;
+    else if (step < 0 && lo > hi)
+        return 1UL + (lo - 1UL - hi) / (0UL - step);
+    else
+        return 0UL;
 }
 
-static void
-range_dealloc(rangeobject *r)
+/* Return a stop value suitable for reconstructing the xrange from
+ * a (start, stop, step) triple.  Used in range_repr and range_reduce.
+ * Computes start + len * step, clipped to the range [LONG_MIN, LONG_MAX].
+ */
+static long
+get_stop_for_range(rangeobject *r)
 {
-	PyObject_DEL(r);
+    long last;
+
+    if (r->len == 0)
+        return r->start;
+
+    /* The tricky bit is avoiding overflow.  We first compute the last entry in
+       the xrange, start + (len - 1) * step, which is guaranteed to lie within
+       the range of a long, and then add step to it.  See the range_reverse
+       comments for an explanation of the casts below.
+    */
+    last = (long)(r->start + (unsigned long)(r->len - 1) * r->step);
+    if (r->step > 0)
+        return last > LONG_MAX - r->step ? LONG_MAX : last + r->step;
+    else
+        return last < LONG_MIN - r->step ? LONG_MIN : last + r->step;
 }
 
 static PyObject *
-range_item(rangeobject *r, int i)
+range_new(PyTypeObject *type, PyObject *args, PyObject *kw)
 {
-	if (i < 0 || i >= r->len * r->reps) {
-		PyErr_SetString(PyExc_IndexError,
-				"xrange object index out of range");
-		return NULL;
-	}
+    rangeobject *obj;
+    long ilow = 0, ihigh = 0, istep = 1;
+    unsigned long n;
 
-	return PyInt_FromLong(r->start + (i % r->len) * r->step);
+    if (!_PyArg_NoKeywords("xrange()", kw))
+        return NULL;
+
+    if (PyTuple_Size(args) <= 1) {
+        if (!PyArg_ParseTuple(args,
+                        "l;xrange() requires 1-3 int arguments",
+                        &ihigh))
+            return NULL;
+    }
+    else {
+        if (!PyArg_ParseTuple(args,
+                        "ll|l;xrange() requires 1-3 int arguments",
+                        &ilow, &ihigh, &istep))
+            return NULL;
+    }
+    if (istep == 0) {
+        PyErr_SetString(PyExc_ValueError, "xrange() arg 3 must not be zero");
+        return NULL;
+    }
+    n = get_len_of_range(ilow, ihigh, istep);
+    if (n > (unsigned long)LONG_MAX || (long)n > PY_SSIZE_T_MAX) {
+        PyErr_SetString(PyExc_OverflowError,
+                        "xrange() result has too many items");
+        return NULL;
+    }
+
+    obj = PyObject_New(rangeobject, &PyRange_Type);
+    if (obj == NULL)
+        return NULL;
+    obj->start = ilow;
+    obj->len   = (long)n;
+    obj->step  = istep;
+    return (PyObject *) obj;
 }
 
-static int
+PyDoc_STRVAR(range_doc,
+"xrange(stop) -> xrange object\n\
+xrange(start, stop[, step]) -> xrange object\n\
+\n\
+Like range(), but instead of returning a list, returns an object that\n\
+generates the numbers in the range on demand.  For looping, this is \n\
+slightly faster than range() and more memory efficient.");
+
+static PyObject *
+range_item(rangeobject *r, Py_ssize_t i)
+{
+    if (i < 0 || i >= r->len) {
+        PyErr_SetString(PyExc_IndexError,
+                        "xrange object index out of range");
+        return NULL;
+    }
+    /* do calculation entirely using unsigned longs, to avoid
+       undefined behaviour due to signed overflow. */
+    return PyInt_FromLong((long)(r->start + (unsigned long)i * r->step));
+}
+
+static Py_ssize_t
 range_length(rangeobject *r)
 {
-	return r->len * r->reps;
+    return (Py_ssize_t)(r->len);
 }
 
 static PyObject *
 range_repr(rangeobject *r)
 {
-	/* buffers must be big enough to hold 3 longs + an int +
-	 * a bit of "(xrange(...) * ...)" text.
-	 */
-	char buf1[250];
-	char buf2[250];
+    PyObject *rtn;
 
-	if (r->start == 0 && r->step == 1)
-		sprintf(buf1, "xrange(%ld)", r->start + r->len * r->step);
+    if (r->start == 0 && r->step == 1)
+        rtn = PyString_FromFormat("xrange(%ld)",
+                                  get_stop_for_range(r));
 
-	else if (r->step == 1)
-		sprintf(buf1, "xrange(%ld, %ld)",
-			r->start,
-			r->start + r->len * r->step);
+    else if (r->step == 1)
+        rtn = PyString_FromFormat("xrange(%ld, %ld)",
+                                  r->start,
+                                  get_stop_for_range(r));
 
-	else
-		sprintf(buf1, "xrange(%ld, %ld, %ld)",
-			r->start,
-			r->start + r->len * r->step,
-			r->step);
-
-	if (r->reps != 1)
-		sprintf(buf2, "(%s * %d)", buf1, r->reps);
-
-	return PyString_FromString(r->reps == 1 ? buf1 : buf2);
+    else
+        rtn = PyString_FromFormat("xrange(%ld, %ld, %ld)",
+                                  r->start,
+                                  get_stop_for_range(r),
+                                  r->step);
+    return rtn;
 }
 
+/* Pickling support */
 static PyObject *
-range_concat(rangeobject *r, PyObject *obj)
+range_reduce(rangeobject *r, PyObject *args)
 {
-	PyErr_SetString(PyExc_TypeError, "cannot concatenate xrange objects");
-	return NULL;
-}
-
-static PyObject *
-range_repeat(rangeobject *r, int n)
-{
-	if (n < 0)
-		return (PyObject *) PyRange_New(0, 0, 1, 1);
-
-	else if (n == 1) {
-		Py_INCREF(r);
-		return (PyObject *) r;
-	}
-
-	else
-		return (PyObject *) PyRange_New(
-						r->start,
-						r->len,
-						r->step,
-						r->reps * n);
-}
-
-static int
-range_compare(rangeobject *r1, rangeobject *r2)
-{
-	if (r1->start != r2->start)
-		return r1->start - r2->start;
-
-	else if (r1->step != r2->step)
-		return r1->step - r2->step;
-
-	else if (r1->len != r2->len)
-		return r1->len - r2->len;
-
-	else
-		return r1->reps - r2->reps;
-}
-
-static PyObject *
-range_slice(rangeobject *r, int low, int high)
-{
-	if (r->reps != 1) {
-		PyErr_SetString(PyExc_TypeError,
-				"cannot slice a replicated xrange");
-		return NULL;
-	}
-	if (low < 0)
-		low = 0;
-	else if (low > r->len)
-		low = r->len;
-	if (high < 0)
-		high = 0;
-	if (high < low)
-		high = low;
-	else if (high > r->len)
-		high = r->len;
-
-	if (low == 0 && high == r->len) {
-		Py_INCREF(r);
-		return (PyObject *) r;
-	}
-
-	return (PyObject *) PyRange_New(
-				low * r->step + r->start,
-				high - low,
-				r->step,
-				1);
-}
-
-static PyObject *
-range_tolist(rangeobject *self, PyObject *args)
-{
-	PyObject *thelist;
-	int j;
-	int len = self->len * self->reps;
-
-	if (! PyArg_ParseTuple(args, ":tolist"))
-		return NULL;
-
-	if ((thelist = PyList_New(len)) == NULL)
-		return NULL;
-
-	for (j = 0; j < len; ++j)
-		if ((PyList_SetItem(thelist, j, (PyObject *) PyInt_FromLong(
-			self->start + (j % self->len) * self->step))) < 0)
-			return NULL;
-
-	return thelist;
-}
-
-static PyObject *
-range_getattr(rangeobject *r, char *name)
-{
-	static PyMethodDef range_methods[] = {
-		{"tolist",	(PyCFunction)range_tolist, METH_VARARGS,
-                 "tolist() -> list\n"
-                 "Return a list object with the same values."},
-		{NULL,		NULL}
-	};
-
-	return Py_FindMethod(range_methods, (PyObject *) r, name);
-}
-
-static int
-range_contains(rangeobject *r, PyObject *obj)
-{
-	long num = PyInt_AsLong(obj);
-
-	if (num < 0 && PyErr_Occurred())
-		return -1;
-
-	if (num < r->start || (num - r->start) % r->step)
-		return 0;
-	if (num > (r->start + (r->len * r->step)))
-		return 0;
-	return 1;
+    return Py_BuildValue("(O(lll))", Py_TYPE(r),
+                         r->start,
+                         get_stop_for_range(r),
+                         r->step);
 }
 
 static PySequenceMethods range_as_sequence = {
-	(inquiry)range_length, /*sq_length*/
-	(binaryfunc)range_concat, /*sq_concat*/
-	(intargfunc)range_repeat, /*sq_repeat*/
-	(intargfunc)range_item, /*sq_item*/
-	(intintargfunc)range_slice, /*sq_slice*/
-	0,		/*sq_ass_item*/
-	0,		/*sq_ass_slice*/
-	(objobjproc)range_contains, /*sq_contains*/
+    (lenfunc)range_length,      /* sq_length */
+    0,                          /* sq_concat */
+    0,                          /* sq_repeat */
+    (ssizeargfunc)range_item, /* sq_item */
+    0,                          /* sq_slice */
+};
+
+static PyObject * range_iter(PyObject *seq);
+static PyObject * range_reverse(PyObject *seq);
+
+PyDoc_STRVAR(reverse_doc,
+"Returns a reverse iterator.");
+
+static PyMethodDef range_methods[] = {
+    {"__reversed__",            (PyCFunction)range_reverse, METH_NOARGS, reverse_doc},
+    {"__reduce__",              (PyCFunction)range_reduce, METH_VARARGS},
+    {NULL,              NULL}           /* sentinel */
 };
 
 PyTypeObject PyRange_Type = {
-	PyObject_HEAD_INIT(&PyType_Type)
-	0,			/* Number of items for varobject */
-	"xrange",		/* Name of this type */
-	sizeof(rangeobject),	/* Basic object size */
-	0,			/* Item size for varobject */
-	(destructor)range_dealloc, /*tp_dealloc*/
-	0,			/*tp_print*/
-	(getattrfunc)range_getattr, /*tp_getattr*/
-	0,			/*tp_setattr*/
-	(cmpfunc)range_compare, /*tp_compare*/
-	(reprfunc)range_repr,	/*tp_repr*/
-	0,			/*tp_as_number*/
-	&range_as_sequence,	/*tp_as_sequence*/
-	0,			/*tp_as_mapping*/
-	0,			/*tp_hash*/
-	0,			/*tp_call*/
-	0,			/*tp_str*/
-	0,			/*tp_getattro*/
-	0,			/*tp_setattro*/
-	0,			/*tp_as_buffer*/
-	Py_TPFLAGS_DEFAULT,	/*tp_flags*/
+    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    "xrange",                   /* Name of this type */
+    sizeof(rangeobject),        /* Basic object size */
+    0,                          /* Item size for varobject */
+    (destructor)PyObject_Del, /* tp_dealloc */
+    0,                          /* tp_print */
+    0,                          /* tp_getattr */
+    0,                          /* tp_setattr */
+    0,                          /* tp_compare */
+    (reprfunc)range_repr,       /* tp_repr */
+    0,                          /* tp_as_number */
+    &range_as_sequence,         /* tp_as_sequence */
+    0,                          /* tp_as_mapping */
+    0,                          /* tp_hash */
+    0,                          /* tp_call */
+    0,                          /* tp_str */
+    PyObject_GenericGetAttr,  /* tp_getattro */
+    0,                          /* tp_setattro */
+    0,                          /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT,         /* tp_flags */
+    range_doc,                  /* tp_doc */
+    0,                          /* tp_traverse */
+    0,                          /* tp_clear */
+    0,                          /* tp_richcompare */
+    0,                          /* tp_weaklistoffset */
+    range_iter,                 /* tp_iter */
+    0,                          /* tp_iternext */
+    range_methods,              /* tp_methods */
+    0,                          /* tp_members */
+    0,                          /* tp_getset */
+    0,                          /* tp_base */
+    0,                          /* tp_dict */
+    0,                          /* tp_descr_get */
+    0,                          /* tp_descr_set */
+    0,                          /* tp_dictoffset */
+    0,                          /* tp_init */
+    0,                          /* tp_alloc */
+    range_new,                  /* tp_new */
 };
+
+/*********************** Xrange Iterator **************************/
+
+typedef struct {
+    PyObject_HEAD
+    long        index;
+    long        start;
+    long        step;
+    long        len;
+} rangeiterobject;
+
+static PyObject *
+rangeiter_next(rangeiterobject *r)
+{
+    if (r->index < r->len)
+        return PyInt_FromLong(r->start + (r->index++) * r->step);
+    return NULL;
+}
+
+static PyObject *
+rangeiter_len(rangeiterobject *r)
+{
+    return PyInt_FromLong(r->len - r->index);
+}
+
+PyDoc_STRVAR(length_hint_doc, "Private method returning an estimate of len(list(it)).");
+
+static PyMethodDef rangeiter_methods[] = {
+    {"__length_hint__", (PyCFunction)rangeiter_len, METH_NOARGS, length_hint_doc},
+    {NULL,              NULL}           /* sentinel */
+};
+
+static PyTypeObject Pyrangeiter_Type = {
+    PyVarObject_HEAD_INIT(&PyType_Type, 0)
+    "rangeiterator",                        /* tp_name */
+    sizeof(rangeiterobject),                /* tp_basicsize */
+    0,                                      /* tp_itemsize */
+    /* methods */
+    (destructor)PyObject_Del,                   /* tp_dealloc */
+    0,                                      /* tp_print */
+    0,                                      /* tp_getattr */
+    0,                                      /* tp_setattr */
+    0,                                      /* tp_compare */
+    0,                                      /* tp_repr */
+    0,                                      /* tp_as_number */
+    0,                                          /* tp_as_sequence */
+    0,                                      /* tp_as_mapping */
+    0,                                      /* tp_hash */
+    0,                                      /* tp_call */
+    0,                                      /* tp_str */
+    PyObject_GenericGetAttr,                /* tp_getattro */
+    0,                                      /* tp_setattro */
+    0,                                      /* tp_as_buffer */
+    Py_TPFLAGS_DEFAULT,                         /* tp_flags */
+    0,                                      /* tp_doc */
+    0,                                          /* tp_traverse */
+    0,                                      /* tp_clear */
+    0,                                      /* tp_richcompare */
+    0,                                      /* tp_weaklistoffset */
+    PyObject_SelfIter,                          /* tp_iter */
+    (iternextfunc)rangeiter_next,               /* tp_iternext */
+    rangeiter_methods,                          /* tp_methods */
+    0,
+};
+
+static PyObject *
+range_iter(PyObject *seq)
+{
+    rangeiterobject *it;
+
+    if (!PyRange_Check(seq)) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
+    it = PyObject_New(rangeiterobject, &Pyrangeiter_Type);
+    if (it == NULL)
+        return NULL;
+    it->index = 0;
+    it->start = ((rangeobject *)seq)->start;
+    it->step = ((rangeobject *)seq)->step;
+    it->len = ((rangeobject *)seq)->len;
+    return (PyObject *)it;
+}
+
+static PyObject *
+range_reverse(PyObject *seq)
+{
+    rangeiterobject *it;
+    long start, step, len;
+
+    if (!PyRange_Check(seq)) {
+        PyErr_BadInternalCall();
+        return NULL;
+    }
+    it = PyObject_New(rangeiterobject, &Pyrangeiter_Type);
+    if (it == NULL)
+        return NULL;
+
+    start = ((rangeobject *)seq)->start;
+    step = ((rangeobject *)seq)->step;
+    len = ((rangeobject *)seq)->len;
+
+    it->index = 0;
+    it->len = len;
+    /* the casts below guard against signed overflow by turning it
+       into unsigned overflow instead.  The correctness of this
+       code still depends on conversion from unsigned long to long
+       wrapping modulo ULONG_MAX+1, which isn't guaranteed (see
+       C99 6.3.1.3p3) but seems to hold in practice for all
+       platforms we're likely to meet.
+
+       If step == LONG_MIN then we still end up with LONG_MIN
+       after negation; but this works out, since we've still got
+       the correct value modulo ULONG_MAX+1, and the range_item
+       calculation is also done modulo ULONG_MAX+1.
+    */
+    it->start = (long)(start + (unsigned long)(len-1) * step);
+    it->step = (long)(0UL-step);
+
+    return (PyObject *)it;
+}

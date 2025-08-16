@@ -8,24 +8,10 @@
 
 #include "Python.h"
 
-#ifdef __SASC
-/* Replacement stack overflow routine for SAS/C */
-void __stdargs _CXOVF(void)
-{
-	PyErr_SetString(PyExc_MemoryError,"too deep recursion");
-}
-#endif /* __SASC */
-
 /* ARGSUSED */
 int
 PyErr_CheckSignals(void)
 {
-#ifdef __SASC
-/* Amiga SAS/C: Explicit check of available stack */
-extern unsigned long stackavail(void);
-extern long __STKNEED;
-if(stackavail()<__STKNEED) return _CXOVF(),-1;
-#endif /* __SASC */
 	if (!PyOS_InterruptOccurred())
 		return 0;
 	PyErr_SetNone(PyExc_KeyboardInterrupt);

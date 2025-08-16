@@ -3,7 +3,7 @@
  *
  * regular expression matching engine
  *
- * Copyright (c) 1997-2000 by Secret Labs AB.  All rights reserved.
+ * Copyright (c) 1997-2001 by Secret Labs AB.  All rights reserved.
  *
  * See the _sre.c file for information on usage and redistribution.
  */
@@ -13,18 +13,35 @@
 
 #include "sre_constants.h"
 
-/* size of a code word (must be unsigned short or larger) */
-#define SRE_CODE unsigned short
+/* size of a code word (must be unsigned short or larger, and
+   large enough to hold a UCS4 character) */
+#ifdef Py_USING_UNICODE
+# define SRE_CODE Py_UCS4
+# if SIZEOF_SIZE_T > 4
+#  define SRE_MAXREPEAT (~(SRE_CODE)0)
+# else
+#  define SRE_MAXREPEAT ((SRE_CODE)PY_SSIZE_T_MAX)
+# endif
+#else
+# define SRE_CODE unsigned int
+# if SIZEOF_SIZE_T > SIZEOF_INT
+#  define SRE_MAXREPEAT (~(SRE_CODE)0)
+# else
+#  define SRE_MAXREPEAT ((SRE_CODE)PY_SSIZE_T_MAX)
+# endif
+#endif
 
 typedef struct {
     PyObject_VAR_HEAD
-    int groups;
+    Py_ssize_t groups; /* must be first! */
     PyObject* groupindex;
     PyObject* indexgroup;
     /* compatibility */
     PyObject* pattern; /* pattern source (or None) */
     int flags; /* flags used when compiling pattern source */
+    PyObject *weakreflist; /* List of weak references */
     /* pattern code */
+    Py_ssize_t codesize;
     SRE_CODE code[1];
 } PatternObject;
 
@@ -32,13 +49,13 @@ typedef struct {
 
 typedef struct {
     PyObject_VAR_HEAD
-    PyObject* string; /* link to the target string */
+    PyObject* string; /* link to the target string (must be first) */
     PyObject* regs; /* cached list of matching spans */
     PatternObject* pattern; /* link to the regex (pattern) object */
-    int pos, endpos; /* current target slice */
-    int lastindex; /* last index marker seen by the engine (-1 if none) */
-    int groups; /* number of groups (start/end marks) */
-    int mark[1];
+    Py_ssize_t pos, endpos; /* current target slice */
+    Py_ssize_t lastindex; /* last index marker seen by the engine (-1 if none) */
+    Py_ssize_t groups; /* number of groups (start/end marks) */
+    Py_ssize_t mark[1];
 } MatchObject;
 
 typedef unsigned int (*SRE_TOLOWER_HOOK)(unsigned int ch);
@@ -47,8 +64,9 @@ typedef unsigned int (*SRE_TOLOWER_HOOK)(unsigned int ch);
 #define SRE_MARK_SIZE 200
 
 typedef struct SRE_REPEAT_T {
-    int count;
+    Py_ssize_t count;
     SRE_CODE* pattern; /* points to REPEAT operator arguments */
+    void* last_ptr; /* helper to check for infinite loops */
     struct SRE_REPEAT_T *prev; /* points to previous repeat context */
 } SRE_REPEAT;
 
@@ -60,18 +78,19 @@ typedef struct {
     void* end; /* end of original string */
     /* attributes for the match object */
     PyObject* string;
-    int pos, endpos;
+    Py_ssize_t pos, endpos;
     /* character size */
     int charsize;
     /* registers */
-    int lastindex;
-    int lastmark;
+    Py_ssize_t lastindex;
+    Py_ssize_t lastmark;
     void* mark[SRE_MARK_SIZE];
     /* dynamically allocated stuff */
-    void** mark_stack;
-    int mark_stack_size;
-    int mark_stack_base;
-    SRE_REPEAT *repeat; /* current repeat context */
+    char* data_stack;
+    size_t data_stack_size;
+    size_t data_stack_base;
+    /* current repeat context */
+    SRE_REPEAT *repeat;
     /* hooks */
     SRE_TOLOWER_HOOK lower;
 } SRE_STATE;

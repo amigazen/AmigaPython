@@ -7,8 +7,8 @@
  *
  *                    All Rights Reserved
  *
- * Permission to use, copy, modify, and distribute this software and its 
- * documentation for any purpose and without fee is hereby granted, 
+ * Permission to use, copy, modify, and distribute this software and its
+ * documentation for any purpose and without fee is hereby granted,
  * provided that the above copyright notice, this permission notice and
  * the following disclaimer notice appear unmodified in all copies.
  *
@@ -24,73 +24,113 @@
  * davegottner@delphi.com.
  *---------------------------------------------------------------------------*/
 
+/* Modified to support --help and --version, as well as /? on Windows
+ * by Georg Brandl. */
+
 #include <stdio.h>
 #include <string.h>
 
-#define bool	int
-#ifndef TRUE
-#define TRUE	1
-#endif
-#ifndef FALSE
-#define FALSE	0
+#ifdef __cplusplus
+extern "C" {
 #endif
 
-bool    opterr = TRUE;          /* generate error messages */
-int     optind = 1;             /* index into argv array   */
-char *  optarg = NULL;          /* optional argument       */
+int _PyOS_opterr = 1;          /* generate error messages */
+int _PyOS_optind = 1;          /* index into argv array   */
+char *_PyOS_optarg = NULL;     /* optional argument       */
+static char *opt_ptr = "";
 
-
-#ifndef __BEOS__
-int getopt(int argc, char *argv[], char optstring[])
-#else
-int getopt(int argc, char *const *argv, const char *optstring)
-#endif
+void _PyOS_ResetGetOpt(void)
 {
-	static   char *opt_ptr = "";
-	register char *ptr;
-			 int   option;
-
-	if (*opt_ptr == '\0') {
-
-		if (optind >= argc || argv[optind][0] != '-' ||
-		    argv[optind][1] == '\0' /* lone dash */ )
-			return -1;
-
-		else if (strcmp(argv[optind], "--") == 0) {
-			++optind;
-			return -1;
-		}
-
-		opt_ptr = &argv[optind++][1]; 
-	}
-
-	if ( (option = *opt_ptr++) == '\0')
-	  return -1;
-	
-	if ((ptr = strchr(optstring, option)) == NULL) {
-		if (opterr)
-			fprintf(stderr, "Unknown option: -%c\n", option);
-
-		return '?';
-	}
-
-	if (*(ptr + 1) == ':') {
-		if (*opt_ptr != '\0') {
-			optarg  = opt_ptr;
-			opt_ptr = "";
-		}
-
-		else {
-			if (optind >= argc) {
-				if (opterr)
-					fprintf(stderr,
-			    "Argument expected for the -%c option\n", option);
-				return '?';
-			}
-
-			optarg = argv[optind++];
-		}
-	}
-
-	return option;
+    _PyOS_opterr = 1;
+    _PyOS_optind = 1;
+    _PyOS_optarg = NULL;
+    opt_ptr = "";
 }
+
+int _PyOS_GetOpt(int argc, char **argv, char *optstring)
+{
+    char *ptr;
+    int option;
+
+    if (*opt_ptr == '\0') {
+
+        if (_PyOS_optind >= argc)
+            return -1;
+#ifdef MS_WINDOWS
+        else if (strcmp(argv[_PyOS_optind], "/?") == 0) {
+            ++_PyOS_optind;
+            return 'h';
+        }
+#endif
+
+        else if (argv[_PyOS_optind][0] != '-' ||
+                 argv[_PyOS_optind][1] == '\0' /* lone dash */ )
+            return -1;
+
+        else if (strcmp(argv[_PyOS_optind], "--") == 0) {
+            ++_PyOS_optind;
+            return -1;
+        }
+
+        else if (strcmp(argv[_PyOS_optind], "--help") == 0) {
+            ++_PyOS_optind;
+            return 'h';
+        }
+
+        else if (strcmp(argv[_PyOS_optind], "--version") == 0) {
+            ++_PyOS_optind;
+            return 'V';
+        }
+
+
+        opt_ptr = &argv[_PyOS_optind++][1];
+    }
+
+    if ((option = *opt_ptr++) == '\0')
+        return -1;
+
+    if (option == 'J') {
+        if (_PyOS_opterr)
+            fprintf(stderr, "-J is reserved for Jython\n");
+        return '_';
+    }
+
+    if (option == 'X') {
+        if (_PyOS_opterr)
+            fprintf(stderr,
+                "-X is reserved for implementation-specific arguments\n");
+        return '_';
+    }
+
+    if ((ptr = strchr(optstring, option)) == NULL) {
+        if (_PyOS_opterr)
+            fprintf(stderr, "Unknown option: -%c\n", option);
+
+        return '_';
+    }
+
+    if (*(ptr + 1) == ':') {
+        if (*opt_ptr != '\0') {
+            _PyOS_optarg  = opt_ptr;
+            opt_ptr = "";
+        }
+
+        else {
+            if (_PyOS_optind >= argc) {
+                if (_PyOS_opterr)
+                    fprintf(stderr,
+                        "Argument expected for the -%c option\n", option);
+                return '_';
+            }
+
+            _PyOS_optarg = argv[_PyOS_optind++];
+        }
+    }
+
+    return option;
+}
+
+#ifdef __cplusplus
+}
+#endif
+

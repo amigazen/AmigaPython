@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/env python
 """ Utility for parsing HTML entity definitions available from:
 
       http://www.w3.org/ as e.g.
@@ -8,7 +8,7 @@
     Python snippet defining a dictionary "entitydefs" mapping literal
     entity name to character or numeric entity.
 
-    Marc-Andre Lemburg, mal@lemburg.com, 1999. 
+    Marc-Andre Lemburg, mal@lemburg.com, 1999.
     Use as you like. NO WARRANTIES.
 
 """
@@ -62,4 +62,3 @@ if __name__ == '__main__':
     text = infile.read()
     defs = parse(text)
     writefile(outfile,defs)
-
