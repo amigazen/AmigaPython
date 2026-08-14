@@ -170,3 +170,7 @@ amigapythonamitcp.lib
 **/*.exe
 **/*.GST
 **/*.gst
+
+output.txt
+*.pyc
+*.uaem

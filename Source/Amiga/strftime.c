@@ -31,9 +31,10 @@ int daylight = 0;   /* Daylight saving time flag */
 extern long __gmtoffset;
 extern int __dstflag;
 
+/* LocaleBase: declared in proto/locale.h, defined and opened in libcheck.c */
+
 static void amiga_init_tzname(void) {
     struct Locale *locale;
-    struct Library *LocaleBase = NULL;
 
     /* Initialize PosixLib timezone variables */
     tzset();
@@ -42,7 +43,9 @@ static void amiga_init_tzname(void) {
     timezone = __gmtoffset;
     daylight = __dstflag;
 
-    LocaleBase = OpenLibrary("locale.library", 38);
+    /* Constructor should have opened locale.library; open here if not. */
+    if (LocaleBase == NULL)
+        LocaleBase = (struct LocaleBase *)OpenLibrary("locale.library", 38);
     if (LocaleBase) {
         locale = OpenLocale(NULL);
         if (locale) {
@@ -53,7 +56,7 @@ static void amiga_init_tzname(void) {
             tzname[1] = tzname[0];
             CloseLocale(locale);
         }
-        CloseLibrary(LocaleBase);
+        /* Leave LocaleBase open for PosixLib / other locale callers. */
     }
 }
 

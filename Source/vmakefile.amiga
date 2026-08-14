@@ -52,9 +52,9 @@ $(ODIR)/stackinit.o: $(SRCDIR)/stackinit.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -D__DATA_FAR__ -o $@ $<
 
-$(ODIR)/crc32.o: $(SRCDIR)/crc32.asm
+$(ODIR)/crc32.o: $(SRCDIR)/crc32.c
 	@$(MKDIR) $(ODIR)
-	$(VASM) -quiet -m68000 -Fhunk -linedebug -o $@ $<
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
 # Individual object rules for all files
 

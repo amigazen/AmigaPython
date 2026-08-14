@@ -1,9 +1,12 @@
 /*
- * amiga_paths.h - Amiga path conversion macros for Python 2.7.18
- * 
- * This header provides macros that override standard POSIX functions
- * to handle Amiga-style paths by converting them to Unix-style paths
- * before calling the actual PosixLib functions.
+ * amiga_paths.h - Amiga path helpers for Python 2.7.18
+ *
+ * vbcc PosixLib fopen/stat accept Amiga volume:path names natively
+ * (they convert internally).  Do not rewrite them as /volume/path --
+ * that form breaks directory detection (NullImporter) and imports.
+ *
+ * Py_AmigaToPosixPath() copies the Amiga path through unchanged so
+ * call sites share one helper if PosixLib behaviour ever changes.
  */
 
 #ifndef AMIGA_PATHS_H
@@ -11,18 +14,11 @@
 
 #ifdef _AMIGA
 
-/* Override standard functions with Amiga path-aware versions */
-#define stat(path, buf) amiga_stat(path, buf)
-#define lstat(path, buf) amiga_lstat(path, buf)
-#define access(path, mode) amiga_access(path, mode)
-#define open(path, flags, ...) amiga_open(path, flags, ##__VA_ARGS__)
+#include <stddef.h>
 
-/* Function declarations */
-int amiga_stat(const char* path, struct stat* buf);
-int amiga_lstat(const char* path, struct stat* buf);
-int amiga_access(const char* path, int mode);
-int amiga_open(const char* path, int flags, ...);
+/* Copy amiga_path into dest.  dest_len includes the trailing NUL. */
+void Py_AmigaToPosixPath(char *dest, size_t dest_len, const char *amiga_path);
 
 #endif /* _AMIGA */
 
-#endif /* AMIGA_PATHS_H */ 
+#endif /* AMIGA_PATHS_H */

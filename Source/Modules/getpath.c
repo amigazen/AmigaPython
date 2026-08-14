@@ -2,6 +2,9 @@
 
 #include "Python.h"
 #include "osdefs.h"
+#ifdef _AMIGA
+#include "amiga_paths.h"
+#endif
 
 #include <sys/types.h>
 #include <string.h>
@@ -122,71 +125,26 @@ static void
 reduce(char *dir)
 {
     size_t i = strlen(dir);
+#ifdef _AMIGA
+    /* Stop at '/' or at the volume/assign colon so "Python:Lib" -> "Python:" */
+    while (i > 0 && dir[i] != SEP && dir[i] != ':')
+        --i;
+    if (i > 0 && dir[i] == ':') {
+        if (dir[i + 1] == '\0') {
+            /* Already at volume root (e.g. "AmigaZen:") -- clear to end walk */
+            dir[0] = '\0';
+            return;
+        }
+        dir[i + 1] = '\0';
+        return;
+    }
+#else
     while (i > 0 && dir[i] != SEP)
         --i;
+#endif
     dir[i] = '\0';
 }
 
-
-#ifdef _AMIGA
-/* Convert Amiga path to POSIX path for stat() calls */
-static void
-amiga_to_posix_path(char *posix_path, const char *amiga_path)
-{
-    char *colon;
-    char *slash;
-    
-    /* Handle volume:folder/file */
-    colon = strchr(amiga_path, ':');
-    if (colon) {
-        /* Get the folder/file part after the colon */
-        slash = colon + 1;
-        
-        /* Skip leading slashes */
-        while (*slash == '/') {
-            slash++;
-        }
-        
-        /* Check if this is the current working directory volume */
-        if (strncmp(amiga_path, "Python:", 7) == 0) {
-            /* We're already in Python: directory, use relative path */
-            if (*slash) {
-                strcpy(posix_path, slash);
-            } else {
-                strcpy(posix_path, ".");
-            }
-        } else {
-            /* For other volumes, use absolute path */
-            posix_path[0] = '/';
-            strncpy(posix_path + 1, amiga_path, colon - amiga_path);
-            posix_path[colon - amiga_path + 1] = '\0';
-            
-            /* Add the folder/file part */
-            if (*slash) {
-                strcat(posix_path, "/");
-                strcat(posix_path, slash);
-            }
-        }
-    } else {
-        /* Handle relative paths */
-        if (amiga_path[0] == '/') {
-            /* /path/file -> ../path/file */
-            posix_path[0] = '.';
-            posix_path[1] = '.';
-            posix_path[2] = '/';
-            strcpy(posix_path + 3, amiga_path + 1);
-        } else {
-            /* path/file -> ./path/file */
-            posix_path[0] = '.';
-            posix_path[1] = '/';
-            strcpy(posix_path + 2, amiga_path);
-        }
-    }
-    
-    /* Debug logging for path conversion */
-    fprintf(stderr, "DEBUG: getpath.c amiga_to_posix_path: '%s' -> '%s'\n", amiga_path, posix_path);
-}
-#endif
 
 static int
 isfile(char *filename)          /* Is file, not directory */
@@ -194,26 +152,16 @@ isfile(char *filename)          /* Is file, not directory */
     struct stat buf;
 #ifdef _AMIGA
     char posix_path[MAXPATHLEN];
-    amiga_to_posix_path(posix_path, filename);
-    fprintf(stderr, "[DEBUG] isfile: Checking '%s' (POSIX: '%s')\n", filename, posix_path);
-    if (stat(posix_path, &buf) != 0) {
-        fprintf(stderr, "[DEBUG] isfile: stat() failed for '%s', errno=%d\n", posix_path, errno);
+
+    Py_AmigaToPosixPath(posix_path, sizeof(posix_path), filename);
+    if (stat(posix_path, &buf) != 0)
         return 0;
-    }
 #else
-    if (stat(filename, &buf) != 0) {
+    if (stat(filename, &buf) != 0)
         return 0;
-    }
 #endif
-    if (!S_ISREG(buf.st_mode)) {
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] isfile: Not a regular file '%s'\n", filename);
-#endif
+    if (!S_ISREG(buf.st_mode))
         return 0;
-    }
-#ifdef _AMIGA
-    fprintf(stderr, "[DEBUG] isfile: Found file '%s'\n", filename);
-#endif
     return 1;
 }
 
@@ -221,34 +169,17 @@ isfile(char *filename)          /* Is file, not directory */
 static int
 ismodule(char *filename)        /* Is module -- check for .pyc/.pyo too */
 {
-#ifdef _AMIGA
-    fprintf(stderr, "[DEBUG] ismodule: Checking '%s'\n", filename);
-#endif
-    if (isfile(filename)) {
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] ismodule: Found file '%s'\n", filename);
-#endif
+    if (isfile(filename))
         return 1;
-    }
 
     /* Check for the compiled version of prefix. */
     if (strlen(filename) < MAXPATHLEN) {
         char compiled_filename[MAXPATHLEN];
         strcpy(compiled_filename, filename);
         strcat(compiled_filename, Py_OptimizeFlag ? "o" : "c");
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] ismodule: Checking compiled version '%s'\n", compiled_filename);
-#endif
-        if (isfile(compiled_filename)) {
-#ifdef _AMIGA
-            fprintf(stderr, "[DEBUG] ismodule: Found compiled file '%s'\n", compiled_filename);
-#endif
+        if (isfile(compiled_filename))
             return 1;
-        }
     }
-#ifdef _AMIGA
-    fprintf(stderr, "[DEBUG] ismodule: Not found '%s'\n", filename);
-#endif
     return 0;
 }
 
@@ -259,20 +190,13 @@ isxfile(char *filename)         /* Is executable file */
     struct stat buf;
 #ifdef _AMIGA
     char posix_path[MAXPATHLEN];
-    amiga_to_posix_path(posix_path, filename);
-    fprintf(stderr, "DEBUG: isxfile stat('%s') -> ", posix_path);
-    if (stat(posix_path, &buf) != 0) {
-        fprintf(stderr, "FAILED (errno=%d)\n", errno);
+
+    Py_AmigaToPosixPath(posix_path, sizeof(posix_path), filename);
+    if (stat(posix_path, &buf) != 0)
         return 0;
-    }
-    fprintf(stderr, "SUCCESS\n");
 #else
-    fprintf(stderr, "DEBUG: isxfile stat('%s') -> ", filename);
-    if (stat(filename, &buf) != 0) {
-        fprintf(stderr, "FAILED (errno=%d)\n", errno);
+    if (stat(filename, &buf) != 0)
         return 0;
-    }
-    fprintf(stderr, "SUCCESS\n");
 #endif
     if (!S_ISREG(buf.st_mode))
         return 0;
@@ -282,55 +206,24 @@ isxfile(char *filename)         /* Is executable file */
 }
 
 #ifdef _AMIGA
-/* Amiga-specific program path detection */
-extern void Py_GetArgcArgv Py_PROTO((int *argc, char ***argv));  /* in main.c */
-
 static const char *
 fullprogpath(void)
 {
     static char path[MAXPATHLEN*2];
-    char *prog_name = Py_GetProgramName();
-    
-#ifdef _AMIGA
-    fprintf(stderr, "[DEBUG] fullprogpath: prog_name='%s'\n", prog_name);
-#endif
-    
-    /* If the program name contains ':' or '/' it's not in the user's
-     * path and probably set by using Py_SetProgramName. In that case,
-     * just use this. If it exists! */
+    char *prog_name;
+    char cwd[MAXPATHLEN];
+
+    prog_name = Py_GetProgramName();
     strcpy(path, prog_name);
-    if (strchr(path, ':') || strchr(path, '/')) {
-        /* For Amiga paths with ':', we can't use isxfile() directly
-           since it expects Unix-style paths. Just return the path as-is. */
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] fullprogpath: Using absolute path '%s'\n", path);
-#endif
+    if (strchr(path, ':') || strchr(path, '/'))
         return path;
-    }
 
-    /* For relative paths, try to resolve them using PosixLib functions */
-    if (path[0] != '/' && path[0] != ':') {
-        char cwd[MAXPATHLEN];
-        if (getcwd(cwd, MAXPATHLEN)) {
-            /* Construct full path using PosixLib path handling */
-            strcpy(path, cwd);
-            if (path[strlen(path)-1] != '/') {
-                strcat(path, "/");
-            }
-            strcat(path, prog_name);
-#ifdef _AMIGA
-            fprintf(stderr, "[DEBUG] fullprogpath: Resolved to '%s'\n", path);
-#endif
-        } else {
-#ifdef _AMIGA
-            fprintf(stderr, "[DEBUG] fullprogpath: getcwd() failed\n");
-#endif
-        }
+    if (getcwd(cwd, MAXPATHLEN)) {
+        strcpy(path, cwd);
+        if (path[strlen(path)-1] != '/')
+            strcat(path, "/");
+        strcat(path, prog_name);
     }
-
-#ifdef _AMIGA
-    fprintf(stderr, "[DEBUG] fullprogpath: Returning '%s'\n", path);
-#endif
     return path;
 }
 #endif /* _AMIGA */
@@ -342,20 +235,13 @@ isdir(char *filename)                   /* Is directory */
     struct stat buf;
 #ifdef _AMIGA
     char posix_path[MAXPATHLEN];
-    amiga_to_posix_path(posix_path, filename);
-    fprintf(stderr, "DEBUG: isdir stat('%s') -> ", posix_path);
-    if (stat(posix_path, &buf) != 0) {
-        fprintf(stderr, "FAILED (errno=%d)\n", errno);
+
+    Py_AmigaToPosixPath(posix_path, sizeof(posix_path), filename);
+    if (stat(posix_path, &buf) != 0)
         return 0;
-    }
-    fprintf(stderr, "SUCCESS\n");
 #else
-    fprintf(stderr, "DEBUG: isdir stat('%s') -> ", filename);
-    if (stat(filename, &buf) != 0) {
-        fprintf(stderr, "FAILED (errno=%d)\n", errno);
+    if (stat(filename, &buf) != 0)
         return 0;
-    }
-    fprintf(stderr, "SUCCESS\n");
 #endif
     if (!S_ISDIR(buf.st_mode))
         return 0;
@@ -883,13 +769,9 @@ calculate_path(void)
             delim = strchr(defpath, DELIM);
 
 #ifdef _AMIGA
-            /* For Amiga, check if path is absolute (starts with volume name) */
-            if (defpath[0] != 'P' || strncmp(defpath, "Python:", 7) != 0) {
-                /* Only add prefix size for relative paths, not for absolute Python: paths */
-                if (defpath[0] != SEP)
-                    bufsz += prefixsz;
-            }
-            /* For Python: paths, we don't add prefix size since we use them as-is */
+            /* Absolute Amiga paths contain ':'; relative ones get the prefix. */
+            if (strchr(defpath, ':') == NULL && defpath[0] != SEP)
+                bufsz += prefixsz;
 #else
             if (defpath[0] != SEP)
                 /* Paths are relative to prefix */
@@ -944,18 +826,14 @@ calculate_path(void)
                 delim = strchr(defpath, DELIM);
 
 #ifdef _AMIGA
-                /* For Amiga, check if path is absolute (starts with volume name) */
-                if (defpath[0] != 'P' || strncmp(defpath, "Python:", 7) != 0) {
-                    /* Only add prefix for relative paths, not for absolute Python: paths */
-                    if (defpath[0] != SEP) {
-                        strcat(buf, prefix);
-                        if (prefixsz >= 2 && prefix[prefixsz - 2] != SEP &&
-                            defpath[0] != (delim ? DELIM : L'\0')) {  /* not empty */
-                            strcat(buf, separator);
-                        }
+                /* Absolute Amiga paths contain ':'; relative ones get the prefix. */
+                if (strchr(defpath, ':') == NULL && defpath[0] != SEP) {
+                    strcat(buf, prefix);
+                    if (prefixsz >= 2 && prefix[prefixsz - 2] != SEP &&
+                        defpath[0] != (delim ? DELIM : L'\0')) {  /* not empty */
+                        strcat(buf, separator);
                     }
                 }
-                /* For Python: paths, we don't add prefix, just add the path */
 #else
                 if (defpath[0] != SEP) {
                     strcat(buf, prefix);

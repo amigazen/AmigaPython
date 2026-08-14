@@ -9,6 +9,7 @@
 /* Amiga constructor function declarations */
 extern int WBArgParse_constructor(void);
 extern int dosio_init_constructor(void);
+extern int locale_lib_init_constructor(void);
 
 int
 main(int argc, char **argv)
@@ -24,6 +25,7 @@ main(int argc, char **argv)
 
 	/* Call Amiga constructor functions before Python initialization */
 #ifdef _AMIGA
+	locale_lib_init_constructor();
 	WBArgParse_constructor();
 	dosio_init_constructor();
 #endif

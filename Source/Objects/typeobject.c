@@ -6001,141 +6001,204 @@ slot_tp_del(PyObject *self)
 /*
 Table mapping __foo__ names to tp_foo offsets and slot_tp_foo wrapper functions.
 
-The table is ordered by offsets relative to the 'PyHeapTypeObject' structure,
-which incorporates the additional structures used for numbers, sequences and
-mappings.  Note that multiple names may map to the same slot (e.g. __eq__,
-__ne__ etc. all map to tp_richcompare) and one name may map to multiple slots
-(e.g. __str__ affects tp_str as well as tp_repr). The table is terminated with
-an all-zero entry.  (This table is further initialized in init_slotdefs().)
+Amiga/VBCC: do not use BINSLOT-style macros that paste string-literal args
+("x." NAME ... DOC) -- vbccm68k misparses those.  Use plain initializers with
+offsetof() so tp_init/etc. get correct 32-bit offsets (the old 0x70 hardcodes
+were wrong and broke Quitter('quit') / object.__new__).
 */
 
 typedef struct wrapperbase slotdef;
 
-#ifdef _AMIGA
-/* VBCC-compatible type definition based on PyAROS */
-typedef struct {
-    PyTypeObject type;
-    PyNumberMethods as_number;
-    PySequenceMethods as_sequence;
-    PyMappingMethods as_mapping;
-    PyBufferProcs as_buffer;
-    PyObject *name, *slots;
-    PyMemberDef members[1];
-} etype;
-#endif
-
-#undef TPSLOT
-#undef FLSLOT
-#undef ETSLOT
-#undef SQSLOT
-#undef MPSLOT
-#undef NBSLOT
-#undef UNSLOT
-#undef IBSLOT
-#undef BINSLOT
-#undef RBINSLOT
-
-#ifdef _AMIGA
-/* VBCC-compatible macro definitions based on PyAROS patterns */
-#define TPSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    {NAME, offsetof(PyTypeObject, SLOT), (void *)(FUNCTION), WRAPPER, DOC}
-#define FLSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC, FLAGS) \
-    {NAME, offsetof(PyTypeObject, SLOT), (void *)(FUNCTION), WRAPPER, \
-     DOC, FLAGS}
-#define ETSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    {NAME, offsetof(etype, SLOT), (void *)(FUNCTION), WRAPPER, DOC}
-#define SQSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    ETSLOT(NAME, as_sequence.SLOT, FUNCTION, WRAPPER, DOC)
-#define MPSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    ETSLOT(NAME, as_mapping.SLOT, FUNCTION, WRAPPER, DOC)
-#define NBSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, WRAPPER, DOC)
-#define UNSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, WRAPPER, \
-           "x." NAME "() <==> " DOC)
-#define IBSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, WRAPPER, \
-           "x." NAME "(y) <==> x" DOC "y")
-#define BINSLOT(NAME, SLOT, FUNCTION, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, wrap_binaryfunc_l, \
-           "x." NAME "(y) <==> x" DOC "y")
-#define RBINSLOT(NAME, SLOT, FUNCTION, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, wrap_binaryfunc_r, \
-           "x." NAME "(y) <==> y" DOC "x")
-#else
-/* Original Python 2.7.18 macro definitions */
-#define TPSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    {NAME, offsetof(PyTypeObject, SLOT), (void *)(FUNCTION), WRAPPER, \
-     PyDoc_STR(DOC)}
-#define FLSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC, FLAGS) \
-    {NAME, offsetof(PyTypeObject, SLOT), (void *)(FUNCTION), WRAPPER, \
-     PyDoc_STR(DOC), FLAGS}
-#define ETSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    {NAME, offsetof(PyHeapTypeObject, SLOT), (void *)(FUNCTION), WRAPPER, \
-     PyDoc_STR(DOC)}
-#define SQSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    ETSLOT(NAME, as_sequence.SLOT, FUNCTION, WRAPPER, DOC)
-#define MPSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    ETSLOT(NAME, as_mapping.SLOT, FUNCTION, WRAPPER, DOC)
-#define NBSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, WRAPPER, DOC)
-#define UNSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, WRAPPER, \
-           "x." NAME "() <==> " DOC)
-#define IBSLOT(NAME, SLOT, FUNCTION, WRAPPER, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, WRAPPER, \
-           "x." NAME "(y) <==> x" DOC "y")
-#define BINSLOT(NAME, SLOT, FUNCTION, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, wrap_binaryfunc_l, \
-           "x." NAME "(y) <==> x" DOC "y")
-#define RBINSLOT(NAME, SLOT, FUNCTION, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, wrap_binaryfunc_r, \
-           "x." NAME "(y) <==> y" DOC "x")
-#define BINSLOTNOTINFIX(NAME, SLOT, FUNCTION, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, wrap_binaryfunc_l, \
-           "x." NAME "(y) <==> " DOC)
-#define RBINSLOTNOTINFIX(NAME, SLOT, FUNCTION, DOC) \
-    ETSLOT(NAME, as_number.SLOT, FUNCTION, wrap_binaryfunc_r, \
-           "x." NAME "(y) <==> " DOC)
-#endif
-
 static slotdef slotdefs[] = {
-#ifdef _AMIGA
-    /* Minimal slotdefs for VBCC compatibility - using only existing slot and wrapper functions */
-    /* Type slots (0x40-0x74) */
-    {"__str__", 0x40, (void *)(slot_tp_str), wrap_unaryfunc, "x.__str__() <==> str(x)"},
-    {"__repr__", 0x44, (void *)(slot_tp_repr), wrap_unaryfunc, "x.__repr__() <==> repr(x)"},
-    {"__cmp__", 0x48, (void *)(_PyObject_SlotCompare), wrap_cmpfunc, "x.__cmp__(y) <==> cmp(x,y)"},
-    {"__hash__", 0x4C, (void *)(slot_tp_hash), wrap_hashfunc, "x.__hash__() <==> hash(x)"},
-    {"__call__", 0x50, (void *)(slot_tp_call), (wrapperfunc)wrap_call, "x.__call__(...) <==> x(...)"},
-    {"__getattribute__", 0x54, (void *)(slot_tp_getattr_hook), wrap_binaryfunc, "x.__getattribute__('name') <==> x.name"},
-    {"__setattr__", 0x58, (void *)(slot_tp_setattro), wrap_setattr, "x.__setattr__('name', value) <==> x.name = value"},
-    {"__delattr__", 0x58, (void *)(slot_tp_setattro), wrap_delattr, "x.__delattr__('name') <==> del x.name"},
-    {"__iter__", 0x60, (void *)(slot_tp_iter), wrap_unaryfunc, "x.__iter__() <==> iter(x)"},
-    {"next", 0x64, (void *)(slot_tp_iternext), wrap_next, "x.next() -> the next value, or raise StopIteration"},
-    {"__get__", 0x68, (void *)(slot_tp_descr_get), wrap_descr_get, "descr.__get__(obj[, type]) -> value"},
-    {"__set__", 0x6C, (void *)(slot_tp_descr_set), wrap_descr_set, "descr.__set__(obj, value)"},
-    {"__init__", 0x70, (void *)(slot_tp_init), (wrapperfunc)wrap_init, "x.__init__(...) initializes x; see x.__class__.__doc__ for signature"},
-    {"__new__", 0x74, (void *)(slot_tp_new), NULL, ""},
-    /* Sequence slots (0x100-0x11F) */
-    {"__len__", 0x100, (void *)(slot_sq_length), wrap_lenfunc, "x.__len__() <==> len(x)"},
-    {"__getitem__", 0x10C, (void *)(slot_sq_item), wrap_sq_item, "x.__getitem__(y) <==> x[y]"},
-    {"__setitem__", 0x110, (void *)(slot_sq_ass_item), wrap_sq_setitem, "x.__setitem__(i, y) <==> x[i]=y"},
-    /* Mapping slots (0x200-0x20F) */
-    {"__getitem__", 0x200, (void *)(slot_mp_subscript), wrap_binaryfunc, "x.__getitem__(y) <==> x[y]"},
-    {"__setitem__", 0x204, (void *)(slot_mp_ass_subscript), wrap_objobjargproc, "x.__setitem__(i, y) <==> x[i]=y"},
-    /* Number slots (0x300-0x32F) */
-    {"__add__", 0x300, (void *)(slot_nb_add), wrap_binaryfunc_l, "x.__add__(y) <==> x+y"},
-    {"__sub__", 0x304, (void *)(slot_nb_subtract), wrap_binaryfunc_l, "x.__sub__(y) <==> x-y"},
-    {"__mul__", 0x308, (void *)(slot_nb_multiply), wrap_binaryfunc_l, "x.__mul__(y) <==> x*y"},
-    {"__div__", 0x30C, (void *)(slot_nb_divide), wrap_binaryfunc_l, "x.__div__(y) <==> x/y"},
-    {"__mod__", 0x310, (void *)(slot_nb_remainder), wrap_binaryfunc_l, "x.__mod__(y) <==> x%y"},
-    {"__pow__", 0x314, (void *)(slot_nb_power), wrap_ternaryfunc, "x.__pow__(y[, z]) <==> pow(x, y[, z])"},
-    {"__neg__", 0x318, (void *)(slot_nb_negative), wrap_unaryfunc, "x.__neg__() <==> -x"},
-    {"__pos__", 0x31C, (void *)(slot_nb_positive), wrap_unaryfunc, "x.__pos__() <==> +x"},
-    {"__abs__", 0x320, (void *)(slot_nb_absolute), wrap_unaryfunc, "x.__abs__() <==> abs(x)"},
-    {"__nonzero__", 0x324, (void *)(slot_nb_nonzero), wrap_inquirypred, "x.__nonzero__() <==> x != 0"},
-#endif
+    /* Type slots -- offsetof(PyTypeObject, ...) */
+    {"__str__", offsetof(PyTypeObject, tp_str), (void *)slot_tp_str, wrap_unaryfunc,
+     "x.__str__() <==> str(x)"},
+    {"__repr__", offsetof(PyTypeObject, tp_repr), (void *)slot_tp_repr, wrap_unaryfunc,
+     "x.__repr__() <==> repr(x)"},
+    {"__cmp__", offsetof(PyTypeObject, tp_compare), (void *)_PyObject_SlotCompare, wrap_cmpfunc,
+     "x.__cmp__(y) <==> cmp(x,y)"},
+    {"__hash__", offsetof(PyTypeObject, tp_hash), (void *)slot_tp_hash, wrap_hashfunc,
+     "x.__hash__() <==> hash(x)"},
+    {"__call__", offsetof(PyTypeObject, tp_call), (void *)slot_tp_call, (wrapperfunc)wrap_call,
+     "x.__call__(...) <==> x(...)", PyWrapperFlag_KEYWORDS},
+    {"__getattribute__", offsetof(PyTypeObject, tp_getattro), (void *)slot_tp_getattr_hook, wrap_binaryfunc,
+     "x.__getattribute__('name') <==> x.name"},
+    {"__setattr__", offsetof(PyTypeObject, tp_setattro), (void *)slot_tp_setattro, wrap_setattr,
+     "x.__setattr__('name', value) <==> x.name = value"},
+    {"__delattr__", offsetof(PyTypeObject, tp_setattro), (void *)slot_tp_setattro, wrap_delattr,
+     "x.__delattr__('name') <==> del x.name"},
+    {"__lt__", offsetof(PyTypeObject, tp_richcompare), (void *)slot_tp_richcompare, richcmp_lt,
+     "x.__lt__(y) <==> x<y"},
+    {"__le__", offsetof(PyTypeObject, tp_richcompare), (void *)slot_tp_richcompare, richcmp_le,
+     "x.__le__(y) <==> x<=y"},
+    {"__eq__", offsetof(PyTypeObject, tp_richcompare), (void *)slot_tp_richcompare, richcmp_eq,
+     "x.__eq__(y) <==> x==y"},
+    {"__ne__", offsetof(PyTypeObject, tp_richcompare), (void *)slot_tp_richcompare, richcmp_ne,
+     "x.__ne__(y) <==> x!=y"},
+    {"__gt__", offsetof(PyTypeObject, tp_richcompare), (void *)slot_tp_richcompare, richcmp_gt,
+     "x.__gt__(y) <==> x>y"},
+    {"__ge__", offsetof(PyTypeObject, tp_richcompare), (void *)slot_tp_richcompare, richcmp_ge,
+     "x.__ge__(y) <==> x>=y"},
+    {"__iter__", offsetof(PyTypeObject, tp_iter), (void *)slot_tp_iter, wrap_unaryfunc,
+     "x.__iter__() <==> iter(x)"},
+    {"next", offsetof(PyTypeObject, tp_iternext), (void *)slot_tp_iternext, wrap_next,
+     "x.next() -> the next value, or raise StopIteration"},
+    {"__get__", offsetof(PyTypeObject, tp_descr_get), (void *)slot_tp_descr_get, wrap_descr_get,
+     "descr.__get__(obj[, type]) -> value"},
+    {"__set__", offsetof(PyTypeObject, tp_descr_set), (void *)slot_tp_descr_set, wrap_descr_set,
+     "descr.__set__(obj, value)"},
+    {"__delete__", offsetof(PyTypeObject, tp_descr_set), (void *)slot_tp_descr_set, wrap_descr_delete,
+     "descr.__delete__(obj)"},
+    {"__init__", offsetof(PyTypeObject, tp_init), (void *)slot_tp_init, (wrapperfunc)wrap_init,
+     "x.__init__(...) initializes x", PyWrapperFlag_KEYWORDS},
+    {"__new__", offsetof(PyTypeObject, tp_new), (void *)slot_tp_new, NULL, ""},
+    {"__del__", offsetof(PyTypeObject, tp_del), (void *)slot_tp_del, NULL, ""},
+
+    /* Number / mapping / sequence -- offsetof(PyHeapTypeObject, ...) */
+    {"__add__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_add)), (void *)slot_nb_add, wrap_binaryfunc_l,
+     "x.__add__(y) <==> x+y"},
+    {"__radd__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_add)), (void *)slot_nb_add, wrap_binaryfunc_r,
+     "x.__radd__(y) <==> y+x"},
+    {"__sub__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_subtract)), (void *)slot_nb_subtract, wrap_binaryfunc_l,
+     "x.__sub__(y) <==> x-y"},
+    {"__rsub__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_subtract)), (void *)slot_nb_subtract, wrap_binaryfunc_r,
+     "x.__rsub__(y) <==> y-x"},
+    {"__mul__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_multiply)), (void *)slot_nb_multiply, wrap_binaryfunc_l,
+     "x.__mul__(y) <==> x*y"},
+    {"__rmul__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_multiply)), (void *)slot_nb_multiply, wrap_binaryfunc_r,
+     "x.__rmul__(y) <==> y*x"},
+    {"__div__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_divide)), (void *)slot_nb_divide, wrap_binaryfunc_l,
+     "x.__div__(y) <==> x/y"},
+    {"__rdiv__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_divide)), (void *)slot_nb_divide, wrap_binaryfunc_r,
+     "x.__rdiv__(y) <==> y/x"},
+    {"__mod__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_remainder)), (void *)slot_nb_remainder, wrap_binaryfunc_l,
+     "x.__mod__(y) <==> x%y"},
+    {"__rmod__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_remainder)), (void *)slot_nb_remainder, wrap_binaryfunc_r,
+     "x.__rmod__(y) <==> y%x"},
+    {"__divmod__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_divmod)), (void *)slot_nb_divmod, wrap_binaryfunc_l,
+     "x.__divmod__(y) <==> divmod(x, y)"},
+    {"__rdivmod__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_divmod)), (void *)slot_nb_divmod, wrap_binaryfunc_r,
+     "x.__rdivmod__(y) <==> divmod(y, x)"},
+    {"__pow__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_power)), (void *)slot_nb_power, wrap_ternaryfunc,
+     "x.__pow__(y[, z]) <==> pow(x, y[, z])"},
+    {"__rpow__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_power)), (void *)slot_nb_power, wrap_ternaryfunc_r,
+     "y.__rpow__(x[, z]) <==> pow(x, y[, z])"},
+    {"__neg__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_negative)), (void *)slot_nb_negative, wrap_unaryfunc,
+     "x.__neg__() <==> -x"},
+    {"__pos__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_positive)), (void *)slot_nb_positive, wrap_unaryfunc,
+     "x.__pos__() <==> +x"},
+    {"__abs__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_absolute)), (void *)slot_nb_absolute, wrap_unaryfunc,
+     "x.__abs__() <==> abs(x)"},
+    {"__nonzero__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_nonzero)), (void *)slot_nb_nonzero, wrap_inquirypred,
+     "x.__nonzero__() <==> x != 0"},
+    {"__invert__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_invert)), (void *)slot_nb_invert, wrap_unaryfunc,
+     "x.__invert__() <==> ~x"},
+    {"__lshift__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_lshift)), (void *)slot_nb_lshift, wrap_binaryfunc_l,
+     "x.__lshift__(y) <==> x<<y"},
+    {"__rlshift__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_lshift)), (void *)slot_nb_lshift, wrap_binaryfunc_r,
+     "x.__rlshift__(y) <==> y<<x"},
+    {"__rshift__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_rshift)), (void *)slot_nb_rshift, wrap_binaryfunc_l,
+     "x.__rshift__(y) <==> x>>y"},
+    {"__rrshift__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_rshift)), (void *)slot_nb_rshift, wrap_binaryfunc_r,
+     "x.__rrshift__(y) <==> y>>x"},
+    {"__and__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_and)), (void *)slot_nb_and, wrap_binaryfunc_l,
+     "x.__and__(y) <==> x&y"},
+    {"__rand__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_and)), (void *)slot_nb_and, wrap_binaryfunc_r,
+     "x.__rand__(y) <==> y&x"},
+    {"__xor__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_xor)), (void *)slot_nb_xor, wrap_binaryfunc_l,
+     "x.__xor__(y) <==> x^y"},
+    {"__rxor__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_xor)), (void *)slot_nb_xor, wrap_binaryfunc_r,
+     "x.__rxor__(y) <==> y^x"},
+    {"__or__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_or)), (void *)slot_nb_or, wrap_binaryfunc_l,
+     "x.__or__(y) <==> x|y"},
+    {"__ror__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_or)), (void *)slot_nb_or, wrap_binaryfunc_r,
+     "x.__ror__(y) <==> y|x"},
+    {"__coerce__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_coerce)), (void *)slot_nb_coerce, wrap_coercefunc,
+     "x.__coerce__(y) <==> coerce(x, y)"},
+    {"__int__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_int)), (void *)slot_nb_int, wrap_unaryfunc,
+     "x.__int__() <==> int(x)"},
+    {"__long__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_long)), (void *)slot_nb_long, wrap_unaryfunc,
+     "x.__long__() <==> long(x)"},
+    {"__float__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_float)), (void *)slot_nb_float, wrap_unaryfunc,
+     "x.__float__() <==> float(x)"},
+    {"__oct__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_oct)), (void *)slot_nb_oct, wrap_unaryfunc,
+     "x.__oct__() <==> oct(x)"},
+    {"__hex__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_hex)), (void *)slot_nb_hex, wrap_unaryfunc,
+     "x.__hex__() <==> hex(x)"},
+    {"__iadd__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_add)), (void *)slot_nb_inplace_add, wrap_binaryfunc,
+     "x.__iadd__(y) <==> x+=y"},
+    {"__isub__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_subtract)), (void *)slot_nb_inplace_subtract, wrap_binaryfunc,
+     "x.__isub__(y) <==> x-=y"},
+    {"__imul__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_multiply)), (void *)slot_nb_inplace_multiply, wrap_binaryfunc,
+     "x.__imul__(y) <==> x*=y"},
+    {"__idiv__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_divide)), (void *)slot_nb_inplace_divide, wrap_binaryfunc,
+     "x.__idiv__(y) <==> x/=y"},
+    {"__imod__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_remainder)), (void *)slot_nb_inplace_remainder, wrap_binaryfunc,
+     "x.__imod__(y) <==> x%=y"},
+    {"__ipow__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_power)), (void *)slot_nb_inplace_power, wrap_binaryfunc,
+     "x.__ipow__(y) <==> x**=y"},
+    {"__ilshift__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_lshift)), (void *)slot_nb_inplace_lshift, wrap_binaryfunc,
+     "x.__ilshift__(y) <==> x<<=y"},
+    {"__irshift__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_rshift)), (void *)slot_nb_inplace_rshift, wrap_binaryfunc,
+     "x.__irshift__(y) <==> x>>=y"},
+    {"__iand__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_and)), (void *)slot_nb_inplace_and, wrap_binaryfunc,
+     "x.__iand__(y) <==> x&=y"},
+    {"__ixor__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_xor)), (void *)slot_nb_inplace_xor, wrap_binaryfunc,
+     "x.__ixor__(y) <==> x^=y"},
+    {"__ior__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_or)), (void *)slot_nb_inplace_or, wrap_binaryfunc,
+     "x.__ior__(y) <==> x|=y"},
+    {"__floordiv__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_floor_divide)), (void *)slot_nb_floor_divide, wrap_binaryfunc_l,
+     "x.__floordiv__(y) <==> x//y"},
+    {"__rfloordiv__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_floor_divide)), (void *)slot_nb_floor_divide, wrap_binaryfunc_r,
+     "x.__rfloordiv__(y) <==> y//x"},
+    {"__truediv__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_true_divide)), (void *)slot_nb_true_divide, wrap_binaryfunc_l,
+     "x.__truediv__(y) <==> x/y"},
+    {"__rtruediv__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_true_divide)), (void *)slot_nb_true_divide, wrap_binaryfunc_r,
+     "x.__rtruediv__(y) <==> y/x"},
+    {"__ifloordiv__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_floor_divide)), (void *)slot_nb_inplace_floor_divide, wrap_binaryfunc,
+     "x.__ifloordiv__(y) <==> x//=y"},
+    {"__itruediv__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_inplace_true_divide)), (void *)slot_nb_inplace_true_divide, wrap_binaryfunc,
+     "x.__itruediv__(y) <==> x/=y"},
+    {"__index__", (offsetof(PyHeapTypeObject, as_number) + offsetof(PyNumberMethods, nb_index)), (void *)slot_nb_index, wrap_unaryfunc,
+     "x[y:z] <==> x[y.__index__():z.__index__()]"},
+
+    {"__len__", (offsetof(PyHeapTypeObject, as_mapping) + offsetof(PyMappingMethods, mp_length)), (void *)slot_mp_length, wrap_lenfunc,
+     "x.__len__() <==> len(x)"},
+    {"__getitem__", (offsetof(PyHeapTypeObject, as_mapping) + offsetof(PyMappingMethods, mp_subscript)), (void *)slot_mp_subscript, wrap_binaryfunc,
+     "x.__getitem__(y) <==> x[y]"},
+    {"__setitem__", (offsetof(PyHeapTypeObject, as_mapping) + offsetof(PyMappingMethods, mp_ass_subscript)), (void *)slot_mp_ass_subscript, wrap_objobjargproc,
+     "x.__setitem__(i, y) <==> x[i]=y"},
+    {"__delitem__", (offsetof(PyHeapTypeObject, as_mapping) + offsetof(PyMappingMethods, mp_ass_subscript)), (void *)slot_mp_ass_subscript, wrap_delitem,
+     "x.__delitem__(y) <==> del x[y]"},
+
+    {"__len__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_length)), (void *)slot_sq_length, wrap_lenfunc,
+     "x.__len__() <==> len(x)"},
+    /* sq_concat/sq_repeat left NULL for heap types (CPython 2.7.18); nb_* used instead */
+    {"__add__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_concat)), NULL, wrap_binaryfunc,
+     "x.__add__(y) <==> x+y"},
+    {"__mul__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_repeat)), NULL, wrap_indexargfunc,
+     "x.__mul__(n) <==> x*n"},
+    {"__rmul__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_repeat)), NULL, wrap_indexargfunc,
+     "x.__rmul__(n) <==> n*x"},
+    {"__getitem__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_item)), (void *)slot_sq_item, wrap_sq_item,
+     "x.__getitem__(y) <==> x[y]"},
+    {"__getslice__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_slice)), (void *)slot_sq_slice, wrap_ssizessizeargfunc,
+     "x.__getslice__(i, j) <==> x[i:j]"},
+    {"__setitem__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_ass_item)), (void *)slot_sq_ass_item, wrap_sq_setitem,
+     "x.__setitem__(i, y) <==> x[i]=y"},
+    {"__delitem__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_ass_item)), (void *)slot_sq_ass_item, wrap_sq_delitem,
+     "x.__delitem__(y) <==> del x[y]"},
+    {"__setslice__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_ass_slice)), (void *)slot_sq_ass_slice, wrap_ssizessizeobjargproc,
+     "x.__setslice__(i, j, y) <==> x[i:j]=y"},
+    {"__delslice__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_ass_slice)), (void *)slot_sq_ass_slice, wrap_delslice,
+     "x.__delslice__(i, j) <==> del x[i:j]"},
+    {"__contains__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_contains)), (void *)slot_sq_contains, wrap_objobjproc,
+     "x.__contains__(y) <==> y in x"},
+    {"__iadd__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_inplace_concat)), NULL, wrap_binaryfunc,
+     "x.__iadd__(y) <==> x+=y"},
+    {"__imul__", (offsetof(PyHeapTypeObject, as_sequence) + offsetof(PySequenceMethods, sq_inplace_repeat)), NULL, wrap_indexargfunc,
+     "x.__imul__(y) <==> x*=y"},
+
     {NULL}
 };
 
@@ -6150,26 +6213,7 @@ slotptr(PyTypeObject *type, int ioffset)
     char *ptr;
     long offset = ioffset;
 
-#ifdef _AMIGA
-    /* Note: this depends on the hardcoded offsets used in slotdefs! */
-    assert(offset >= 0);
-    if (offset >= 0x200) {
-        /* Mapping slots */
-        ptr = (char *)type->tp_as_mapping;
-        offset -= 0x200;
-    }
-    else if (offset >= 0x100) {
-        /* Sequence slots */
-        ptr = (char *)type->tp_as_sequence;
-        offset -= 0x100;
-    }
-    else if (offset >= 0x300) {
-        /* Number slots */
-        ptr = (char *)type->tp_as_number;
-        offset -= 0x300;
-    }
-#else
-    /* Note: this depends on the order of the members of PyHeapTypeObject! */
+    /* Depends on PyHeapTypeObject member order: number, mapping, sequence. */
     assert(offset >= 0);
     assert((size_t)offset < offsetof(PyHeapTypeObject, as_buffer));
     if ((size_t)offset >= offsetof(PyHeapTypeObject, as_sequence)) {
@@ -6184,7 +6228,6 @@ slotptr(PyTypeObject *type, int ioffset)
         ptr = (char *)type->tp_as_number;
         offset -= offsetof(PyHeapTypeObject, as_number);
     }
-#endif
     else {
         ptr = (char *)type;
     }
@@ -6336,6 +6379,25 @@ update_slots_callback(PyTypeObject *type, void *data)
     return 0;
 }
 
+/* Comparison for qsort: order by offset, then by address (stable groups). */
+static int
+slotdef_cmp(const void *aa, const void *bb)
+{
+    const slotdef *a = (const slotdef *)aa;
+    const slotdef *b = (const slotdef *)bb;
+    int c;
+
+    c = a->offset - b->offset;
+    if (c != 0)
+        return c;
+    /* Force a stable order when offsets match. */
+    if (a < b)
+        return -1;
+    if (a > b)
+        return 1;
+    return 0;
+}
+
 /* Initialize the slotdefs table by adding interned string objects for the
    names and sorting the entries. */
 static void
@@ -6347,16 +6409,13 @@ init_slotdefs(void)
     if (initialized)
         return;
     for (p = slotdefs; p->name; p++) {
-#ifdef _AMIGA
-        /* Slots must be ordered by their offset in the etype. */
-#else
-        /* Slots must be ordered by their offset in the PyHeapTypeObject. */
-#endif
-        assert(!p[1].name || p->offset <= p[1].offset);
         p->name_strobj = PyString_InternFromString(p->name);
         if (!p->name_strobj || !PyString_CHECK_INTERNED(p->name_strobj))
             Py_FatalError("Out of memory interning slotdef names");
     }
+    /* VBCC-friendly plain initializers need not be pre-sorted. */
+    qsort((void *)slotdefs, (size_t)(p - slotdefs), sizeof(slotdef),
+          slotdef_cmp);
     initialized = 1;
 }
 

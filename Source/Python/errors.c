@@ -14,6 +14,11 @@ extern char *strerror(int);
 #include "winbase.h"
 #endif
 
+#ifdef _AMIGA
+#include "amiga_paths.h"
+#include "osdefs.h"
+#endif
+
 #include <ctype.h>
 
 #ifdef __cplusplus
@@ -795,10 +800,18 @@ PyErr_ProgramText(const char *filename, int lineno)
     FILE *fp;
     int i;
     char linebuf[1000];
+#ifdef _AMIGA
+    char posix_filename[MAXPATHLEN];
+#endif
 
     if (filename == NULL || *filename == '\0' || lineno <= 0)
         return NULL;
+#ifdef _AMIGA
+    Py_AmigaToPosixPath(posix_filename, sizeof(posix_filename), filename);
+    fp = fopen(posix_filename, "r" PY_STDIOTEXTMODE);
+#else
     fp = fopen(filename, "r" PY_STDIOTEXTMODE);
+#endif
     if (fp == NULL)
         return NULL;
     for (i = 0; i < lineno; i++) {

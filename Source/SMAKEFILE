@@ -6,7 +6,7 @@
 #
 
 # Program name
-PROGRAM = Python27
+PROGRAM = Python27_sas
 
 all: $(PROGRAM)
 
@@ -14,8 +14,9 @@ all: $(PROGRAM)
 # define to use mempools library
 # (use mempools39 to link with V39+ only pools lib => shorter & faster)
 #
-#MEMPOOLSLIB=LIB:mempools39nb.lib
-#STARTUP=LIB:c_mempools.o
+MEMPOOLSLIB=LIB:mempools39nb.lib
+STARTUP=LIB:c_mempools.o
+#STARTUP=LIB:startup.o
 
 # make sure to include the appropriate math library here
 # For VBCC with PosixLib, we need the IEEE math library
@@ -24,8 +25,8 @@ MLIB=LIB:scmieee.lib
 #
 # define if NOT using mempools library
 #
-MEMPOOLSLIB=
-STARTUP=LIB:c.o
+#MEMPOOLSLIB=
+#STARTUP=LIB:c.o
 #
 
 #
@@ -51,7 +52,7 @@ TCPSTACKLIB=
 #
 # Link library configuration. Change to reflect correct math options etc.
 #
-CLIBS = $(AMIGAPYTHONLIB) $(MEMPOOLSLIB) $(TCPSTACKLIB) $(MLIB) LIB:scnb.lib LIB:z.lib
+CLIBS = $(AMIGAPYTHONLIB) $(MEMPOOLSLIB) $(TCPSTACKLIB) $(MLIB) LIB:pthread.lib LIB:unix.lib LIB:scnb.lib
 
 # Set link options to thy likes.
 # (compiler options can be changed using SCOPTIONS)

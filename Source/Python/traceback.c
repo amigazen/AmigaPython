@@ -9,6 +9,10 @@
 #include "osdefs.h"
 #include "traceback.h"
 
+#ifdef _AMIGA
+#include "amiga_paths.h"
+#endif
+
 #define OFF(x) offsetof(PyTracebackObject, x)
 
 static PyMemberDef tb_memberlist[] = {
@@ -123,12 +127,21 @@ _Py_DisplaySourceLine(PyObject *f, const char *filename, int lineno, int indent)
     char linebuf[2000];
     int i;
     char namebuf[MAXPATHLEN+1];
+#ifdef _AMIGA
+    char posix_filename[MAXPATHLEN];
+    char posix_namebuf[MAXPATHLEN];
+#endif
 
     if (filename == NULL)
         return -1;
     /* This is needed by Emacs' compile command */
 #define FMT "  File \"%.500s\", line %d, in %.500s\n"
+#ifdef _AMIGA
+    Py_AmigaToPosixPath(posix_filename, sizeof(posix_filename), filename);
+    xfp = fopen(posix_filename, "r" PY_STDIOTEXTMODE);
+#else
     xfp = fopen(filename, "r" PY_STDIOTEXTMODE);
+#endif
     if (xfp == NULL) {
         /* Search tail of filename in sys.path before giving up */
         PyObject *path;
@@ -159,7 +172,13 @@ _Py_DisplaySourceLine(PyObject *f, const char *filename, int lineno, int indent)
                     if (len > 0 && namebuf[len-1] != SEP)
                         namebuf[len++] = SEP;
                     strcpy(namebuf+len, tail);
+#ifdef _AMIGA
+                    Py_AmigaToPosixPath(posix_namebuf, sizeof(posix_namebuf),
+                                        namebuf);
+                    xfp = fopen(posix_namebuf, "r" PY_STDIOTEXTMODE);
+#else
                     xfp = fopen(namebuf, "r" PY_STDIOTEXTMODE);
+#endif
                     if (xfp != NULL) {
                         break;
                     }

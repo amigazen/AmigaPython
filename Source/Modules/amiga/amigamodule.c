@@ -239,11 +239,13 @@ posix_error_with_allocated_filename(char* name)
     return rc;
 }
 
-/* Helper function to convert struct stat to Python stat tuple */
+/* Helper: pack struct stat into a 10-tuple.
+ * Python 2.7 Lib prefers st_mode attributes, but Amiga uses tuples
+ * (see genericpath.py) to avoid structseq/GC issues on this port. */
 static PyObject*
 _pystat_fromstructstat(struct stat *st)
 {
-    PyObject *v = Py_BuildValue("(llllllllll)",
+    return Py_BuildValue("(llllllllll)",
             (long)st->st_mode,
             (long)st->st_ino,
             (long)st->st_dev,
@@ -254,7 +256,6 @@ _pystat_fromstructstat(struct stat *st)
             (long)st->st_atime,
             (long)st->st_mtime,
             (long)st->st_ctime);
-    return v;
 }
 
 /* File descriptor verification (simplified for Amiga, clean version) */
@@ -356,17 +357,7 @@ amiga_do_stat(PyObject *self, PyObject *args, int (*statfunc)(const char *, stru
 	Py_END_ALLOW_THREADS
 	if (res != 0)
 		return amiga_error_with_filename(path);
-	return Py_BuildValue("(llllllllll)",
-			(long)st.st_mode,
-			(long)st.st_ino,
-			(long)st.st_dev,
-			(long)st.st_nlink,
-			(long)st.st_uid,
-			(long)st.st_gid,
-			(long)st.st_size,
-			(long)st.st_atime,
-			(long)st.st_mtime,
-			(long)st.st_ctime);
+	return _pystat_fromstructstat(&st);
 }
 
 
@@ -1139,10 +1130,8 @@ amiga_access(PyObject *self, PyObject *args)
 	Py_BEGIN_ALLOW_THREADS
 	res = access(path, mode);
 	Py_END_ALLOW_THREADS
-	if (res < 0)
-		return amiga_error_with_filename(path);
-	Py_INCREF(Py_None);
-	return Py_None;
+	/* Match posixmodule: True/False, do not raise on denial. */
+	return PyBool_FromLong(res == 0);
 }
 
 static PyObject *
@@ -1576,8 +1565,8 @@ static struct PyMethodDef amiga_methods[] = {
 #if defined(AMITCP) || defined(INET225)
 	{"utime",   amiga_utime},
 #endif
-	{"abort",   amiga_abort},
-	{"_exit",   amiga_exit},
+	{"abort",   amiga_abort, 1},
+	{"_exit",   amiga_exit, 1},
 	/* {"times",   amiga_times}, */  
 	/* execv/execve not supported on AmigaOS 3 */
 #ifdef HAVE_GETEGID
@@ -1620,16 +1609,16 @@ static struct PyMethodDef amiga_methods[] = {
 	/* Terminal control functions not available on AmigaOS 3 - no termios.h support */
 	/* {"tcgetpgrp",   amiga_tcgetpgrp}, */
 	/* {"tcsetpgrp",   amiga_tcsetpgrp}, */
-	{"open",    amiga_open},
-	{"close",   amiga_close},
+	{"open",    amiga_open, 1},
+	{"close",   amiga_close, 1},
 #if defined(AMITCP) || defined(INET225)
-	{"dup",     amiga_dup},
-	{"dup2",    amiga_dup2},
+	{"dup",     amiga_dup, 1},
+	{"dup2",    amiga_dup2, 1},
 #endif
-	{"lseek",   amiga_lseek},
-	{"read",    amiga_read},
-	{"write",   amiga_write},
-	{"fstat",   amiga_fstat},
+	{"lseek",   amiga_lseek, 1},
+	{"read",    amiga_read, 1},
+	{"write",   amiga_write, 1},
+	{"fstat",   amiga_fstat, 1},
 	{"fdopen",  amiga_fdopen,   1},
 	/* {"mkfifo",	amiga_mkfifo, 1}, */  /* Not implemented in PosixLib */
 #ifdef HAVE_FTRUNCATE
@@ -1642,55 +1631,55 @@ static struct PyMethodDef amiga_methods[] = {
 	{"strerror",	amiga_strerror, 1},
 #endif
 #ifdef HAVE_ACCESS
-	{"access", amiga_access},
+	{"access", amiga_access, 1},
 #endif
 #ifdef HAVE_ISATTY
-	{"isatty", amiga_isatty},
+	{"isatty", amiga_isatty, 1},
 #endif
 #ifdef HAVE_CLOSERANGE
-	{"closerange", amiga_closerange},
+	{"closerange", amiga_closerange, 1},
 #endif
 #ifdef HAVE_NICE
-	{"nice", amiga_nice},
+	{"nice", amiga_nice, 1},
 #endif
 #ifdef HAVE_KILL
-	{"kill", amiga_kill},
+	{"kill", amiga_kill, 1},
 #endif
 #ifdef HAVE_WAITPID
-	{"waitpid", amiga_waitpid},
+	{"waitpid", amiga_waitpid, 1},
 #endif
 #ifdef HAVE_PATHCONF
-	{"pathconf", amiga_pathconf},
+	{"pathconf", amiga_pathconf, 1},
 #endif
 #ifdef HAVE_FPATHCONF
-	{"fpathconf", amiga_fpathconf},
+	{"fpathconf", amiga_fpathconf, 1},
 #endif
 #ifdef HAVE_SYSCONF
-	{"sysconf", amiga_sysconf},
+	{"sysconf", amiga_sysconf, 1},
 #endif
 #ifdef HAVE_TEMPNAM
-	{"tempnam", amiga_tempnam},
+	{"tempnam", amiga_tempnam, 1},
 #endif
 #ifdef HAVE_URANDOM
-	{"urandom", amiga_urandom},
+	{"urandom", amiga_urandom, 1},
 #endif
 #ifdef HAVE_GETDTABLESIZE
-	{"getdtablesize", amiga_getdtablesize},
+	{"getdtablesize", amiga_getdtablesize, 1},
 #endif
 #ifdef HAVE_FSYNC
-	{"fsync", amiga_fsync},
+	{"fsync", amiga_fsync, 1},
 #endif
 #ifdef HAVE_SLEEP
-	{"sleep", amiga_sleep},
+	{"sleep", amiga_sleep, 1},
 #endif
 #ifdef HAVE_USLEEP
-	{"usleep", amiga_usleep},
+	{"usleep", amiga_usleep, 1},
 #endif
 #ifdef HAVE_GETTIMEOFDAY
-	{"gettimeofday", amiga_gettimeofday},
+	{"gettimeofday", amiga_gettimeofday, 1},
 #endif
 #ifdef HAVE_SETTIMEOFDAY
-	{"settimeofday", amiga_settimeofday},
+	{"settimeofday", amiga_settimeofday, 1},
 #endif
 #if 0
 	/* AMIGA TODO: implement threads. Otherwise pipe() is useless. */

@@ -76,8 +76,13 @@ extern "C" {
 #define EXEC_PREFIX "Python:"
 #define VERSION "2.7.18"
 #define VPATH "."
-/* Use Amiga-style paths for PYTHONPATH */
-#define PYTHONPATH "Python:Lib;Python:Lib/site-packages"
+/*
+ * Relative entries are joined with the Lib directory found by getpath.
+ * An empty PYTHONPATH still contributes that found prefix (see getpath.c).
+ * Do not hardcode Python:Lib here -- PosixLib maps that to /Python/Lib and
+ * only works when the Python: assign exists.
+ */
+#define PYTHONPATH ""
 #endif
 
 #ifdef __cplusplus
