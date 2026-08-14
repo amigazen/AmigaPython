@@ -6,7 +6,7 @@ CC=vc
 VLINK=vlink
 MKDIR=MakeDir ALL
 CONFIG=+aos68k_posix
-CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -stack-check
+CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft
 
 # Source directory
 SRCDIR=Python
@@ -42,7 +42,7 @@ $(ODIR)/bltinmodule.o: $(SRCDIR)/bltinmodule.c
 
 $(ODIR)/ceval.o: $(SRCDIR)/ceval.c
 	@$(MKDIR) $(ODIR)
-	$(CC) $(CONFIG) -c -g -O0 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data -stack-check -o $@ $<
+	$(CC) $(CONFIG) -c -g -O0 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data -o $@ $<
 
 $(ODIR)/compile.o: $(SRCDIR)/compile.c
 	@$(MKDIR) $(ODIR)

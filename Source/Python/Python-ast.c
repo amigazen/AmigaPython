@@ -668,7 +668,10 @@ ast_type_reduce(PyObject *self, PyObject *unused)
 
  int init_types(void)
 {
-         int initialized;
+        /* Must be static: asdl_c.py emits this. A plain auto left
+         * uninitialized on Amiga/VBCC, so init_types() often returned
+         * early with NULL type objects and PyDict_SetItem asserted. */
+        static int initialized;
         if (initialized) return 1;
         if (add_ast_fields() < 0) return 0;
         mod_type = make_type("mod", &AST_type, NULL, 0);

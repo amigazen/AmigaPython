@@ -1,15 +1,32 @@
 #!/usr/bin/env python
 # Run the Amiga Python 2.7.18 port test suite.
 #
-# From the Source directory:
+# Covers every module enabled in Modules/config.c for this port.
+# Socket / remote TCP stays separate (AmigaTests/test_socket_net.py).
+#
+# From the Source directory (do not pass python -v; it floods stderr):
 #   python27 AmigaTests/run.py
 #   python27 AmigaTests/run.py runtime os_path
 #   python27 AmigaTests/run.py -q
+#   python27 AmigaTests/test_socket_net.py
 
 from __future__ import print_function
 
 import os
 import sys
+
+# Avoid rewriting .pyc on shared Mac/Amiga volumes (bad mtime spam).
+sys.dont_write_bytecode = True
+
+# Mute -v import tracing for the rest of the suite (stderr was interleaving
+# with PASS lines). Early site/import noise still needs omitting -v on CLI.
+if getattr(sys.flags, "verbose", 0):
+    try:
+        import amiga
+        if hasattr(amiga, "set_verbose"):
+            amiga.set_verbose(0)
+    except Exception:
+        pass
 
 # Ensure Source root (parent of AmigaTests) is on sys.path.
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -20,15 +37,28 @@ if _ROOT not in sys.path:
 from AmigaTests import support
 from AmigaTests.support import run_module_tests, summary, reset_counters
 
-# Suite modules in run order.
+# Default suite: offline / local only (matches enabled Amiga build modules).
+# Never call AmiTCP/usergroup/bsdsocket APIs here - they hard-crash without a stack.
+# AmiTCP / socket tests stay optional (bsdsocket may be absent or gated).
 SUITE = [
+    ("inventory", "AmigaTests.test_inventory"),
     ("runtime", "AmigaTests.test_runtime"),
     ("os_path", "AmigaTests.test_os_path"),
     ("amiga", "AmigaTests.test_amiga_module"),
+    ("extras", "AmigaTests.test_amiga_extras"),
     ("builtins", "AmigaTests.test_builtins_ext"),
     ("tier_a", "AmigaTests.test_tier_a"),
-    ("extras", "AmigaTests.test_amiga_extras"),
 ]
+
+# Not run by default. Prefer: python27 AmigaTests/test_socket_net.py
+# netmods = pwd/grp/crypt/syslog; socket* = _socket LoadSeg / remote TCP.
+OPTIONAL = [
+    ("netmods", "AmigaTests.test_net_modules"),
+    ("socket", "AmigaTests.test_socket_local"),
+    ("socket_net", "AmigaTests.test_socket_net"),
+]
+
+ALL_GROUPS = SUITE + OPTIONAL
 
 
 def _load(modname):
@@ -46,7 +76,9 @@ def main(argv=None):
             quiet_banner = True
         elif a in ("-h", "--help"):
             print("Usage: python27 AmigaTests/run.py [group ...]")
-            print("Groups:", ", ".join(n for n, _ in SUITE))
+            print("Do not pass python -v (import tracing floods the log).")
+            print("Default groups:", ", ".join(n for n, _ in SUITE))
+            print("Optional groups:", ", ".join(n for n, _ in OPTIONAL))
             return 0
         else:
             names.append(a)
@@ -55,11 +87,11 @@ def main(argv=None):
         selected = SUITE
     else:
         wanted = set(names)
-        selected = [(n, m) for n, m in SUITE if n in wanted]
-        unknown = wanted - set(n for n, _ in SUITE)
+        selected = [(n, m) for n, m in ALL_GROUPS if n in wanted]
+        unknown = wanted - set(n for n, _ in ALL_GROUPS)
         if unknown:
             print("Unknown groups:", ", ".join(sorted(unknown)))
-            print("Valid:", ", ".join(n for n, _ in SUITE))
+            print("Valid:", ", ".join(n for n, _ in ALL_GROUPS))
             return 2
         if not selected:
             print("No groups selected")

@@ -35,6 +35,7 @@
 #include "osdefs.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/errno.h>
 #include <sys/stat.h>
@@ -45,6 +46,9 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <signal.h>
+#ifdef HAVE_UTIME_H
+#include <utime.h>
+#endif
 
 /* #include <termios.h>        For tcgetpgrp/tcsetpgrp - not available in PosixLib */
 
@@ -516,24 +520,63 @@ amiga_umask(PyObject *self, PyObject *args)
 #endif
 
 #ifdef HAVE_UNAME
+/* PosixLib has no sys/utsname.h; build the posix-style 5-tuple from ExecBase. */
 static PyObject *
 amiga_uname(PyObject *self, PyObject *args)
 {
-        struct utsname u;
-        int res;
-        if (!PyArg_NoArgs(args))
-                return NULL;
-        Py_BEGIN_ALLOW_THREADS
-        res = uname(&u);
-        Py_END_ALLOW_THREADS
-        if (res < 0)
-                return amiga_error();
-        return Py_BuildValue("(sssss)",
-                             u.sysname,
-                             u.nodename,
-                             u.release,
-                             u.version,
-                             u.machine);
+	struct ExecBase *sysbase;
+	char version[32];
+	char release[16];
+	const char *machine;
+	ULONG attnflags;
+
+	if (!PyArg_NoArgs(args))
+		return NULL;
+
+	sysbase = *((struct ExecBase **)4);
+	if (sysbase == NULL) {
+		PyErr_SetString(PyExc_OSError, "no ExecBase");
+		return NULL;
+	}
+
+	sprintf(version, "%d.%d",
+		(int)sysbase->LibNode.lib_Version,
+		(int)sysbase->LibNode.lib_Revision);
+
+	if (sysbase->LibNode.lib_Version >= 47)
+		strcpy(release, "3.2+");
+	else if (sysbase->LibNode.lib_Version >= 40)
+		strcpy(release, "3.1");
+	else if (sysbase->LibNode.lib_Version >= 39)
+		strcpy(release, "3.0");
+	else if (sysbase->LibNode.lib_Version >= 37)
+		strcpy(release, "2.04");
+	else if (sysbase->LibNode.lib_Version >= 36)
+		strcpy(release, "2.0");
+	else
+		strcpy(release, "1.x");
+
+	attnflags = sysbase->AttnFlags;
+	if (attnflags & AFF_68060)
+		machine = "m68060";
+	else if (attnflags & AFF_68040)
+		machine = "m68040";
+	else if (attnflags & AFF_68030)
+		machine = "m68030";
+	else if (attnflags & AFF_68020)
+		machine = "m68020";
+	else if (attnflags & AFF_68010)
+		machine = "m68010";
+	else
+		machine = "m68000";
+
+	/* nodename: hostname is not always available without TCP; use fixed id. */
+	return Py_BuildValue("(sssss)",
+		"AmigaOS",
+		"amiga",
+		release,
+		version,
+		machine);
 }
 #endif
 
@@ -1526,6 +1569,20 @@ amiga_tcsetpgrp(PyObject *self, PyObject *args)
 static PyObject *amiga_ftruncate(PyObject *, PyObject *);
 #endif
 
+/* Allow scripts (e.g. AmigaTests/run.py) to mute -v import tracing mid-run.
+ * Startup noise before the script starts still needs omitting -v on the CLI. */
+static PyObject *
+amiga_set_verbose(PyObject *self, PyObject *args)
+{
+	int flag;
+
+	if (!PyArg_ParseTuple(args, "i:set_verbose", &flag))
+		return NULL;
+	Py_VerboseFlag = flag;
+	Py_INCREF(Py_None);
+	return Py_None;
+}
+
 static struct PyMethodDef amiga_methods[] = {
 	{"chdir",   amiga_chdir},
 	{"chmod",   amiga_chmod},
@@ -1686,6 +1743,7 @@ static struct PyMethodDef amiga_methods[] = {
 	{"pipe",    amiga_pipe},
 #endif
 	{"crc32",	amiga_crc32, 1},
+	{"set_verbose", amiga_set_verbose, 1},
 	{NULL,      NULL}        /* Sentinel */
 };
 

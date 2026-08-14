@@ -46,7 +46,8 @@ from math import log as _log, exp as _exp, pi as _pi, e as _e, ceil as _ceil
 from math import sqrt as _sqrt, acos as _acos, cos as _cos, sin as _sin
 from os import urandom as _urandom
 from binascii import hexlify as _hexlify
-import hashlib as _hashlib
+# hashlib is only needed by jumpahead(); load it lazily so "import random"
+# does not pull digests until jumpahead is used.
 
 __all__ = ["Random","seed","random","uniform","randint","choice","sample",
            "randrange","shuffle","normalvariate","lognormvariate",
@@ -111,8 +112,16 @@ class Random(_random.Random):
         if a is None:
             try:
                 # Seed with enough bytes to span the 19937 bit
-                # state space for the Mersenne Twister
-                a = long(_hexlify(_urandom(2500)), 16)
+                # state space for the Mersenne Twister.
+                # Amiga: 2500-byte urandom seed becomes a huge long that
+                # random_seed() splits with a quadratic loop -- too heavy
+                # for softfloat / small stacks. Use time instead.
+                import sys
+                if getattr(sys, 'platform', '') == 'amiga':
+                    import time
+                    a = long(time.time() * 256)
+                else:
+                    a = long(_hexlify(_urandom(2500)), 16)
             except NotImplementedError:
                 import time
                 a = long(time.time() * 256) # use fractional seconds
@@ -154,8 +163,12 @@ class Random(_random.Random):
         # The super.jumpahead() method uses shuffling to change state,
         # so it needs a large and "interesting" n to work with.  Here,
         # we use hashing to create a large n for the shuffle.
+        import hashlib as _hashlib
         s = repr(n) + repr(self.getstate())
-        n = int(_hashlib.new('sha512', s).hexdigest(), 16)
+        try:
+            n = int(_hashlib.new('sha256', s).hexdigest(), 16)
+        except ValueError:
+            n = int(_hashlib.new('sha1', s).hexdigest(), 16)
         super(Random, self).jumpahead(n)
 
 ## ---- Methods below this point do not need to be overridden when
@@ -191,7 +204,10 @@ class Random(_random.Random):
             if istart > 0:
                 if istart >= _maxwidth:
                     return self._randbelow(istart)
-                return _int(self.random() * istart)
+                r = _int(self.random() * istart)
+                if r >= istart:
+                    r = istart - 1
+                return r
             raise ValueError, "empty range for randrange()"
 
         # stop argument supplied.
@@ -215,7 +231,10 @@ class Random(_random.Random):
 
             if width >= _maxwidth:
                 return _int(istart + self._randbelow(width))
-            return _int(istart + _int(self.random()*width))
+            r = _int(self.random() * width)
+            if r >= width:
+                r = width - 1
+            return _int(istart + r)
         if step == 1:
             raise ValueError, "empty range for randrange() (%d,%d, %d)" % (istart, istop, width)
 
@@ -235,7 +254,10 @@ class Random(_random.Random):
 
         if n >= _maxwidth:
             return istart + istep*self._randbelow(n)
-        return istart + istep*_int(self.random() * n)
+        r = _int(self.random() * n)
+        if r >= n:
+            r = n - 1
+        return istart + istep*r
 
     def randint(self, a, b):
         """Return random integer in range [a, b], including both end points.
@@ -250,6 +272,11 @@ class Random(_random.Random):
         Handles the case where n has more bits than returned
         by a single call to the underlying generator.
         """
+
+        if n <= 0:
+            raise ValueError("n must be > 0")
+        if n == 1:
+            return 0
 
         try:
             getrandbits = self.getrandbits
@@ -268,13 +295,22 @@ class Random(_random.Random):
         if n >= _maxwidth:
             _warn("Underlying random() generator does not supply \n"
                 "enough bits to choose from a population range this large")
-        return _int(self.random() * n)
+        r = _int(self.random() * n)
+        if r >= n:
+            r = n - 1
+        return r
 
 ## -------------------- sequence methods  -------------------
 
     def choice(self, seq):
         """Choose a random element from a non-empty sequence."""
-        return seq[int(self.random() * len(seq))]  # raises IndexError if seq is empty
+        # Prefer integer getrandbits path (_randbelow) over random()*n:
+        # Amiga softfloat has produced out-of-range indexes and hard crashes
+        # on this port for the float multiply form.
+        n = len(seq)
+        if n == 0:
+            raise IndexError('Cannot choose from an empty sequence')
+        return seq[self._randbelow(n)]
 
     def shuffle(self, x, random=None):
         """x, random=random.random -> shuffle list x in place; return None.
@@ -287,9 +323,13 @@ class Random(_random.Random):
         if random is None:
             random = self.random
         _int = int
-        for i in reversed(xrange(1, len(x))):
+        # Use xrange(..., -1) instead of reversed(xrange(...)): clearer and
+        # avoids an extra iterator object on low-memory Amiga builds.
+        for i in xrange(len(x) - 1, 0, -1):
             # pick an element in x[:i+1] with which to exchange x[i]
-            j = _int(random() * (i+1))
+            j = _int(random() * (i + 1))
+            if j > i:
+                j = i
             x[i], x[j] = x[j], x[i]
 
     def sample(self, population, k):

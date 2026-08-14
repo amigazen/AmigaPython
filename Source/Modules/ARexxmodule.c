@@ -18,34 +18,38 @@
 
 /* Define DEVICES_TIMER_H to prevent timer.h conflicts with Amiga headers */
 #define DEVICES_TIMER_H
-#define CLIB_ALIB_PROTOS_H
 
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <exec/types.h>
 #include <exec/memory.h>
 #include <dos/dos.h>
 #include <exec/libraries.h>
 #include <rexx/storage.h>
 #include <rexx/rxslib.h>
-#include <proto/alib.h>
 #include <proto/dos.h>
 #include <proto/exec.h>
+#include <proto/rexxsyslib.h>
 #include "Python.h"
 
-#ifdef __VBCC__
-/* VBCC chokes on the NDK 3.2 REXX proto headers so until that gets fixed, we need this */
-#include <inline/rexxsyslib.h>
-/* Define RexxSysBase for VBCC ErrorMsg macro */
-extern struct Library *RexxSysBase;
+/*
+ * PosixLib sets NULL to ((void *)0). BPTR is typedef long, so never pass
+ * NULL where a BPTR is required -- use ZERO_BPTR instead.
+ */
+#define ZERO_BPTR ((BPTR)0L)
 
-/* Type definitions if not already defined */
-#ifndef CONST_STRPTR
-#define CONST_STRPTR const char *
-#endif
-#ifndef STRPTR
-#define STRPTR char *
-#endif
-#endif
+/*
+ * Do not include proto/alib.h here: clib/alib_protos.h declares DoTimer()
+ * with TimeVal_Type, which is unavailable once DEVICES_TIMER_H / PosixLib
+ * timeval conflicts are in play. Declare only the amiga.lib ARexx helpers.
+ */
+BOOL CheckRexxMsg(CONST struct RexxMsg *rexxmsg);
+LONG GetRexxVar(CONST struct RexxMsg *rexxmsg, CONST_STRPTR name, STRPTR *result);
+LONG SetRexxVar(struct RexxMsg *rexxmsg, CONST_STRPTR name, CONST_STRPTR value, LONG length);
+
+/* Opened in init_arexx(); required by CreateRexxMsg / CreateArgstring. */
+struct RxsLib *RexxSysBase = NULL;
 
 #define RHF_CMDSHELL     (1L << 0)
 #define RHF_USRMSGPORT   (1L << 1)
@@ -89,7 +93,7 @@ static void FreeRexxCommand( struct RexxMsg *rxmsg );
 static void CloseDownARexxHost( struct RexxHost *host );
 static struct RexxHost *SetupARexxHost( char *basename);
 static struct RexxMsg *GetARexxMsg( struct RexxHost *host );
-struct RexxMsg *SendRexxCommandToPort( struct RexxHost *host,
+static struct RexxMsg *ARexx_SendToPort( struct RexxHost *host,
 		char *port, char *cmd, BPTR fh );
 
 static BOOL Test_Open(arexxportobject * );
@@ -106,7 +110,7 @@ static PyObject * port_repr(arexxportobject * );
 static PyObject * newarexxportobject(char * );
 static void msg_dealloc(arexxmsgobject * );
 static PyObject * msg_getattr(arexxmsgobject * , char * );
-static PyObject * msg_setattr(arexxmsgobject * , char * , PyObject * );
+static int msg_setattr(arexxmsgobject * , char * , PyObject * );
 static PyObject * msg_repr(arexxmsgobject * );
 static PyObject * newarexxmsgobject(struct RexxMsg * );
 static PyObject * msg_reply(arexxmsgobject * , PyObject * );
@@ -188,7 +192,7 @@ static PyObject *port_send(arexxportobject *ao, PyObject *args)
 	if(Test_Open(ao))
 	{
 		/* create a new RexxMsg from the command string and send it */
-		sentrm = SendRexxCommandToPort(ao->host, to, cmd,NULL);
+		sentrm = ARexx_SendToPort(ao->host, to, cmd, ZERO_BPTR);
 		if( !sentrm )
 		{
 			PyErr_SetString(error,"can't send to port");
@@ -364,7 +368,13 @@ newarexxportobject(char *name)              /* `constructor' */
 			return NULL;
 		}
 
-		(void)strupr(name);
+		/* ARexx port names are conventionally uppercase; PosixLib has no strupr. */
+		{
+			char *p;
+
+			for (p = name; *p; p++)
+				*p = (char)ToUpper(*p);
+		}
 	}
 
 	ao = PyObject_NEW(arexxportobject, &ARexxPorttype);
@@ -439,9 +449,9 @@ static PyObject *msg_setvar(arexxmsgobject *am, PyObject *args)
 
 	if(Test_Replied(am))
 	{
-		if(CheckRexxMsg((struct Message*)am->msg))
+		if(CheckRexxMsg(am->msg))
 		{
-			if(0==SetRexxVar((struct Message*)am->msg,name,val,vlen))
+			if(0==SetRexxVar(am->msg,name,val,vlen))
 			{
 				Py_INCREF(Py_None);
 				return Py_None;
@@ -459,9 +469,9 @@ static PyObject *msg_getvar(arexxmsgobject *am, PyObject *args)
 
 	if(Test_Replied(am))
 	{
-		if(CheckRexxMsg((struct Message*)am->msg))
+		if(CheckRexxMsg(am->msg))
 		{
-			if(0==GetRexxVar((struct Message*)am->msg,name,&val))
+			if(0==GetRexxVar(am->msg,name,&val))
 			{
 				if(val!=NULL) return PyString_FromString(val);
 			}
@@ -635,14 +645,16 @@ struct RexxMsg *CreateRexxCommand( struct RexxHost *host, char *buff, BPTR fh )
 {
 	struct RexxMsg *rexx_command_message;
 
-	rexx_command_message = CreateRexxMsg( host->port,
-		"python", host->port->mp_Node.ln_Name);
+	rexx_command_message = CreateRexxMsg(host->port,
+		(UBYTE *)"python",
+		(UBYTE *)host->port->mp_Node.ln_Name);
 	if( rexx_command_message == NULL )
 	{
 		return( NULL );
 	}
 
-	rexx_command_message->rm_Args[0] = CreateArgstring(buff,strlen(buff));
+	rexx_command_message->rm_Args[0] =
+		CreateArgstring((UBYTE *)buff, (ULONG)strlen(buff));
 	if( rexx_command_message->rm_Args[0] == NULL )
 	{
 		DeleteRexxMsg(rexx_command_message);
@@ -672,7 +684,7 @@ static void ReplyRexxCommand(
 		if( primary == 0 )
 		{
 			secondary = result
-				? (long) CreateArgstring( result, strlen(result) )
+				? (long) CreateArgstring((UBYTE *)result, (ULONG)strlen(result))
 				: (long) NULL;
 		}
 		else
@@ -690,9 +702,9 @@ static void ReplyRexxCommand(
 				result = (char *) secondary;
 			}
 
-			if(CheckRexxMsg((struct Message*)rexxmessage))
+			if(CheckRexxMsg(rexxmessage))
 			{
-				SetRexxVar( (struct Message *) rexxmessage,
+				SetRexxVar( rexxmessage,
 					"RC2", result, strlen(result) );
 			}
 
@@ -858,7 +870,7 @@ static struct RexxMsg *GetARexxMsg( struct RexxHost *host )
 	return NULL;    /* no important message arrived. */
 }
 
-struct RexxMsg *SendRexxCommandToPort( struct RexxHost *host, char *port, char *cmd, BPTR fh )
+static struct RexxMsg *ARexx_SendToPort( struct RexxHost *host, char *port, char *cmd, BPTR fh )
 {
 	struct RexxMsg *rcm;
 	
@@ -911,38 +923,15 @@ ARexx_openport(PyObject *self, PyObject *args)
 static PyObject *
 ARexx_errorstring(PyObject *self, PyObject *args)
 {
-/* undocumented function: */
+	/* 2.0 used private rexxsyslib ErrorMsg LVO; keep a portable fallback
+	 * so VBCC does not need GCC statement-expressions / getreg(). */
 	long err;
-	char *errmsg;
-	
-#ifdef __SASC
-	extern BOOL ErrorMsg(LONG err);
-	#pragma libcall RexxSysBase ErrorMsg 60 001
-#endif
-
-#ifdef __VBCC__
-	/* ErrorMsg is a private RexxSysLib function - offset 60 */
-	#define ErrorMsg(err) ({ \
-	  LONG _ErrorMsg_err = (err); \
-	  ({ \
-	  register char * _ErrorMsg__bn __asm("a6") = (char *) (REXXSYSLIB_BASE_NAME);\
-	  ((BOOL (*)(char * __asm("a6"), LONG __asm("d0"))) \
-	  (_ErrorMsg__bn - 60))(_ErrorMsg__bn, _ErrorMsg_err); \
-	});})
-#endif
+	char buf[80];
 
 	if (!PyArg_ParseTuple(args, "i", &err))
 		return NULL;
-
-	if(ErrorMsg(err))
-	{
-		return PyString_FromString("");
-	}
-	else
-	{
-		PyErr_SetString(PyExc_ValueError,"invalid error code");
-		return NULL;
-	}
+	sprintf(buf, "ARexx error %ld", err);
+	return PyString_FromString(buf);
 }
 
 /* High-level dorexx function for simple command sending */
@@ -950,20 +939,29 @@ static PyObject *
 ARexx_dorexx(PyObject *self, PyObject *args)
 {
 	char *port, *message;
-	
+	struct RexxHost *temp_host;
+	struct RexxMsg *sentrm;
+	struct RexxMsg *rm;
+	PyObject *result;
+	long rc;
+	BOOL waiting;
+
 	if (!PyArg_ParseTuple(args, "ss", &port, &message))
 		return NULL;
 
-	/* Create a temporary anonymous host for sending */
-	struct RexxHost *temp_host = SetupARexxHost(NULL);
+	if (RexxSysBase == NULL) {
+		PyErr_SetString(error, "rexxsyslib.library not available");
+		return NULL;
+	}
+
+	temp_host = SetupARexxHost(NULL);
 	if (!temp_host)
 	{
 		PyErr_SetString(error, "can't create temporary host");
 		return NULL;
 	}
 
-	/* Send the command synchronously */
-	struct RexxMsg *sentrm = SendRexxCommandToPort(temp_host, port, message, NULL);
+	sentrm = ARexx_SendToPort(temp_host, port, message, ZERO_BPTR);
 	if (!sentrm)
 	{
 		CloseDownARexxHost(temp_host);
@@ -971,59 +969,49 @@ ARexx_dorexx(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	/* Wait for the reply */
-	PyObject *result = NULL;
-	long rc;
-	struct RexxMsg *rm;
-	BOOL waiting = TRUE;
-	
+	result = NULL;
+	waiting = TRUE;
+
 	do
 	{
 		WaitPort(temp_host->port);
-			
+
 		rm = (struct RexxMsg *) GetMsg(temp_host->port);
 		while(rm)
 		{
-			/* Reply? */
 			if(rm->rm_Node.mn_Node.ln_Type == NT_REPLYMSG)
 			{
-				/* 'our' Msg? */
 				if(rm == sentrm)
 				{
 					rc = rm->rm_Result1;
-						
+
 					if(!rc && rm->rm_Result2)
 					{
-						/* Res2 is String */
 						result = Py_BuildValue("(iss)", rc, NULL, rm->rm_Result2);
 					}
 					else
 					{
-						/* Res2 is number */
 						result = Py_BuildValue("(iis)", rc, rm->rm_Result2, NULL);
 					}
 
 					waiting = FALSE;
 				}
-					
+
 				FreeRexxCommand(rm);
 				--temp_host->replies;
 			}
-				
-			/* it's a command, error */
 			else if(ARG0(rm))
 			{
 				ReplyRexxCommand(rm, -20, (long) "invalid port", NULL);
 			}
-			
+
 			rm = (struct RexxMsg *) GetMsg(temp_host->port);
 		}
 	}
 	while(waiting);
 
-	/* Clean up */
 	CloseDownARexxHost(temp_host);
-	
+
 	return result;
 }
 
@@ -1037,28 +1025,29 @@ static struct PyMethodDef ARexx_global_methods[] = {
 };
 
 void
-initarexx(void)
+init_arexx(void)
 {
 	PyObject *m, *d;
 
-	m = Py_InitModule3("arexx", ARexx_global_methods, 
-		"Amiga ARexx module for Python.\n\n"
-		"This module provides support for ARexx communication and ARexx hosts.\n"
-		"The module's methods may only be used if the module has been imported.\n\n"
-		"Functions:\n"
-		"  port(portname) -- Create a new ARexx port object\n"
-		"  dorexx(port, message) -- Send ARexx message to port, returns (rc, rc2, result)\n"
-		"  errorstring(err) -- Get error string for ARexx error code\n\n"
-		"Classes:\n"
-		"  Port -- ARexx port object with methods: close(), getmsg(), wait(), send()\n"
-		"  Msg -- ARexx message object with methods: reply(), error(), setvar(), getvar()\n\n"
-		"Example:\n"
-		"  import arexx\n"
-		"  rc, rc2, result = arexx.dorexx('WORKBENCH', 'menu window root invoke workbench.about')");
+	/* CreateRexxMsg / CreateArgstring need rexxsyslib.library. */
+	if (RexxSysBase == NULL)
+		RexxSysBase = (struct RxsLib *)OpenLibrary("rexxsyslib.library", 0L);
+	if (RexxSysBase == NULL) {
+		PySys_WriteStderr(
+			"# _arexx: rexxsyslib.library not found (ARexx unavailable)\n");
+	}
+
+	/* Leading underscore: private C accelerator (public API is Lib/ARexx.py). */
+	m = Py_InitModule3("_arexx", ARexx_global_methods,
+		"Amiga ARexx low-level module (_arexx).\n"
+		"Prefer import ARexx for the high-level wrapper.\n"
+		"Functions: port(), errorstring(), dorexx().");
+	if (m == NULL)
+		return;
 	d = PyModule_GetDict(m);
 
-	/* Initialize error exception */
-	error = PyErr_NewException("arexx.error", NULL, NULL);
+	/* Exception name matches the public ARexx wrapper. */
+	error = PyErr_NewException("ARexx.error", NULL, NULL);
 	if (error != NULL)
 		PyDict_SetItemString(d, "error", error);
 }

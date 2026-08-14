@@ -6,7 +6,7 @@ CC=vc
 VLINK=vlink
 MKDIR=MakeDir ALL
 CONFIG=+aos68k_posix
-CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -D__USE_NEW_TIMEVAL__ -D__NO_NETINCLUDE_TIMEVAL -IInclude -I$(SRCDIR) -Inetinclude: -cpu=68020 -fpu=soft -stack-check
+CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -D__USE_NEW_TIMEVAL__ -D__NO_NETINCLUDE_TIMEVAL -IInclude -I$(SRCDIR) -Inetinclude: -cpu=68020 -fpu=soft
 
 # Source directory
 SRCDIR=Modules
@@ -16,7 +16,7 @@ OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
     arraymodule.o mathmodule.o timemodule.o \
     binascii.o _codecsmodule.o cStringIO.o cPickle.o \
     errnomodule.o operator.o _weakref.o _struct.o \
-    selectmodule.o zlibmodule.o \
+    selectmodule.o zlibmodule.o zipimport.o \
     amigamodule.o amigapathmodule.o socketmodule.o \
 	pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o syslog.o \
     gcmodule.o \
@@ -25,11 +25,18 @@ OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
     md5module.o \
     cmathmodule.o \
     shamodule.o \
+    _hashcrc.o \
     _collectionsmodule.o \
     itertoolsmodule.o \
     _functoolsmodule.o \
     _randommodule.o \
+    datetimemodule.o \
+    symtablemodule.o \
+    _bisectmodule.o \
+    _heapqmodule.o \
+    _csv.o \
     Doslibmodule.o \
+    ARexxmodule.o \
     stropmodule.o \
     posix_helpers.o \
     _math.o
@@ -126,6 +133,10 @@ $(ODIR)/zlibmodule.o: $(SRCDIR)/zlibmodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -I$(SRCDIR)/zlib -o $@ $<
 
+$(ODIR)/zipimport.o: $(SRCDIR)/zipimport.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
 $(ODIR)/amigamodule.o: $(SRCDIR)/amiga/amigamodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $< -lamiga
@@ -186,6 +197,11 @@ $(ODIR)/shamodule.o: $(SRCDIR)/shamodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
+# crc.library headers: monorepo SDK (ToolKit NDK also provides these).
+$(ODIR)/_hashcrc.o: $(SRCDIR)/_hashcrc.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -I../../crc.library/SDK/Include_H -o $@ $<
+
 $(ODIR)/_collectionsmodule.o: $(SRCDIR)/_collectionsmodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
@@ -202,13 +218,33 @@ $(ODIR)/_randommodule.o: $(SRCDIR)/_randommodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
+$(ODIR)/datetimemodule.o: $(SRCDIR)/datetimemodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/symtablemodule.o: $(SRCDIR)/symtablemodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_bisectmodule.o: $(SRCDIR)/_bisectmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_heapqmodule.o: $(SRCDIR)/_heapqmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_csv.o: $(SRCDIR)/_csv.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
 # $(ODIR)/unicodedata.o: $(SRCDIR)/unicodedata.c
 #	@$(MKDIR) $(ODIR)
 #	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
-# $(ODIR)/ARexxmodule.o: $(SRCDIR)/ARexxmodule.c
-#	@$(MKDIR) $(ODIR)
-#	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+$(ODIR)/ARexxmodule.o: $(SRCDIR)/ARexxmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $<
 
 $(ODIR)/Doslibmodule.o: $(SRCDIR)/Doslibmodule.c
 	@$(MKDIR) $(ODIR)

@@ -38,7 +38,7 @@ Dos_module		Dos module
 			ArgParser class
 
 ARexx_module		ARexx module
-			ARexxll module
+			_arexx module
 
 environment_module	environment module
 			
@@ -73,7 +73,7 @@ Dos module		Dos_module
 Doslib module		Dos_module
 ArgParser class		Dos_module
 ARexx module		ARexx_module
-ARexxll module		ARexx_module
+_arexx module		ARexx_module
 
 module search path	general
 module case sensitivity	general

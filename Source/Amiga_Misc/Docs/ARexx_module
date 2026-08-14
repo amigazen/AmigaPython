@@ -3,7 +3,7 @@
 
                            PYTHON AREXX SUPPORT
 
-                         ARexx and ARexxll modules
+                         ARexx and _arexx modules
 	
                    by Irmen de Jong - irmen@bigfoot.com
 
@@ -24,7 +24,7 @@ documentation on that subject first (Dos_module, python module Dos.py).
 
 ***************************************************************************
 
-                              MODULE: ARexxll
+                              MODULE: _arexx
 
                             File: N/A (builtin)
 
@@ -48,7 +48,7 @@ This module defines:
 		  Use a higher-level object from the ARexx module instead.
 
   errorstring()	- Returns string associated with ARexx error number:
-		  str = ARexxll.errorstring(number)
+		  str = _arexx.errorstring(number)
 
 
 ARexx message objects
@@ -85,18 +85,18 @@ APPLICATION".
 ***************************************************************************
 
 This  module  implements  the  Python  ARexx support classes and such.  You
-should  use  this module and not ARexxll directly, if your code must remain
+should  use  this module and not _arexx directly, if your code must remain
 compatible with future versions.
 
 This module defines:
 
   error		- The exception that will be raised when an
 		  error occurs related to ARexx. This is the same
-		  exception as the one in the ARexxll module.
+		  exception as the one in the _arexx module.
 		  ('ARexx.error')
 
   errorstring()	- Returns string associated with ARexx error number:
-		  str = ARexxll.errorstring(number)
+		  str = _arexx.errorstring(number)
 
   RC_OK		- ARexx 'success' return code (0)
   RC_WARN	- ARexx 'warning' return code (5)
@@ -215,7 +215,7 @@ Publicport objects are created as follows:
 	
 
 Attributes of publicport objects:
-  port		- The lowlevel ARexx port. See ARexxll module.
+  port		- The lowlevel ARexx port. See _arexx module.
   signal	- The AmigaDOS signal mask of the port.
   name		- The actual port name.
 

@@ -93,20 +93,62 @@ def test_strerror_uname_ids():
         check("strerror", isinstance(s, basestring) and len(s) > 0)
     except Exception, e:
         skip("strerror", str(e))
-    try:
-        u = amiga.uname()
-        check("uname", isinstance(u, tuple) and len(u) >= 1)
-    except Exception, e:
-        skip("uname", str(e))
-    for name in ("getpid", "getuid", "getgid", "geteuid", "getegid"):
-        fn = getattr(amiga, name, None)
-        if fn is None:
-            skip(name, "missing")
-            continue
+    if not hasattr(amiga, "uname"):
+        skip("uname", "not exported")
+    else:
         try:
-            check(name, isinstance(fn(), (int, long)))
+            u = amiga.uname()
+            check("uname", isinstance(u, tuple) and len(u) >= 1)
         except Exception, e:
-            skip(name, str(e))
+            skip("uname", str(e))
+    # getpid is local; uid/gid/pgrp go through usergroup/AmiTCP and can
+    # hard-crash when bsdsocket is absent - never call them in the default suite.
+    if hasattr(amiga, "getpid"):
+        try:
+            check("getpid", isinstance(amiga.getpid(), (int, long)))
+        except Exception, e:
+            skip("getpid", str(e))
+    else:
+        skip("getpid", "not exported")
+    for name in ("getuid", "getgid", "geteuid", "getegid", "getpgrp"):
+        if hasattr(amiga, name):
+            skip(name + " call", "AmiTCP/usergroup (optional netmods group)")
+        else:
+            skip(name, "not exported")
+
+
+def test_classic_amiga_apis():
+    # APIs present in Python 2.0 Amiga docs / AMITCP config.
+    amiga = require_import("amiga")
+    if not amiga:
+        return
+    for name in ("system", "popen", "putenv", "chown", "link", "symlink",
+                 "readlink", "setuid", "setgid", "setsid", "umask", "utime"):
+        check("amiga has " + name, hasattr(amiga, name))
+
+    try:
+        amiga.putenv("PYTHON_AMIGA_TEST", "1")
+        check("putenv", True)
+    except Exception, e:
+        skip("putenv call", str(e))
+
+    # system("true")-style: Amiga shell echo is safest no-op-ish.
+    try:
+        rc = amiga.system("echo >NIL:")
+        check("system", isinstance(rc, (int, long)))
+    except Exception, e:
+        skip("system call", str(e))
+
+    # popen: read a tiny command if the shell supports it.
+    try:
+        f = amiga.popen("echo amigapopen", "r")
+        try:
+            data = f.read()
+            check("popen read", isinstance(data, basestring))
+        finally:
+            f.close()
+    except Exception, e:
+        skip("popen call", str(e))
 
 
 def test_access_sleep():

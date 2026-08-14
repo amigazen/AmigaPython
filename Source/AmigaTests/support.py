@@ -23,12 +23,14 @@ def check(name, cond, detail=None):
     if cond:
         PASSED += 1
         print("  PASS:", name)
+        sys.stdout.flush()
         return True
     FAILED += 1
     if detail is None:
         print("  FAIL:", name)
     else:
         print("  FAIL:", name, "-", detail)
+    sys.stdout.flush()
     return False
 
 
@@ -36,6 +38,7 @@ def skip(name, reason):
     global SKIPPED
     SKIPPED += 1
     print("  SKIP:", name, "-", reason)
+    sys.stdout.flush()
 
 
 def expect_raises(name, exc_type, fn):

@@ -47,24 +47,30 @@ extern void init_weakref(void);
 extern void init_struct(void);
 extern void initselect(void);
 extern void initzlib(void);
+extern void initzipimport(void);
 extern void init_sre(void);
 extern void init_md5(void);
 extern void initcmath(void);
 extern void init_sha(void);
+extern void init_hashlib(void);
 extern void init_collections(void);
 extern void inititertools(void);
 extern void init_functools(void);
 extern void init_random(void);
+extern void initdatetime(void);
+extern void init_symtable(void);
+extern void init_bisect(void);
+extern void init_heapq(void);
+extern void init_csv(void);
 /* extern void initunicodedata(void); */
 extern void initenvironment(void);
 extern void initstrop(void);
-
-/* extern void initARexx(void); */
 extern void initDoslib(void);
 
 /* Amiga-specific modules */
 extern void initamiga(void);
 extern void initamigapath(void);
+extern void init_arexx(void);
 /* _socket is a LoadSeg plugin (lib-dynload/_socket.module), not builtin */
 #if defined(AMITCP) /* || defined(INET225) */
 /* Network modules - only if networking is available */
@@ -97,18 +103,29 @@ struct _inittab _PyImport_Inittab[] = {
     {"_struct", init_struct},
     {"select", initselect},
     {"zlib", initzlib},
+    /* Builtin (same as Unix Setup); needs zlib for deflated zip members. */
+    {"zipimport", initzipimport},
     {"_sre", init_sre},
     {"md5", init_md5},
     {"cmath", initcmath},
     {"sha", init_sha},
+    {"_hashlib", init_hashlib},
     {"_collections", init_collections},
     {"itertools", inititertools},
     {"_functools", init_functools},
     {"_random", init_random},
+    /* C-only in 2.7; needed by calendar/email/etc. */
+    {"datetime", initdatetime},
+    /* Always on Unix Setup; small compiler tooling helper. */
+    {"_symtable", init_symtable},
+    {"_bisect", init_bisect},
+    {"_heapq", init_heapq},
+    {"_csv", init_csv},
     /* {"unicodedata", initunicodedata}, */
     {"environment", initenvironment},
     {"strop", initstrop},
-    /* {"ARexx", initARexx}, */
+    /* Low-level ARexx accelerator; use Lib/ARexx.py for the public API. */
+    {"_arexx", init_arexx},
     {"Doslib", initDoslib},
 
 #if defined(AMITCP) /* || defined(INET225) */

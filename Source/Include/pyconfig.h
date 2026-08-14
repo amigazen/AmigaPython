@@ -523,6 +523,37 @@
 /* Define if you have bsdsocket.library networking */
 #define AMITCP 1
 
+/*
+ * Classic amiga module APIs (match Python 2.0 Amiga AMITCP config).
+ * Implementations live in Modules/amiga/amigamodule.c; PosixLib / usergroup
+ * provide the C library backing where available.
+ */
+#define HAVE_SYSTEM 1
+#define HAVE_POPEN 1
+#define HAVE_UNAME 1
+#define HAVE_PUTENV 1
+#define HAVE_CHOWN 1
+#define HAVE_LINK 1
+#define HAVE_SYMLINK 1
+#define HAVE_GETUID 1
+#define HAVE_GETEUID 1
+#define HAVE_GETGID 1
+#define HAVE_GETEGID 1
+#define HAVE_GETPGRP 1
+#define HAVE_SETUID 1
+#define HAVE_SETGID 1
+#define HAVE_SETSID 1
+/* PosixLib may lack utime.h; amiga_utime uses time_t[2] when this is off. */
+#undef HAVE_UTIME_H
+/* Still unsupported on AmigaOS 3 (same as 2.0 docs): */
+#undef HAVE_EXECV
+#undef HAVE_FORK
+#undef HAVE_WAIT
+#undef HAVE_TIMES
+#undef HAVE_MKFIFO
+#undef HAVE_TCGETPGRP
+#undef HAVE_TCSETPGRP
+
 /* Define if you have the socket module */
 #define HAVE_SOCKET 1
 

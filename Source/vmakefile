@@ -12,7 +12,7 @@ MKDIR=MakeDir ALL
 # Objects are compiled with -g (Amiga hunkdebug via +aos68k_posix). Release link omits
 # -g so vc inserts -ldnodb (-s -Rshort) and strips; Debug link keeps symbols with -g.
 CONFIG=+aos68k_posix
-CFLAGS=-c -g -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data -stack-check
+CFLAGS=-c -g -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data
 ODIR=build-vbcc
 
 # Program names
@@ -30,7 +30,7 @@ CLIBS=-lamiga -lmieee build-vbcc/Modules/zlib/libz.a
 OBJECTS=$(ODIR)/Modules/python.o $(ODIR)/Modules/main.o $(ODIR)/Amiga/finite.o
 
 # All the individual object files from each directory
-MODULES_OBJECTS=$(ODIR)/Modules/config.o $(ODIR)/Modules/getpath.o $(ODIR)/Modules/environment.o $(ODIR)/Modules/getbuildinfo.o $(ODIR)/Modules/arraymodule.o $(ODIR)/Modules/mathmodule.o $(ODIR)/Modules/timemodule.o $(ODIR)/Modules/binascii.o $(ODIR)/Modules/_codecsmodule.o $(ODIR)/Modules/cStringIO.o $(ODIR)/Modules/cPickle.o $(ODIR)/Modules/errnomodule.o $(ODIR)/Modules/operator.o $(ODIR)/Modules/_weakref.o $(ODIR)/Modules/_struct.o $(ODIR)/Modules/selectmodule.o $(ODIR)/Modules/zlibmodule.o $(ODIR)/Modules/amigamodule.o $(ODIR)/Modules/amigapathmodule.o $(ODIR)/Modules/socketmodule.o $(ODIR)/Modules/pwdmodule.o $(ODIR)/Modules/grpmodule.o $(ODIR)/Modules/cryptmodule.o $(ODIR)/Modules/syslogmodule.o $(ODIR)/Modules/syslog.o $(ODIR)/Modules/gcmodule.o $(ODIR)/Modules/_sre.o $(ODIR)/Modules/md5.o $(ODIR)/Modules/md5module.o $(ODIR)/Modules/cmathmodule.o $(ODIR)/Modules/shamodule.o $(ODIR)/Modules/_collectionsmodule.o $(ODIR)/Modules/itertoolsmodule.o $(ODIR)/Modules/_functoolsmodule.o $(ODIR)/Modules/_randommodule.o $(ODIR)/Modules/stropmodule.o $(ODIR)/Modules/Doslibmodule.o $(ODIR)/Modules/posix_helpers.o $(ODIR)/Modules/_math.o
+MODULES_OBJECTS=$(ODIR)/Modules/config.o $(ODIR)/Modules/getpath.o $(ODIR)/Modules/environment.o $(ODIR)/Modules/getbuildinfo.o $(ODIR)/Modules/arraymodule.o $(ODIR)/Modules/mathmodule.o $(ODIR)/Modules/timemodule.o $(ODIR)/Modules/binascii.o $(ODIR)/Modules/_codecsmodule.o $(ODIR)/Modules/cStringIO.o $(ODIR)/Modules/cPickle.o $(ODIR)/Modules/errnomodule.o $(ODIR)/Modules/operator.o $(ODIR)/Modules/_weakref.o $(ODIR)/Modules/_struct.o $(ODIR)/Modules/selectmodule.o $(ODIR)/Modules/zlibmodule.o $(ODIR)/Modules/zipimport.o $(ODIR)/Modules/amigamodule.o $(ODIR)/Modules/amigapathmodule.o $(ODIR)/Modules/socketmodule.o $(ODIR)/Modules/pwdmodule.o $(ODIR)/Modules/grpmodule.o $(ODIR)/Modules/cryptmodule.o $(ODIR)/Modules/syslogmodule.o $(ODIR)/Modules/syslog.o $(ODIR)/Modules/gcmodule.o $(ODIR)/Modules/_sre.o $(ODIR)/Modules/md5.o $(ODIR)/Modules/md5module.o $(ODIR)/Modules/cmathmodule.o $(ODIR)/Modules/shamodule.o $(ODIR)/Modules/_hashcrc.o $(ODIR)/Modules/_collectionsmodule.o $(ODIR)/Modules/itertoolsmodule.o $(ODIR)/Modules/_functoolsmodule.o $(ODIR)/Modules/_randommodule.o $(ODIR)/Modules/datetimemodule.o $(ODIR)/Modules/symtablemodule.o $(ODIR)/Modules/_bisectmodule.o $(ODIR)/Modules/_heapqmodule.o $(ODIR)/Modules/_csv.o $(ODIR)/Modules/stropmodule.o $(ODIR)/Modules/Doslibmodule.o $(ODIR)/Modules/ARexxmodule.o $(ODIR)/Modules/posix_helpers.o $(ODIR)/Modules/_math.o
 
 PARSER_OBJECTS=$(ODIR)/Parser/acceler.o $(ODIR)/Parser/grammar1.o $(ODIR)/Parser/myreadline.o $(ODIR)/Parser/node.o $(ODIR)/Parser/parser.o $(ODIR)/Parser/parsetok.o $(ODIR)/Parser/tokenizer.o $(ODIR)/Parser/intrcheck.o
 

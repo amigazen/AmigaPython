@@ -61,8 +61,9 @@ def test_stat_result():
     lst = None
     try:
         lst = os.lstat(path)
-    except OSError, e:
-        skip("lstat", str(e))
+    except OSError:
+        # Amiga volumes often lack real symlink/lstat support (EIO etc.).
+        skip("lstat", "not reliable on Amiga volumes")
     if lst is not None:
         check("lstat attrs", hasattr(lst, "st_size") and lst.st_size == st.st_size)
 

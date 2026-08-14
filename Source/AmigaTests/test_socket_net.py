@@ -1,16 +1,14 @@
 #!/usr/bin/env python
-# Standalone Amiga socket / TCP smoke test (no SSL).
+# Standalone / optional-suite Amiga socket TCP smoke test (no SSL).
 #
-# Not part of AmigaTests/run.py - needs a live TCP stack and DNS.
-#
-# From the Source directory:
+# Default AmigaTests/run.py does NOT include this group (needs live DNS/HTTP).
+# Run alone:
 #   python27 AmigaTests/test_socket_net.py
-#   python27 AmigaTests/test_socket_net.py neverssl.com
-#   python27 AmigaTests/test_socket_net.py example.com 30
+#   python27 AmigaTests/test_socket_net.py neverssl.com 30
+# Or via suite:
+#   python27 AmigaTests/run.py socket_net
 #
-# Args: [host] [timeout_seconds]
-# Default host is neverssl.com (plain HTTP). example.com often works for
-# DNS but can stall on connect depending on the stack/route.
+# ASCII only (Python 2.7 / Amiga).
 
 from __future__ import print_function
 
@@ -29,6 +27,12 @@ from AmigaTests.support import check, skip, reset_counters, summary
 DEFAULT_HOST = "neverssl.com"
 DEFAULT_TIMEOUT = 15.0
 
+# Overridden by main() when run as a script; suite uses defaults.
+HOST = DEFAULT_HOST
+TIMEOUT = DEFAULT_TIMEOUT
+_SOCKET = None
+_IP = None
+
 
 def _icmp_checksum(data):
     if len(data) & 1:
@@ -42,17 +46,26 @@ def _icmp_checksum(data):
     return (~s) & 0xffff
 
 
-def test_import_socket():
+def test_01_import_socket():
+    global _SOCKET
+    _SOCKET = None
     try:
         import socket
     except ImportError, e:
         check("import socket", False, str(e))
-        return None
+        return
     check("import socket", True)
-    return socket
+    _SOCKET = socket
 
 
-def test_dns(socket, host):
+def test_02_dns():
+    global _IP
+    _IP = None
+    socket = _SOCKET
+    if socket is None:
+        skip("dns", "no socket module")
+        return
+    host = HOST
     try:
         name = socket.gethostname()
         check("gethostname", isinstance(name, basestring) and len(name) > 0,
@@ -77,14 +90,20 @@ def test_dns(socket, host):
               isinstance(ip, basestring) and ip.count(".") == 3,
               repr(ip))
         print("    %s -> %s" % (host, ip))
-        return ip
+        _IP = ip
     except Exception, e:
         check("gethostbyname(%s)" % host, False, str(e))
-        return None
 
 
-def test_http_get(socket, host, ip, timeout):
+def test_03_http_get():
     """Plain HTTP/1.0 GET - no urllib, no SSL."""
+    socket = _SOCKET
+    ip = _IP
+    host = HOST
+    timeout = TIMEOUT
+    if socket is None:
+        skip("http GET", "no socket module")
+        return
     if ip is None:
         skip("http GET", "no resolved address")
         return
@@ -138,8 +157,14 @@ def test_http_get(socket, host, ip, timeout):
             pass
 
 
-def test_icmp_ping(socket, host, ip, timeout):
+def test_04_icmp_ping():
     """ICMP echo via SOCK_RAW. Stacks often deny raw sockets - skip then."""
+    socket = _SOCKET
+    ip = _IP
+    timeout = TIMEOUT
+    if socket is None:
+        skip("icmp ping", "no socket module")
+        return
     if ip is None:
         skip("icmp ping", "no resolved address")
         return
@@ -176,7 +201,6 @@ def test_icmp_ping(socket, host, ip, timeout):
             except Exception, e:
                 check("icmp recv", False, str(e))
                 return
-            # Raw ICMP usually includes an IP header (20+ bytes).
             if len(data) < 28:
                 continue
             icmp_off = (ord(data[0]) & 0x0f) * 4
@@ -203,6 +227,7 @@ def test_icmp_ping(socket, host, ip, timeout):
 
 
 def main(argv=None):
+    global HOST, TIMEOUT
     if argv is None:
         argv = sys.argv[1:]
 
@@ -222,20 +247,19 @@ def main(argv=None):
         print("Tests: DNS, HTTP/1.0 GET :80, ICMP echo (if SOCK_RAW allowed)")
         return 0
 
+    HOST = host
+    TIMEOUT = timeout
+
     print("Amiga Python socket net test (no SSL)")
     print("version:", sys.version.replace("\n", " "))
-    print("host:", host, "timeout:", timeout)
+    print("host:", HOST, "timeout:", TIMEOUT)
     print("---")
 
     reset_counters()
-    socket = test_import_socket()
-    if socket is None:
-        summary()
-        return 1
-
-    ip = test_dns(socket, host)
-    test_http_get(socket, host, ip, timeout)
-    test_icmp_ping(socket, host, ip, timeout)
+    test_01_import_socket()
+    test_02_dns()
+    test_03_http_get()
+    test_04_icmp_ping()
 
     ok = summary()
     if ok:

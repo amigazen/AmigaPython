@@ -138,7 +138,16 @@ static PyObject *
 random_random(RandomObject *self)
 {
     unsigned long a=genrand_int32(self)>>5, b=genrand_int32(self)>>6;
-    return PyFloat_FromDouble((a*67108864.0+b)*(1.0/9007199254740992.0));
+    double d;
+
+    /* Softfloat on Amiga can round the 53-bit construction up to 1.0,
+     * which breaks seq[int(random()*len)] with IndexError (and has
+     * crashed this port during traceback). Keep the half-open range.
+     */
+    d = (a * 67108864.0 + b) * (1.0 / 9007199254740992.0);
+    if (d >= 1.0 || d < 0.0)
+        d = 0.0;
+    return PyFloat_FromDouble(d);
 }
 
 /* initializes mt[N] with a seed */

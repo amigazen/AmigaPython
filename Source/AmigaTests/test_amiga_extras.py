@@ -119,6 +119,57 @@ def test_doslib_basic():
         skip("IsFileSystem", str(e))
 
 
+def test_arexx_accelerator():
+    # Private C accelerator; public API is Lib/ARexx.py.
+    import sys
+    check("_arexx builtin", "_arexx" in sys.builtin_module_names)
+    ll = require_import("_arexx")
+    if not ll:
+        return
+    check("_arexx.port", hasattr(ll, "port"))
+    check("_arexx.errorstring", hasattr(ll, "errorstring"))
+    check("_arexx.dorexx", hasattr(ll, "dorexx"))
+    check("_arexx.error", hasattr(ll, "error"))
+    try:
+        s = ll.errorstring(1)
+        check("errorstring", isinstance(s, basestring) and len(s) > 0)
+    except Exception, e:
+        skip("errorstring call", str(e))
+
+    try:
+        p = ll.port(None)
+        check("port(None)", p is not None)
+        if hasattr(p, "close"):
+            p.close()
+            check("port.close", True)
+    except Exception, e:
+        skip("port(None)", str(e))
+
+
+def test_arexx_dos_wrappers():
+    # High-level Lib wrappers (ARexx.py / Dos.py).
+    try:
+        import Dos
+        check("import Dos", True)
+        check("Dos.DateStamp", hasattr(Dos, "DateStamp"))
+    except Exception, e:
+        skip("import Dos", str(e))
+    try:
+        import ARexx
+        check("import ARexx", True)
+        check("ARexx.privateport", hasattr(ARexx, "privateport"))
+        check("ARexx.publicport", hasattr(ARexx, "publicport"))
+        check("ARexx.host", hasattr(ARexx, "host"))
+        check("ARexx.RC_OK", getattr(ARexx, "RC_OK", None) == 0)
+        # Create/close a private port without talking to other hosts.
+        p = ARexx.privateport()
+        check("privateport", p is not None)
+        p.close()
+        check("privateport.close", True)
+    except Exception, e:
+        skip("import ARexx", str(e))
+
+
 def test_os_environ_dict():
     # os.environ should work via amiga convertenviron
     try:

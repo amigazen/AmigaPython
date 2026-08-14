@@ -26,6 +26,9 @@ struct Library *UserGroupBase = (struct Library *)1;
 struct Library *SocketBase = (struct Library *)1;
 struct Library *UtilityBase = (struct Library *)1;
 
+/* Opened on demand by Modules/_hashcrc.c (import _hashlib). */
+struct Library *CRCBase = NULL;
+
 /*
  * LocaleBase is declared extern in proto/locale.h. VBCC stubs and PosixLib
  * (tzset, strncmp, etc.) all need a real definition and an opened library.
@@ -74,5 +77,9 @@ cleanup_libraries(void)
     if (LocaleBase != NULL) {
         CloseLibrary((struct Library *)LocaleBase);
         LocaleBase = NULL;
+    }
+    if (CRCBase != NULL) {
+        CloseLibrary(CRCBase);
+        CRCBase = NULL;
     }
 }

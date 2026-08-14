@@ -88,7 +88,7 @@ sitecustomize  module  on  the Amiga.  If you don't like to import the site
 module (why?) just use sys.path.append('Python:Lib/site-python').
 
 You  can  now  simply import any Amiga specific modules, regardless of them
-being built-in (like ARexxll) or in a .py source file:
+being built-in (like _arexx) or in a .py source file:
 
 	import ARexx
 
