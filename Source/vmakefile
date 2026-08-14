@@ -9,12 +9,15 @@ AR=ar
 MKDIR=MakeDir ALL
 
 # VBCC configuration for AmigaOS 3.2 with PosixLib (softfloat for maximum compatibility)
+# Objects are compiled with -g (Amiga hunkdebug via +aos68k_posix). Release link omits
+# -g so vc inserts -ldnodb (-s -Rshort) and strips; Debug link keeps symbols with -g.
 CONFIG=+aos68k_posix
-CFLAGS=-c -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data -stack-check
+CFLAGS=-c -g -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data -stack-check
 ODIR=build-vbcc
 
-# Program name
+# Program names
 PROGRAM=Python27
+PROGRAM_DEBUG=Python27_Debug
 
 # Libraries
 AMIGAPYTHONLIBNAM=amigapythonamitcp.lib
@@ -27,26 +30,37 @@ CLIBS=-lamiga -lmieee build-vbcc/Modules/zlib/libz.a
 OBJECTS=$(ODIR)/Modules/python.o $(ODIR)/Modules/main.o $(ODIR)/Amiga/finite.o
 
 # All the individual object files from each directory
-MODULES_OBJECTS=$(ODIR)/Modules/config.o $(ODIR)/Modules/getpath.o $(ODIR)/Modules/environment.o $(ODIR)/Modules/getbuildinfo.o $(ODIR)/Modules/arraymodule.o $(ODIR)/Modules/mathmodule.o $(ODIR)/Modules/timemodule.o $(ODIR)/Modules/binascii.o $(ODIR)/Modules/_codecsmodule.o $(ODIR)/Modules/cStringIO.o $(ODIR)/Modules/cPickle.o $(ODIR)/Modules/errnomodule.o $(ODIR)/Modules/operator.o $(ODIR)/Modules/_weakref.o $(ODIR)/Modules/_struct.o $(ODIR)/Modules/selectmodule.o $(ODIR)/Modules/zlibmodule.o $(ODIR)/Modules/amigamodule.o $(ODIR)/Modules/amigapathmodule.o $(ODIR)/Modules/socketmodule.o $(ODIR)/Modules/pwdmodule.o $(ODIR)/Modules/grpmodule.o $(ODIR)/Modules/cryptmodule.o $(ODIR)/Modules/syslogmodule.o $(ODIR)/Modules/syslog.o $(ODIR)/Modules/gcmodule.o $(ODIR)/Modules/_sre.o $(ODIR)/Modules/md5.o $(ODIR)/Modules/md5module.o $(ODIR)/Modules/cmathmodule.o $(ODIR)/Modules/shamodule.o $(ODIR)/Modules/stropmodule.o $(ODIR)/Modules/Doslibmodule.o $(ODIR)/Modules/posix_helpers.o $(ODIR)/Modules/_math.o
+MODULES_OBJECTS=$(ODIR)/Modules/config.o $(ODIR)/Modules/getpath.o $(ODIR)/Modules/environment.o $(ODIR)/Modules/getbuildinfo.o $(ODIR)/Modules/arraymodule.o $(ODIR)/Modules/mathmodule.o $(ODIR)/Modules/timemodule.o $(ODIR)/Modules/binascii.o $(ODIR)/Modules/_codecsmodule.o $(ODIR)/Modules/cStringIO.o $(ODIR)/Modules/cPickle.o $(ODIR)/Modules/errnomodule.o $(ODIR)/Modules/operator.o $(ODIR)/Modules/_weakref.o $(ODIR)/Modules/_struct.o $(ODIR)/Modules/selectmodule.o $(ODIR)/Modules/zlibmodule.o $(ODIR)/Modules/amigamodule.o $(ODIR)/Modules/amigapathmodule.o $(ODIR)/Modules/socketmodule.o $(ODIR)/Modules/pwdmodule.o $(ODIR)/Modules/grpmodule.o $(ODIR)/Modules/cryptmodule.o $(ODIR)/Modules/syslogmodule.o $(ODIR)/Modules/syslog.o $(ODIR)/Modules/gcmodule.o $(ODIR)/Modules/_sre.o $(ODIR)/Modules/md5.o $(ODIR)/Modules/md5module.o $(ODIR)/Modules/cmathmodule.o $(ODIR)/Modules/shamodule.o $(ODIR)/Modules/_collectionsmodule.o $(ODIR)/Modules/itertoolsmodule.o $(ODIR)/Modules/_functoolsmodule.o $(ODIR)/Modules/_randommodule.o $(ODIR)/Modules/stropmodule.o $(ODIR)/Modules/Doslibmodule.o $(ODIR)/Modules/posix_helpers.o $(ODIR)/Modules/_math.o
 
 PARSER_OBJECTS=$(ODIR)/Parser/acceler.o $(ODIR)/Parser/grammar1.o $(ODIR)/Parser/myreadline.o $(ODIR)/Parser/node.o $(ODIR)/Parser/parser.o $(ODIR)/Parser/parsetok.o $(ODIR)/Parser/tokenizer.o $(ODIR)/Parser/intrcheck.o
 
-PYTHON_OBJECTS=$(ODIR)/Python/modsupport.o $(ODIR)/Python/pythonrun.o $(ODIR)/Python/errors.o $(ODIR)/Python/bltinmodule.o $(ODIR)/Python/ceval.o $(ODIR)/Python/compile.o $(ODIR)/Python/frozen.o $(ODIR)/Python/getargs.o $(ODIR)/Python/getcompiler.o $(ODIR)/Python/getcopyright.o $(ODIR)/Python/getversion.o $(ODIR)/Python/getplatform.o $(ODIR)/Python/graminit.o $(ODIR)/Python/import.o $(ODIR)/Python/importdl.o $(ODIR)/Python/marshal.o $(ODIR)/Python/structmember.o $(ODIR)/Python/sysmodule.o $(ODIR)/Python/traceback.o $(ODIR)/Python/sigcheck.o $(ODIR)/Python/pystate.o $(ODIR)/Python/codecs.o $(ODIR)/Python/dynload_stub.o $(ODIR)/Python/ast.o $(ODIR)/Python/asdl.o $(ODIR)/Python/_warnings.o $(ODIR)/Python/getopt.o $(ODIR)/Python/random.o $(ODIR)/Python/mysnprintf.o $(ODIR)/Python/pystrtod.o $(ODIR)/Python/pyfpe.o $(ODIR)/Python/pymath.o $(ODIR)/Python/Python-ast.o $(ODIR)/Python/pyarena.o $(ODIR)/Python/pyctype.o $(ODIR)/Python/symtable.o $(ODIR)/Python/mystrtoul.o $(ODIR)/Python/pystrcmp.o $(ODIR)/Python/future.o $(ODIR)/Python/peephole.o $(ODIR)/Python/formatter_string.o
+PYTHON_OBJECTS=$(ODIR)/Python/modsupport.o $(ODIR)/Python/pythonrun.o $(ODIR)/Python/errors.o $(ODIR)/Python/bltinmodule.o $(ODIR)/Python/ceval.o $(ODIR)/Python/compile.o $(ODIR)/Python/frozen.o $(ODIR)/Python/getargs.o $(ODIR)/Python/getcompiler.o $(ODIR)/Python/getcopyright.o $(ODIR)/Python/getversion.o $(ODIR)/Python/getplatform.o $(ODIR)/Python/graminit.o $(ODIR)/Python/import.o $(ODIR)/Python/importdl.o $(ODIR)/Python/marshal.o $(ODIR)/Python/structmember.o $(ODIR)/Python/sysmodule.o $(ODIR)/Python/traceback.o $(ODIR)/Python/sigcheck.o $(ODIR)/Python/pystate.o $(ODIR)/Python/codecs.o $(ODIR)/Python/dynload_amiga.o $(ODIR)/Python/ast.o $(ODIR)/Python/asdl.o $(ODIR)/Python/_warnings.o $(ODIR)/Python/getopt.o $(ODIR)/Python/random.o $(ODIR)/Python/mysnprintf.o $(ODIR)/Python/pystrtod.o $(ODIR)/Python/pyfpe.o $(ODIR)/Python/pymath.o $(ODIR)/Python/Python-ast.o $(ODIR)/Python/pyarena.o $(ODIR)/Python/pyctype.o $(ODIR)/Python/symtable.o $(ODIR)/Python/mystrtoul.o $(ODIR)/Python/pystrcmp.o $(ODIR)/Python/future.o $(ODIR)/Python/peephole.o $(ODIR)/Python/formatter_string.o
 
 OBJECTS_OBJECTS=$(ODIR)/Objects/abstract.o $(ODIR)/Objects/fileobject.o $(ODIR)/Objects/floatobject.o $(ODIR)/Objects/bufferobject.o $(ODIR)/Objects/funcobject.o $(ODIR)/Objects/intobject.o $(ODIR)/Objects/listobject.o $(ODIR)/Objects/longobject.o $(ODIR)/Objects/dictobject.o $(ODIR)/Objects/methodobject.o $(ODIR)/Objects/moduleobject.o $(ODIR)/Objects/object.o $(ODIR)/Objects/rangeobject.o $(ODIR)/Objects/stringobject.o $(ODIR)/Objects/tupleobject.o $(ODIR)/Objects/typeobject.o $(ODIR)/Objects/classobject.o $(ODIR)/Objects/frameobject.o $(ODIR)/Objects/sliceobject.o $(ODIR)/Objects/complexobject.o $(ODIR)/Objects/cobject.o $(ODIR)/Objects/boolobject.o $(ODIR)/Objects/exceptions.o $(ODIR)/Objects/codeobject.o $(ODIR)/Objects/cellobject.o $(ODIR)/Objects/iterobject.o $(ODIR)/Objects/weakrefobject.o $(ODIR)/Objects/bytearrayobject.o $(ODIR)/Objects/bytes_methods.o $(ODIR)/Objects/capsule.o $(ODIR)/Objects/descrobject.o $(ODIR)/Objects/enumobject.o $(ODIR)/Objects/genobject.o $(ODIR)/Objects/memoryobject.o $(ODIR)/Objects/obmalloc.o $(ODIR)/Objects/setobject.o $(ODIR)/Objects/structseq.o
 
-AMIGA_OBJECTS=$(ODIR)/Amiga/envvars.o $(ODIR)/Amiga/fmod.o $(ODIR)/Amiga/rexxvars.o $(ODIR)/Amiga/crc32.o $(ODIR)/Amiga/wbargs.o $(ODIR)/Amiga/printuserfault.o $(ODIR)/Amiga/dosio_init.o $(ODIR)/Amiga/strftime.o $(ODIR)/Amiga/stackinit.o $(ODIR)/Amiga/CheckStack.o $(ODIR)/Amiga/vbcc_runtime.o $(ODIR)/Amiga/libcheck.o $(ODIR)/Amiga/io2errno.o $(ODIR)/Amiga/int64_ops.o
+AMIGA_OBJECTS=$(ODIR)/Amiga/envvars.o $(ODIR)/Amiga/fmod.o $(ODIR)/Amiga/rexxvars.o $(ODIR)/Amiga/crc32.o $(ODIR)/Amiga/wbargs.o $(ODIR)/Amiga/printuserfault.o $(ODIR)/Amiga/dosio_init.o $(ODIR)/Amiga/strftime.o $(ODIR)/Amiga/stackinit.o $(ODIR)/Amiga/CheckStack.o $(ODIR)/Amiga/vbcc_runtime.o $(ODIR)/Amiga/libcheck.o $(ODIR)/Amiga/io2errno.o $(ODIR)/Amiga/int64_ops.o $(ODIR)/Amiga/pyamiga_host.o
 
 # All objects together
 ALL_OBJECTS=$(OBJECTS) $(MODULES_OBJECTS) $(PARSER_OBJECTS) $(PYTHON_OBJECTS) $(OBJECTS_OBJECTS) $(AMIGA_OBJECTS)
+OBJS_READY=$(OBJECTS) modules $(PARSER_OBJECTS) $(PYTHON_OBJECTS) $(OBJECTS_OBJECTS) $(AMIGA_OBJECTS)
 
 # Prepare variables for target 'clean'
 RM=Delete ALL
 
-all: $(PROGRAM)
+all: $(PROGRAM) $(PROGRAM_DEBUG) plugins
 
-$(PROGRAM): $(OBJECTS) modules $(PARSER_OBJECTS) $(PYTHON_OBJECTS) $(OBJECTS_OBJECTS) $(AMIGA_OBJECTS)
+# Release: no -g => vc inserts -ldnodb (-s -Rshort) and strips symbols.
+$(PROGRAM): $(OBJS_READY)
 	$(CC) $(CONFIG) -o $(PROGRAM) $(ALL_OBJECTS) $(CLIBS)
+
+# Debug: -g keeps Amiga hunk debug/symbols (-hunkdebug from +aos68k_posix).
+$(PROGRAM_DEBUG): $(OBJS_READY)
+	$(CC) $(CONFIG) -g -o $(PROGRAM_DEBUG) $(ALL_OBJECTS) $(CLIBS)
+
+plugins:
+	@echo "******************** ENTERING Modules/plugin/ "
+	$(MAKE) -f Modules/plugin/vmakefile
+	@echo "******************** LEAVING Modules/plugin/ "
 
 $(ODIR)/Modules/python.o: Modules/python.c
 	@$(MKDIR) $(ODIR)/Modules
@@ -61,7 +75,9 @@ $(ODIR)/Amiga/finite.o: Amiga/finite.c
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
 # Build all individual object files
-modules: Modules
+# Do not depend on "Modules" — Amiga FS is case-insensitive, so that
+# collides with this target name and make reports a circular dependency.
+modules:
 	@echo "******************** ENTERING MODULES/ "
 	$(MAKE) -f vmakefile.modules ODIR=$(ODIR)/Modules
 	@echo "******************** LEAVING MODULES/ "
@@ -86,11 +102,10 @@ $(AMIGA_OBJECTS): Amiga
 	$(MAKE) -f vmakefile.amiga ODIR=$(ODIR)/Amiga
 	@echo "******************** LEAVING Amiga/ "
 
-debug:
-	$(CC) $(CONFIG) -g -o$(PROGRAM)_debug $(ALL_OBJECTS)
+debug: $(PROGRAM_DEBUG)
 
 clean:
 	-$(RM) $(ODIR)
-	-$(RM) $(PROGRAM) $(PROGRAM)_debug
+	-$(RM) $(PROGRAM) $(PROGRAM_DEBUG) $(PROGRAM)_debug
 
-.PHONY: all clean debug modules 
+.PHONY: all clean debug modules plugins

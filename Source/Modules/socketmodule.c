@@ -321,6 +321,350 @@ int h_errno; /* not used */
 
 #endif
 
+#ifdef _AMIGA
+/*
+ * Roadshow netdb.h / arpa/inet.h are mostly types-only; calls live in
+ * proto/socket.h (AmiTCP LVOs). PosixLib may have #define'd the same
+ * names onto __P* stubs — drop those so vbcc sees pointer-returning
+ * AmiTCP prototypes (otherwise "invalid types for assignment").
+ */
+#ifdef gethostbyname
+#undef gethostbyname
+#endif
+#ifdef gethostbyaddr
+#undef gethostbyaddr
+#endif
+#ifdef getservbyname
+#undef getservbyname
+#endif
+#ifdef getservbyport
+#undef getservbyport
+#endif
+#ifdef getprotobyname
+#undef getprotobyname
+#endif
+#ifdef getprotobynumber
+#undef getprotobynumber
+#endif
+#ifdef inet_addr
+#undef inet_addr
+#endif
+#ifdef inet_network
+#undef inet_network
+#endif
+#ifdef gethostid
+#undef gethostid
+#endif
+#ifdef gethostname
+#undef gethostname
+#endif
+#ifdef getdtablesize
+#undef getdtablesize
+#endif
+
+#include <proto/socket.h>
+
+extern int h_errno;
+
+/* AmiTCP provides Inet_NtoA(in_addr_t), not BSD inet_ntoa(struct in_addr). */
+static char *
+amiga_inet_ntoa(struct in_addr addr)
+{
+    return (char *)Inet_NtoA(addr.s_addr);
+}
+#define inet_ntoa(addr) amiga_inet_ntoa(addr)
+
+/* AmiTCP netinet/in.h has INADDR_ANY / BROADCAST but not LOOPBACK. */
+#ifndef INADDR_LOOPBACK
+#define INADDR_LOOPBACK 0x7f000001UL
+#endif
+
+/*
+ * Roadshow headers define getaddrinfo/getnameinfo LVOs at large negative
+ * offsets (-810/-822). Classic AmiTCP/Miami jump tables are shorter, so
+ * those calls JMP into data and panic. socket.gethostbyname() goes through
+ * setipaddr()->getaddrinfo and makeipaddr()->getnameinfo — replace the
+ * macros with gethostbyname/Inet_NtoA wrappers that use safe LVOs only.
+ */
+#ifdef getaddrinfo
+#undef getaddrinfo
+#endif
+#ifdef freeaddrinfo
+#undef freeaddrinfo
+#endif
+#ifdef getnameinfo
+#undef getnameinfo
+#endif
+#ifdef gai_strerror
+#undef gai_strerror
+#endif
+
+static void
+amiga_freeaddrinfo(struct addrinfo *ai)
+{
+    struct addrinfo *next;
+
+    while (ai != NULL) {
+        next = ai->ai_next;
+        if (ai->ai_canonname != NULL)
+            free(ai->ai_canonname);
+        if (ai->ai_addr != NULL)
+            free(ai->ai_addr);
+        free(ai);
+        ai = next;
+    }
+}
+
+static int
+amiga_h_errno_to_gai(void)
+{
+    switch (h_errno) {
+    case HOST_NOT_FOUND:
+        return EAI_NONAME;
+    case TRY_AGAIN:
+        return EAI_AGAIN;
+    case NO_RECOVERY:
+        return EAI_FAIL;
+    case NO_DATA:
+        return EAI_NODATA;
+    default:
+        return EAI_FAIL;
+    }
+}
+
+static struct addrinfo *
+amiga_make_ai(int socktype, int protocol, struct sockaddr_in *sin,
+              const char *canon)
+{
+    struct addrinfo *ai;
+    struct sockaddr_in *addr;
+
+    ai = (struct addrinfo *)malloc(sizeof(struct addrinfo));
+    if (ai == NULL)
+        return NULL;
+    memset(ai, 0, sizeof(*ai));
+    addr = (struct sockaddr_in *)malloc(sizeof(struct sockaddr_in));
+    if (addr == NULL) {
+        free(ai);
+        return NULL;
+    }
+    memcpy(addr, sin, sizeof(*addr));
+    ai->ai_family = AF_INET;
+    ai->ai_socktype = socktype;
+    ai->ai_protocol = protocol;
+    ai->ai_addrlen = (socklen_t)sizeof(*addr);
+    ai->ai_addr = (struct sockaddr *)addr;
+    if (canon != NULL) {
+        ai->ai_canonname = (char *)malloc(strlen(canon) + 1);
+        if (ai->ai_canonname != NULL)
+            strcpy(ai->ai_canonname, canon);
+    }
+    return ai;
+}
+
+static int
+amiga_getaddrinfo(const char *hostname, const char *servname,
+                  const struct addrinfo *hints, struct addrinfo **res)
+{
+    struct sockaddr_in sin;
+    struct hostent *he;
+    struct servent *se;
+    struct addrinfo *ai;
+    char *endp;
+    unsigned long ul;
+    int port;
+    int flags;
+    int socktype;
+    int protocol;
+    int family;
+    const char *proto;
+    int d1, d2, d3, d4;
+    char ch;
+
+    if (res == NULL)
+        return EAI_FAIL;
+    *res = NULL;
+
+    flags = 0;
+    socktype = 0;
+    protocol = 0;
+    family = AF_UNSPEC;
+    if (hints != NULL) {
+        flags = hints->ai_flags;
+        socktype = hints->ai_socktype;
+        protocol = hints->ai_protocol;
+        family = hints->ai_family;
+    }
+    if (family != AF_UNSPEC && family != AF_INET)
+        return EAI_FAMILY;
+
+    port = 0;
+    if (servname != NULL && servname[0] != '\0') {
+        ul = strtoul(servname, &endp, 10);
+        if (endp != servname && *endp == '\0') {
+            if (ul > 65535UL)
+                return EAI_SERVICE;
+            port = (int)ul;
+        }
+        else {
+            proto = (socktype == SOCK_DGRAM) ? "udp" : "tcp";
+            se = getservbyname((char *)servname, (char *)proto);
+            if (se == NULL)
+                return EAI_SERVICE;
+            port = (int)ntohs((unsigned short)se->s_port);
+        }
+    }
+
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+#ifdef HAVE_SOCKADDR_SA_LEN
+    sin.sin_len = sizeof(sin);
+#endif
+    sin.sin_port = htons((unsigned short)port);
+
+    if (hostname == NULL || hostname[0] == '\0') {
+        if (flags & AI_PASSIVE)
+            sin.sin_addr.s_addr = htonl(INADDR_ANY);
+        else
+            sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        ai = amiga_make_ai(socktype, protocol, &sin, NULL);
+        if (ai == NULL)
+            return EAI_MEMORY;
+        *res = ai;
+        return 0;
+    }
+
+    if (sscanf(hostname, "%d.%d.%d.%d%c", &d1, &d2, &d3, &d4, &ch) == 4 &&
+        d1 >= 0 && d1 <= 255 && d2 >= 0 && d2 <= 255 &&
+        d3 >= 0 && d3 <= 255 && d4 >= 0 && d4 <= 255) {
+        sin.sin_addr.s_addr = htonl(
+            ((unsigned long)d1 << 24) | ((unsigned long)d2 << 16) |
+            ((unsigned long)d3 << 8) | (unsigned long)d4);
+        ai = amiga_make_ai(socktype, protocol, &sin, NULL);
+        if (ai == NULL)
+            return EAI_MEMORY;
+        *res = ai;
+        return 0;
+    }
+
+    if (flags & AI_NUMERICHOST)
+        return EAI_NONAME;
+
+    he = gethostbyname((char *)hostname);
+    if (he == NULL)
+        return amiga_h_errno_to_gai();
+    if (he->h_addrtype != AF_INET || he->h_length != 4)
+        return EAI_FAMILY;
+    memcpy(&sin.sin_addr, he->h_addr_list[0], 4);
+    ai = amiga_make_ai(socktype, protocol, &sin,
+                       (flags & AI_CANONNAME) ? he->h_name : NULL);
+    if (ai == NULL)
+        return EAI_MEMORY;
+    *res = ai;
+    return 0;
+}
+
+static int
+amiga_getnameinfo(const struct sockaddr *sa, socklen_t salen,
+                  char *host, size_t hostlen,
+                  char *serv, size_t servlen, int flags)
+{
+    const struct sockaddr_in *sin;
+    struct hostent *he;
+    struct servent *se;
+    char *p;
+    char buf[32];
+    const char *proto;
+    unsigned port;
+
+    if (sa == NULL || salen < (socklen_t)sizeof(struct sockaddr_in) ||
+        sa->sa_family != AF_INET)
+        return EAI_FAMILY;
+    sin = (const struct sockaddr_in *)sa;
+
+    if (host != NULL && hostlen > 0) {
+        p = NULL;
+        if (!(flags & NI_NUMERICHOST)) {
+            he = gethostbyaddr((char *)&sin->sin_addr,
+                               (int)sizeof(sin->sin_addr), AF_INET);
+            if (he != NULL && he->h_name != NULL)
+                p = he->h_name;
+            else if (flags & NI_NAMEREQD)
+                return EAI_NONAME;
+        }
+        if (p == NULL) {
+            p = (char *)Inet_NtoA(sin->sin_addr.s_addr);
+            if (p == NULL)
+                return EAI_SYSTEM;
+        }
+        if (strlen(p) >= hostlen)
+            return EAI_MEMORY;
+        strcpy(host, p);
+    }
+
+    if (serv != NULL && servlen > 0) {
+        port = (unsigned)ntohs(sin->sin_port);
+        p = NULL;
+        if (!(flags & NI_NUMERICSERV)) {
+            proto = (flags & NI_DGRAM) ? "udp" : "tcp";
+            se = getservbyport((LONG)sin->sin_port, (char *)proto);
+            if (se != NULL && se->s_name != NULL)
+                p = se->s_name;
+        }
+        if (p == NULL) {
+            sprintf(buf, "%u", port);
+            p = buf;
+        }
+        if (strlen(p) >= servlen)
+            return EAI_MEMORY;
+        strcpy(serv, p);
+    }
+    return 0;
+}
+
+static const char *
+amiga_gai_strerror(int err)
+{
+    switch (err) {
+    case EAI_NONAME:
+        return "nodename nor servname provided, or not known";
+    case EAI_AGAIN:
+        return "temporary failure in name resolution";
+    case EAI_FAIL:
+        return "non-recoverable failure in name resolution";
+    case EAI_NODATA:
+        return "no address associated with name";
+    case EAI_FAMILY:
+        return "ai_family not supported";
+    case EAI_SERVICE:
+        return "servname not supported for ai_socktype";
+    case EAI_MEMORY:
+        return "memory allocation failure";
+    case EAI_SYSTEM:
+        return "system error";
+    default:
+        return "getaddrinfo failed";
+    }
+}
+
+#define getaddrinfo amiga_getaddrinfo
+#define freeaddrinfo amiga_freeaddrinfo
+#define getnameinfo amiga_getnameinfo
+#define gai_strerror amiga_gai_strerror
+
+/* Roadshow exports inet_pton/inet_ntop; avoid stock fallback prototypes
+ * which get eaten by AmiTCP's inet_pton(...) function-like macros. */
+#ifndef HAVE_INET_PTON
+#define HAVE_INET_PTON 1
+#endif
+
+#define ioctlsocket IoctlSocket
+#undef AF_UNIX
+#ifndef INET_ADDRSTRLEN
+#define INET_ADDRSTRLEN 16
+#endif
+#endif /* _AMIGA */
+
 #include <stddef.h>
 
 #ifndef offsetof
@@ -341,6 +685,8 @@ int h_errno; /* not used */
   /* Do not include addrinfo.h for MSVC7 or greater. 'addrinfo' and
    * EAI_* constants are defined in (the already included) ws2tcpip.h.
    */
+#elif defined(_AMIGA)
+  /* Roadshow/AmiTCP netdb.h already defines struct addrinfo and EAI_*. */
 #else
 #  include "addrinfo.h"
 #endif

@@ -9,7 +9,9 @@ OBJECTS = config.o getpath.o environment.o \
         errnomodule.o posixmodule.o operator.o _weakref.o _struct.o \
         selectmodule.o zlibmodule.o \
         amigamodule.o amigapathmodule.o socketmodule.o \
-        pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o
+        pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o \
+        _collectionsmodule.o itertoolsmodule.o \
+        _functoolsmodule.o _randommodule.o
 
 Modules.lib: $(OBJECTS)
 	-delete >NIL: Modules.lib
@@ -65,5 +67,13 @@ grpmodule.o : grpmodule.c /Include/Python.h
 cryptmodule.o : cryptmodule.c /Include/Python.h
 
 syslogmodule.o : syslogmodule.c /Include/Python.h
+
+_collectionsmodule.o : _collectionsmodule.c /Include/Python.h
+
+itertoolsmodule.o : itertoolsmodule.c /Include/Python.h
+
+_functoolsmodule.o : _functoolsmodule.c /Include/Python.h
+
+_randommodule.o : _randommodule.c /Include/Python.h
 
 # --- DO NOT MODIFY THIS LINE -- AUTO-DEPENDS PRECEDE --- 

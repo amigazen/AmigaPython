@@ -35,4 +35,19 @@ STDIO_CONSTRUCTOR(dosio_init)
     __dosio_files[2] = __dosio_files[1];
 
   return 0;
-} 
+}
+
+/*
+ * For Py_FdIsInteractive() in pythonrun.c. Kept here (no Python.h) so
+ * proto/dos.h does not clash with Python bitset.h BYTE / BITSPERBYTE.
+ */
+int
+Py_Amiga_StdinInteractive(void)
+{
+  BPTR in;
+
+  in = Input();
+  if (in != 0 && IsInteractive(in))
+    return 1;
+  return 0;
+}

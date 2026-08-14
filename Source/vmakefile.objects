@@ -6,7 +6,7 @@ CC=vc
 VLINK=vlink
 MKDIR=MakeDir ALL
 CONFIG=+aos68k_posix
-CFLAGS=-c -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -stack-check -maxoptpasses=1
+CFLAGS=-c -g -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -stack-check -maxoptpasses=1
 
 # Source directory
 SRCDIR=Objects
@@ -130,7 +130,7 @@ $(ODIR)/tupleobject.o: $(SRCDIR)/tupleobject.c
 
 $(ODIR)/typeobject.o: $(SRCDIR)/typeobject.c
 	@$(MKDIR) $(ODIR)
-	$(CC) $(CONFIG) -c -O0 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -stack-check -maxoptpasses=1 -o $@ $<
+	$(CC) $(CONFIG) -c -g -O0 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -stack-check -maxoptpasses=1 -o $@ $<
 
 
 

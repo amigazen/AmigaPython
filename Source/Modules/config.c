@@ -51,6 +51,10 @@ extern void init_sre(void);
 extern void init_md5(void);
 extern void initcmath(void);
 extern void init_sha(void);
+extern void init_collections(void);
+extern void inititertools(void);
+extern void init_functools(void);
+extern void init_random(void);
 /* extern void initunicodedata(void); */
 extern void initenvironment(void);
 extern void initstrop(void);
@@ -61,9 +65,8 @@ extern void initDoslib(void);
 /* Amiga-specific modules */
 extern void initamiga(void);
 extern void initamigapath(void);
-extern void init_socket(void);
-
-#if defined(AMITCP) /* || defined(INET225) (/)
+/* _socket is a LoadSeg plugin (lib-dynload/_socket.module), not builtin */
+#if defined(AMITCP) /* || defined(INET225) */
 /* Network modules - only if networking is available */
 extern void initpwd(void);
 extern void initgrp(void);
@@ -98,6 +101,10 @@ struct _inittab _PyImport_Inittab[] = {
     {"md5", init_md5},
     {"cmath", initcmath},
     {"sha", init_sha},
+    {"_collections", init_collections},
+    {"itertools", inititertools},
+    {"_functools", init_functools},
+    {"_random", init_random},
     /* {"unicodedata", initunicodedata}, */
     {"environment", initenvironment},
     {"strop", initstrop},
@@ -105,8 +112,7 @@ struct _inittab _PyImport_Inittab[] = {
     {"Doslib", initDoslib},
 
 #if defined(AMITCP) /* || defined(INET225) */
-    /* Network modules */
-    {"_socket", init_socket},
+    /* Network modules (not _socket — that is LoadSeg'd) */
     {"pwd", initpwd},
     {"grp", initgrp},
     {"crypt", initcrypt},

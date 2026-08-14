@@ -6,7 +6,7 @@ CC=vc
 VLINK=vlink
 MKDIR=MakeDir ALL
 CONFIG=+aos68k_posix
-CFLAGS=-c -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -stack-check
+CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -stack-check
 
 # Source directory
 SRCDIR=Python
@@ -18,7 +18,7 @@ OBJECTS = modsupport.o pythonrun.o errors.o bltinmodule.o \
 	getversion.o getplatform.o graminit.o import.o \
 	importdl.o marshal.o structmember.o sysmodule.o \
 	traceback.o sigcheck.o pystate.o \
-	codecs.o dynload_stub.o \
+	codecs.o dynload_amiga.o \
 	ast.o asdl.o _warnings.o \
 	getopt.o random.o mysnprintf.o pystrtod.o pyfpe.o pymath.o \
 	Python-ast.o pyarena.o pyctype.o symtable.o mystrtoul.o \
@@ -42,7 +42,7 @@ $(ODIR)/bltinmodule.o: $(SRCDIR)/bltinmodule.c
 
 $(ODIR)/ceval.o: $(SRCDIR)/ceval.c
 	@$(MKDIR) $(ODIR)
-	$(CC) $(CONFIG) -c -O0 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data -stack-check -o $@ $<
+	$(CC) $(CONFIG) -c -g -O0 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data -stack-check -o $@ $<
 
 $(ODIR)/compile.o: $(SRCDIR)/compile.c
 	@$(MKDIR) $(ODIR)
@@ -80,11 +80,11 @@ $(ODIR)/graminit.o: $(SRCDIR)/graminit.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
-$(ODIR)/import.o: $(SRCDIR)/import.c
+$(ODIR)/import.o: $(SRCDIR)/import.c Include/pyconfig.h
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
-$(ODIR)/importdl.o: $(SRCDIR)/importdl.c
+$(ODIR)/importdl.o: $(SRCDIR)/importdl.c Include/pyconfig.h
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
@@ -124,7 +124,7 @@ $(ODIR)/codecs.o: $(SRCDIR)/codecs.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
-$(ODIR)/dynload_stub.o: $(SRCDIR)/dynload_stub.c
+$(ODIR)/dynload_amiga.o: $(SRCDIR)/dynload_amiga.c Include/pyconfig.h Include/pyamiga_plugin.h
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 

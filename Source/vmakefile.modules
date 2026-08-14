@@ -6,7 +6,7 @@ CC=vc
 VLINK=vlink
 MKDIR=MakeDir ALL
 CONFIG=+aos68k_posix
-CFLAGS=-c -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -I$(SRCDIR) -cpu=68020 -fpu=soft -stack-check
+CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -D__USE_NEW_TIMEVAL__ -D__NO_NETINCLUDE_TIMEVAL -IInclude -I$(SRCDIR) -Inetinclude: -cpu=68020 -fpu=soft -stack-check
 
 # Source directory
 SRCDIR=Modules
@@ -25,6 +25,10 @@ OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
     md5module.o \
     cmathmodule.o \
     shamodule.o \
+    _collectionsmodule.o \
+    itertoolsmodule.o \
+    _functoolsmodule.o \
+    _randommodule.o \
     Doslibmodule.o \
     stropmodule.o \
     posix_helpers.o \
@@ -130,9 +134,9 @@ $(ODIR)/amigapathmodule.o: $(SRCDIR)/amiga/amigapathmodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
-$(ODIR)/socketmodule.o: $(SRCDIR)/socketmodule.c
+$(ODIR)/socketmodule.o: $(SRCDIR)/socketmodule.c Include/pyconfig.h
 	@$(MKDIR) $(ODIR)
-	$(CC) $(CONFIG) $(CFLAGS) -o $@ $< -lamiga
+	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $< -lamiga
 
 $(ODIR)/pwdmodule.o: $(SRCDIR)/pwdmodule.c
 	@$(MKDIR) $(ODIR)
@@ -179,6 +183,22 @@ $(ODIR)/cmathmodule.o: $(SRCDIR)/cmathmodule.c
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
 $(ODIR)/shamodule.o: $(SRCDIR)/shamodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_collectionsmodule.o: $(SRCDIR)/_collectionsmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/itertoolsmodule.o: $(SRCDIR)/itertoolsmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_functoolsmodule.o: $(SRCDIR)/_functoolsmodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/_randommodule.o: $(SRCDIR)/_randommodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 

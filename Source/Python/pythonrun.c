@@ -69,6 +69,10 @@ int Py_DebugFlag; /* Needed by parser.c */
 int Py_VerboseFlag; /* Needed by import.c */
 int Py_InteractiveFlag; /* Needed by Py_FdIsInteractive() below */
 int Py_InspectFlag; /* Needed to determine whether to exit at SystemExit */
+
+#ifdef _AMIGA
+extern int Py_Amiga_StdinInteractive(void);
+#endif
 int Py_NoSiteFlag; /* Suppress 'import site' */
 int Py_BytesWarningFlag; /* Warn on comparison between bytearray and unicode */
 int Py_DontWriteBytecodeFlag; /* Suppress writing bytecode files (*.py[co]) */
@@ -1822,6 +1826,16 @@ initsigs(void)
 int
 Py_FdIsInteractive(FILE *fp, const char *filename)
 {
+#ifdef _AMIGA
+    /*
+     * PosixLib isatty() only trusts an internal FDFL_INTERACTIVE flag.
+     * That bit is often clear for Shell/CON: — banner still prints with
+     * -v but we never enter the >>> loop. DOS IsInteractive() is in
+     * Amiga/libcheck.c (avoid proto/dos.h here; it clashes with Python).
+     */
+    if (fp == stdin && Py_Amiga_StdinInteractive())
+        return 1;
+#endif
     if (isatty((int)fileno(fp)))
         return 1;
     if (!Py_InteractiveFlag)

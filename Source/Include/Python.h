@@ -57,6 +57,16 @@
  * assert() calls won't be removed.
  */
 #include <assert.h>
+#ifdef _AMIGA
+/* PosixLib may #define assert(x) to empty under NDEBUG, which breaks
+ * comma-operator macros such as PyByteArray_GET_SIZE. Force a void
+ * expression so those macros remain valid C.
+ */
+#ifdef NDEBUG
+#undef assert
+#define assert(ignore) ((void)0)
+#endif
+#endif
 
 #include "pyport.h"
 

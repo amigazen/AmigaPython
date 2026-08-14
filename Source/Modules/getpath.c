@@ -337,12 +337,6 @@ search_for_prefix(char *argv0_path, char *home)
     size_t n;
     char *vpath;
 
-#ifdef _AMIGA
-    fprintf(stderr, "[DEBUG] search_for_prefix: argv0_path='%s', home='%s'\n", 
-            argv0_path ? argv0_path : "NULL", 
-            home ? home : "NULL");
-#endif
-
     /* If PYTHONHOME is set, we believe it unconditionally */
     if (home) {
         char *delim;
@@ -350,7 +344,6 @@ search_for_prefix(char *argv0_path, char *home)
         /* Convert Unix-style PYTHONHOME to Amiga-style path */
         if (strncmp(home, "/Python", 7) == 0) {
             strcpy(prefix, "Python:");
-            fprintf(stderr, "[DEBUG] search_for_prefix: Converting PYTHONHOME from '%s' to '%s'\n", home, prefix);
         } else {
             strncpy(prefix, home, MAXPATHLEN);
         }
@@ -362,18 +355,12 @@ search_for_prefix(char *argv0_path, char *home)
             *delim = '\0';
         joinpath(prefix, lib_python);
         joinpath(prefix, LANDMARK);
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] search_for_prefix: Using PYTHONHOME, prefix='%s'\n", prefix);
-#endif
         return 1;
     }
 
     /* Check to see if argv[0] is in the build directory */
     strcpy(prefix, argv0_path);
     joinpath(prefix, "Modules/Setup");
-#ifdef _AMIGA
-    fprintf(stderr, "[DEBUG] search_for_prefix: Checking build dir, path='%s'\n", prefix);
-#endif
     if (isfile(prefix)) {
         /* Check VPATH to see if argv0_path is in the build directory. */
         vpath = VPATH;
@@ -381,60 +368,35 @@ search_for_prefix(char *argv0_path, char *home)
         joinpath(prefix, vpath);
         joinpath(prefix, "Lib");
         joinpath(prefix, LANDMARK);
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] search_for_prefix: Found build dir, checking module at '%s'\n", prefix);
-#endif
         if (ismodule(prefix)) {
-#ifdef _AMIGA
-            fprintf(stderr, "[DEBUG] search_for_prefix: Found module in build dir\n");
-#endif
             return -1;
         }
     }
 
     /* Search from argv0_path, until root is found */
     copy_absolute(prefix, argv0_path);
-#ifdef _AMIGA
-    fprintf(stderr, "[DEBUG] search_for_prefix: Starting path search from '%s'\n", prefix);
-#endif
     do {
         n = strlen(prefix);
         joinpath(prefix, lib_python);
         joinpath(prefix, LANDMARK);
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] search_for_prefix: Checking module at '%s'\n", prefix);
-#endif
         if (ismodule(prefix)) {
-#ifdef _AMIGA
-            fprintf(stderr, "[DEBUG] search_for_prefix: Found module!\n");
-#endif
             return 1;
         }
         prefix[n] = '\0';
         reduce(prefix);
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] search_for_prefix: Reduced to '%s'\n", prefix);
-#endif
     } while (prefix[0]);
 
     /* Look at configure's PREFIX */
 #ifdef _AMIGA
     /* For Amiga, fallback to Python:Lib and look for the landmark directly */
     strcpy(prefix, "Python:Lib");
-    fprintf(stderr, "[DEBUG] search_for_prefix: Using Amiga PREFIX fallback (Python:Lib)\n");
     joinpath(prefix, LANDMARK);
 #else
     strncpy(prefix, PREFIX, MAXPATHLEN);
     joinpath(prefix, lib_python);
     joinpath(prefix, LANDMARK);
 #endif
-#ifdef _AMIGA
-    fprintf(stderr, "[DEBUG] search_for_prefix: Checking PREFIX fallback at '%s'\n", prefix);
-#endif
     if (ismodule(prefix)) {
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] search_for_prefix: Found module in PREFIX fallback!\n");
-#endif
         return 1;
     }
 
@@ -460,7 +422,6 @@ search_for_exec_prefix(char *argv0_path, char *home)
             /* Convert Unix-style exec_prefix to Amiga-style path */
             if (strncmp(delim+1, "/Python", 7) == 0) {
                 strcpy(exec_prefix, "Python:");
-                fprintf(stderr, "[DEBUG] search_for_exec_prefix: Converting exec_prefix from '%s' to '%s'\n", delim+1, exec_prefix);
             } else {
                 strncpy(exec_prefix, delim+1, MAXPATHLEN);
             }
@@ -472,7 +433,6 @@ search_for_exec_prefix(char *argv0_path, char *home)
             /* Convert Unix-style PYTHONHOME to Amiga-style path */
             if (strncmp(home, "/Python", 7) == 0) {
                 strcpy(exec_prefix, "Python:");
-                fprintf(stderr, "[DEBUG] search_for_exec_prefix: Converting PYTHONHOME from '%s' to '%s'\n", home, exec_prefix);
             } else {
                 strncpy(exec_prefix, home, MAXPATHLEN);
             }
@@ -495,13 +455,10 @@ search_for_exec_prefix(char *argv0_path, char *home)
       char rel_builddir_path[MAXPATHLEN+1];
       size_t n;
       
-      fprintf(stderr, "DEBUG: getpath.c fopen('%s', 'r') -> ", exec_prefix);
       f = fopen(exec_prefix, "r");
       if (f == NULL) {
-        fprintf(stderr, "NULL (errno=%d)\n", errno);
 	errno = 0;
       } else {
-        fprintf(stderr, "SUCCESS\n");
 	n = fread(rel_builddir_path, 1, MAXPATHLEN, f);
 	rel_builddir_path[n] = '\0';
 	fclose(f);
@@ -520,6 +477,13 @@ search_for_exec_prefix(char *argv0_path, char *home)
         if (isdir(exec_prefix))
             return 1;
         exec_prefix[n] = '\0';
+#ifdef _AMIGA
+        /* Dev layout: lib-dynload next to Python27 (Source/lib-dynload) */
+        joinpath(exec_prefix, "lib-dynload");
+        if (isdir(exec_prefix))
+            return 1;
+        exec_prefix[n] = '\0';
+#endif
         reduce(exec_prefix);
     } while (exec_prefix[0]);
 
@@ -534,6 +498,12 @@ search_for_exec_prefix(char *argv0_path, char *home)
     joinpath(exec_prefix, "lib-dynload");
     if (isdir(exec_prefix))
         return 1;
+#ifdef _AMIGA
+    strcpy(exec_prefix, "Python:");
+    joinpath(exec_prefix, "lib-dynload");
+    if (isdir(exec_prefix))
+        return 1;
+#endif
 
     /* Fail */
     return 0;
@@ -573,7 +543,6 @@ calculate_path(void)
 #ifdef _AMIGA
         /* Amiga-specific program path detection */
         strcpy(progpath, fullprogpath());
-        fprintf(stderr, "[DEBUG] calculate_path: progpath='%s'\n", progpath);
 #else /* !_AMIGA */
         /* If there is no slash in the argv0 path, then we have to
          * assume python is on the user's $PATH, since there's no
@@ -708,15 +677,9 @@ calculate_path(void)
         strncpy(prefix, PREFIX, MAXPATHLEN);
 #endif
         joinpath(prefix, lib_python);
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] calculate_path: Using fallback prefix='%s'\n", prefix);
-#endif
     }
     else {
         reduce(prefix);
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] calculate_path: Found prefix='%s' (pfound=%d)\n", prefix, pfound);
-#endif
     }
 
     strncpy(zip_path, prefix, MAXPATHLEN);
@@ -864,9 +827,6 @@ calculate_path(void)
 
         /* And publish the results */
         module_search_path = buf;
-#ifdef _AMIGA
-        fprintf(stderr, "[DEBUG] calculate_path: Final module_search_path='%s'\n", module_search_path);
-#endif
     }
 
     /* Reduce prefix and exec_prefix to their essence,

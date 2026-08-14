@@ -1,0 +1,27 @@
+# vmakefile for Amiga Python LoadSeg plugins (VBCC)
+# Invoked from Source/ (no -C): make -f Modules/plugin/vmakefile
+# Builds lib-dynload/_socket.module - networking gate opened only on import.
+
+CC=vc
+CONFIG=+aos68k_posix
+# No -stack-check: that needs ___stack_check from the C runtime, absent with -nostdlib
+CFLAGS=-c -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -D__USE_NEW_TIMEVAL__ -IInclude -Inetinclude: -cpu=68020 -fpu=soft
+SRCDIR=Modules/plugin
+# getpath adds lib/lib-dynload to sys.path (Lib/lib-dynload on Amiga FS)
+OUTDIR=lib/lib-dynload
+MKDIR=MakeDir ALL
+
+all: $(OUTDIR)/_socket.module
+
+# Link with -nostdlib: LoadSeg plugin, no C startup (FastForward-style)
+$(OUTDIR)/_socket.module: $(SRCDIR)/socket_gate.o
+	@$(MKDIR) $(OUTDIR)
+	$(CC) $(CONFIG) -nostdlib -o $@ $(SRCDIR)/socket_gate.o -lamiga
+
+$(SRCDIR)/socket_gate.o: $(SRCDIR)/socket_gate.c Include/pyamiga_plugin.h
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $(SRCDIR)/socket_gate.c
+
+clean:
+	-Delete $(SRCDIR)/socket_gate.o $(OUTDIR)/_socket.module
+
+.PHONY: all clean

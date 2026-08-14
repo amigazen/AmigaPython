@@ -26,6 +26,7 @@ SUITE = [
     ("os_path", "AmigaTests.test_os_path"),
     ("amiga", "AmigaTests.test_amiga_module"),
     ("builtins", "AmigaTests.test_builtins_ext"),
+    ("tier_a", "AmigaTests.test_tier_a"),
     ("extras", "AmigaTests.test_amiga_extras"),
 ]
 

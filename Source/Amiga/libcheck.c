@@ -3,7 +3,11 @@
  *
  *      Based on Irmen de Jong's original Amiga port
  *      Updated for Python 2.7.18
- *      Simplified for vbcc PosixLib usage
+ *
+ *      SocketBase stays a PosixLib dummy (pointer 1) until the _socket
+ *      LoadSeg plugin opens bsdsocket.library for real. Do not OpenLibrary
+ *      from checksocketlib() — that can hang or block console I/O when no
+ *      TCP stack is running, and the interpreter never reaches a prompt.
  */
 
 #include "Python.h"
@@ -17,10 +21,10 @@
 /* global h_errno */
 int h_errno = 0;
 
-/* Library bases - simplified for PosixLib */
-struct Library *UserGroupBase = (struct Library *)1;  /* Dummy pointer to indicate available */
-struct Library *SocketBase = (struct Library *)1;     /* Dummy pointer to indicate available */
-struct Library *UtilityBase = (struct Library *)1;    /* Dummy pointer to indicate available */
+/* Library bases - PosixLib: non-NULL dummy means "available" */
+struct Library *UserGroupBase = (struct Library *)1;
+struct Library *SocketBase = (struct Library *)1;
+struct Library *UtilityBase = (struct Library *)1;
 
 /*
  * LocaleBase is declared extern in proto/locale.h. VBCC stubs and PosixLib
@@ -35,52 +39,40 @@ CONSTRUCTOR_P(locale_lib_init, 5000)
     return 0;
 }
 
-/*
- * Check if usergroup.library is available
- * With PosixLib, user/group functions should be available directly
- * Returns 1 if available, 0 if not
- */
-int checkusergrouplib(void)
+int
+checkusergrouplib(void)
 {
-    /* With PosixLib, user/group functionality should be available directly */
+    return 1;
+}
+
+int
+checkutilitylib(void)
+{
     return 1;
 }
 
 /*
- * Check if utility.library is available
- * With PosixLib, utility functions should be available directly
- * Returns 1 if available, 0 if not
+ * PosixLib path: always succeed. Real bsdsocket open is only in
+ * pyamiga_init_socket_gated() when import _socket loads the plugin.
  */
-int checkutilitylib(void)
+int
+checksocketlib(void)
 {
-    /* With PosixLib, utility functionality should be available directly */
     return 1;
 }
 
-/*
- * Check if socket functionality is available
- * With PosixLib, socket functions should be available directly
- * Returns 1 if available, 0 if not
- */
-int checksocketlib(void)
+void
+cleanup_libraries(void)
 {
-    /* With PosixLib, socket functionality should be available directly */
-    return 1;
-}
-
-/*
- * Clean up library resources
- * Called at program exit
- * Simplified for PosixLib - no actual cleanup needed
- */
-void cleanup_libraries(void)
-{
-    /* With PosixLib, no manual cleanup is needed */
     UserGroupBase = NULL;
-    SocketBase = NULL;
     UtilityBase = NULL;
+    /* Only CloseLibrary a real base, not the PosixLib dummy (1). */
+    if (SocketBase != NULL && SocketBase != (struct Library *)1) {
+        CloseLibrary(SocketBase);
+    }
+    SocketBase = NULL;
     if (LocaleBase != NULL) {
         CloseLibrary((struct Library *)LocaleBase);
         LocaleBase = NULL;
     }
-} 
+}

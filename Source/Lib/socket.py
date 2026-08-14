@@ -228,6 +228,9 @@ def meth(name,self,*args):
     return getattr(self._sock,name)(*args)
 
 for _m in _socketmethods:
+    # Skip APIs omitted from this build's _socket (e.g. no HAVE_GETPEERNAME)
+    if not hasattr(_realsocket, _m):
+        continue
     p = partial(meth,_m)
     p.__name__ = _m
     p.__doc__ = getattr(_realsocket,_m).__doc__

@@ -6,7 +6,7 @@ CC=vc
 VLINK=vlink
 MKDIR=MakeDir ALL
 CONFIG=+aos68k_posix
-CFLAGS=-c -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -stack-check
+CFLAGS=-c -g -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -stack-check
 
 # Parser objects for Python 2.7.18
 OBJECTS = acceler.o grammar1.o myreadline.o node.o parser.o parsetok.o \

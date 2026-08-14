@@ -10,7 +10,7 @@ This is Amiga Python, a port of Python 2 to Amiga.
 
 *Minds awaken, free*
 
-**amigazen project** uses modern software development tools and methods to update and rerelease classic Amiga open source software. Our releases include a new AWeb, this new Amiga Python 2, and the ToolKit project - a universal SDK for Amiga.
+**amigazen project** uses modern software development tools and methods to update and rerelease classic Amiga open source software. amigazen project releases include a new AWeb, a new Amiga Python 2, and the ToolKit project - a universal SDK for Amiga.
 
 Key to our approach is ensuring every project can be built with the same common set of development tools and configurations, so we created the ToolKit project to provide a standard configuration for Amiga development. All *amigazen project* releases will be guaranteed to build against the ToolKit standard so that anyone can download and begin contributing straightaway without having to tailor the toolchain for their own setup.
 
@@ -132,7 +132,7 @@ Also on Aminet, where you got this:  dev/lang/Python20_Src.lha.
 
 ## Acknowledgements
 
-*Amiga* is a trademark of **Amiga Inc**. 
+*Amiga* is a trademark of **Amiga Corporation**. 
 
 Original Amiga Python by Irmen de Jong
 

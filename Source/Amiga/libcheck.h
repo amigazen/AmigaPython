@@ -3,12 +3,12 @@
 
 /* Library availability checks for Amiga */
 
-#ifdef AMITCP
 extern int checkusergrouplib(void);
 extern int checkutilitylib(void);
 extern int checksocketlib(void);
-#endif
+extern void cleanup_libraries(void);
 
-extern void PyErr_Clear(void);
+/* 1 if dos.library says Input() is an interactive console. */
+extern int Py_Amiga_StdinInteractive(void);
 
-#endif /* _LIBCHECK_H */ 
+#endif /* _LIBCHECK_H */

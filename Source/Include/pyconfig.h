@@ -490,6 +490,9 @@
 /* Define to 1 if you have the function dlopen. */
 #undef HAVE_DLOPEN
 
+/* Amiga LoadSeg plugins (.module) via dynload_amiga.c */
+#define HAVE_DYNAMIC_LOADING 1
+
 /* Defined if MALLOC_ZERO_RETURNS_NULL */
 #define MALLOC_ZERO_RETURNS_NULL 1
 
@@ -510,11 +513,29 @@
 #define PLATFORM_AMIGA 1
 #define _AMIGA 1
 
+/*
+ * PosixLib / POSIX timeval vs AmigaOS devices/timer.h:
+ * define __USE_NEW_TIMEVAL__ so NDK 3.2 timer.h uses struct TimeVal /
+ * TimeRequest instead of redeclaring struct timeval (see devices/timer.h).
+ */
+#define __USE_NEW_TIMEVAL__ 1
+
 /* Define if you have bsdsocket.library networking */
 #define AMITCP 1
 
 /* Define if you have the socket module */
 #define HAVE_SOCKET 1
+
+/* AmiTCP / bsdsocket.library provides getpeername() */
+#define HAVE_GETPEERNAME 1
+
+/*
+ * Use getaddrinfo/getnameinfo APIs in socketmodule. Roadshow LVOs for these
+ * are not safe on classic AmiTCP — socketmodule.c substitutes wrappers that
+ * call gethostbyname / Inet_NtoA instead.
+ */
+#define HAVE_GETADDRINFO 1
+#define HAVE_GETNAMEINFO 1
 
 /* Define printf format for long long on AmigaOS */
 #define PY_FORMAT_LONG_LONG "ll"
