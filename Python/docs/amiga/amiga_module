@@ -1,41 +1,60 @@
 
-
                                AMIGA MODULE
 
-                     Irmen de Jong - irmen@bigfoot.com
-                                18 oct 1999
+              Original docs: Irmen de Jong
+                     Updated for AmigaPython 2.7.18
 
 
 This document describes the builtin module `amiga'. This is the Amiga version
 of the `posix' module which is used on Unix. You should not directly import
-this module! Always use module `os' instead.
+this module for portable OS calls! Always use module `os' instead.
+
+Amiga-only APIs (Dos helpers, ASL, catalogs, icons, crc32, path conversion)
+are intentionally used via `import amiga` (or `os` where re-exported).
+
 
 Functions in `amiga' module are listed below. Items marked (*) are discussed
-in more detail below this list:
+in more detail below this list.  Items marked (+) are additions or broadened
+support relative to classic AmigaPython 2.0.
 
+    abort			(+)
+    access			(+)
     chdir
     chmod
     chown
     close
-(*) crc32	*** NEW ***
-(*) dup		(needs bsdsocket.library for actual use)
-(*) dup2	(needs bsdsocket.library for actual use)
+    closerange			(+)
+(*) crc32
+(*) dup				(needs bsdsocket.library for actual use)
+(*) dup2			(needs bsdsocket.library for actual use)
+    _exit			(+)
     fdopen
+    fpathconf			(+)
     fstat
+    fsync			(+)
+    ftruncate			(+)
 (*) fullpath
     getcwd
-    getegid	(requires usergroup.library)
-    geteuid	(requires usergroup.library)
-    getgid	(requires usergroup.library)
-    getpgrp	(requires usergroup.library)
+    getdtablesize		(+)
+    getegid			(requires usergroup.library)
+    geteuid			(requires usergroup.library)
+    getgid			(requires usergroup.library)
+    getpgrp			(requires usergroup.library)
 (*) getpid
-    getuid	(requires usergroup.library)
-    link	(will use usergroup.library if present)
+    getppid			(+)
+    gettimeofday		(+)
+    getuid			(requires usergroup.library)
+    isatty			(+)
+    kill			(+)
+    link			(will use usergroup.library if present)
     listdir
     lseek
     lstat
-(*) mkdir	(will use usergroup.library if present)
+(*) mkdir			(will use usergroup.library if present)
+    nice			(+)
     open
+    pathconf			(+)
+    pipe			(limited; often unavailable without threads)
     popen
     putenv
     read
@@ -43,68 +62,155 @@ in more detail below this list:
     remove
     rename
     rmdir
-    setgid	(requires usergroup.library)
-    setsid	(requires usergroup.library)
-    setuid	(requires usergroup.library)
+    set_verbose			(+)
+    setgid			(requires usergroup.library)
+    setpgid			(+)
+    setpgrp			(+)
+    setsid			(requires usergroup.library)
+    settimeofday		(+)
+    setuid			(requires usergroup.library)
+    sleep			(+)
     stat
     strerror
     symlink
+    sysconf			(+)
     system
-    umask	(requires usergroup.library)
+    tempnam			(+)
+    umask			(requires usergroup.library)
     uname
     unlink
+    urandom			(+)
+    usleep			(+)
     utime
+    waitpid			(+)
     write
 
-  NOT SUPPORTED ARE:
-    execv, execve, _exit, fork, getppid, kill, nice, pipe,
-    times, wait, waitpid, and some others...
+  PATH HELPERS (also see amigapath_module):
+(*) to_unix			(+)
+(*) from_unix			(+)
+
+  DOS.LIBRARY HELPERS (formerly Doslib; see Dos_module):
+    ReadArgs, WaitSignal, CheckSignal, CompareDates, DateStamp,
+    DateToStr, StrToDate, Fault, GetProgramDir, GetProgramName,
+    Inhibit, Info, IoErr, SetIoErr, IsFileSystem, Relabel,
+    SetProtection, SetComment, SetFileDate, SetOwner, Examine,
+    DS2time, time2DS, SetMode, WaitForChar, GetChar, PutChar, PutString
+    Plus _amigados helpers: ArgParser, touch, AddBuffers, AssignAdd,
+    AssignRemove, and FIBF_* / SIGBREAKF_* / FORMAT_* / Mode constants.
+
+  ASL / INTUITION (+):
+(*) FileRequest
+(*) MessageBox
+
+  LOCALE (+):
+(*) OpenCatalog  →  Catalog.GetString
+
+  ICON.LIBRARY (+):
+(*) DiskObject   →  tooltypes, deftool, stacksize, PutIcon
+
+  NOT SUPPORTED / NOT USEFUL ON CLASSIC AMIGA:
+    execv, execve, fork, times, mkfifo, tcgetpgrp, tcsetpgrp,
+    and other Unix process/TTY APIs that have no real Amiga equivalent.
 
   DATA MEMBERS: (Items marked (*): see below, ABOUT ENVIRONMENT)
     O_XXXXX (arguments to open etc.)
+    F_OK, R_OK, W_OK, X_OK			(+)
+    WNOHANG, WUNTRACED				(+)
+    _PC_*, _SC_* path/sysconf names		(+)
 (*) environ
     error
 (*) globalvars
 (*) shellaliases
 (*) shellvars
+    doserror					(+)  (Doslib error type)
 
 
-For  documentation,  see  docs  on  posix  module.   Items  marked  (*) are
-different from the ones in the posix module and are described below.
+For documentation of the POSIX-like calls, see docs on the posix / os
+module.  Items marked (*) are Amiga-specific or differ from Unix and are
+described below.
 
-Note   that   some   functions   require   AmiTCP   (bsdsocket.library)  or
-usergroup.library.   If  you  don't  have  it,  you'll  get  a  SystemError
-exception.   Some  functions  work better with usergroup.library but do not
-require it.
+Note that some functions require bsdsocket.library or usergroup.library.
+If you don't have them, you'll get a SystemError (or similar) exception.
+Some functions work better with usergroup.library but do not require it.
+
 
   crc32
   ~~~~~
-Added  for  convenience.   Pass  any string to this builtin function and it
-returns  the  CRC-32 value of the string.  The optional second parameter is
-the  starting value for the CRC checksum.  You can use this to generate one
-checksum over multiple strings (pass the result of the previous call as the
-starting  value  for  the next call).  It has a very fast implementation in
-machine code.
+Pass any string to this builtin function and it returns the CRC-32 value of
+the string.  The optional second parameter is the starting value for the CRC
+checksum.  You can use this to generate one checksum over multiple strings
+(pass the result of the previous call as the starting value for the next
+call).
 
   dup  &  dup2
   ~~~~~~~~~~~~
-Currently  only  socket  filedescriptors  can be dup'ed.  If you want to do
-this, you will need bsdsocket.library (AmiTCP).
+Currently only socket filedescriptors can be dup'ed.  If you want to do
+this, you will need bsdsocket.library.
 
   fullpath
   ~~~~~~~~
-New function.  Returns the full pathname of a file/directory (i.e.  expands
-assigns).    Implemented  here  but  don't  use  it  directly,  always  use
+Returns the full pathname of a file/directory (i.e. expands assigns).
+Implemented here but don't use it directly for portable code; prefer
 os.path.fullpath (amigapath imports this function).
 
   getpid
   ~~~~~~
-Currently  the  memory  address  of  the process structure (FindTask(0)) is
+Currently the memory address of the process structure (FindTask(0)) is
 taken as pid.
 
   mkdir
   ~~~~~
-Since Python 1.4, the protection mode can be omitted. It defaults to 0777.
+The protection mode can be omitted. It defaults to 0777.
+
+  to_unix / from_unix
+  ~~~~~~~~~~~~~~~~~~~
+Convert between Amiga device:path style and a Unix-like /device/path form.
+Useful when sharing path logic with Unix-oriented code.  Prefer os.path for
+normal Amiga path work.
+
+  FileRequest
+  ~~~~~~~~~~~
+FileRequest(title=None, drawer=None, filename=None, pattern=None)
+  -> (drawer, filename) or None if cancelled.
+Pops up an asl.library file requester (requires asl.library).
+
+  MessageBox
+  ~~~~~~~~~~
+EasyRequest-style message box via intuition.library.
+
+  OpenCatalog
+  ~~~~~~~~~~~
+OpenCatalog(name, languagename=None, builtinlanguage=None) -> Catalog
+Opens a locale.library catalog.  Catalog objects support:
+  GetString(id, default=None) -> string
+
+  DiskObject
+  ~~~~~~~~~~
+DiskObject(name) -> DiskObject
+Loads an icon via icon.library (do not include the .info suffix).
+Attributes: tooltypes (list of strings, read/write), deftool, stacksize.
+Method: PutIcon(name) writes the DiskObject back to disk.
+
+
+POSIX ADDITIONS IN 2.7.18
+-------------------------
+
+When PosixLib (or equivalent) provides the underlying C APIs, the amiga
+module exposes them for better compatibility with Python 2.7's os module
+expectations:
+
+  access, isatty, closerange, fsync, getdtablesize
+  nice, kill, waitpid, sleep, usleep
+  pathconf, fpathconf, sysconf
+  gettimeofday, settimeofday
+  tempnam, urandom
+  abort, _exit, getppid, setpgrp, setpgid, ftruncate
+
+Constants such as F_OK/R_OK/W_OK/X_OK, WNOHANG/WUNTRACED, and selected
+_PC_* / _SC_* names are registered when available.
+
+Availability is build-dependent (`HAVE_*` guards).  Unsupported calls still
+raise cleanly rather than crashing.
 
 
 
@@ -114,12 +220,12 @@ ABOUT FILESYSTEM LINK SUPPORT
 (Functions: link, symlink, readlink)
 
 You can make hardlinks and softlinks, using link and symlink, respectively.
-You  can  read the value of a symbolic (soft) link using readlink.  Keep in
-mind  that  the  filesystem  must  support links (2.04+ FFS does) All three
+You can read the value of a symbolic (soft) link using readlink.  Keep in
+mind that the filesystem must support links (2.04+ FFS does).  All three
 functions are designed for compatibility with their Posix equivalents.
 
-NOTE:  because of implementation issues, readlink fails when passing only a
-device  name  as argument.  This is not a big problem (devices can never be
+NOTE: because of implementation issues, readlink fails when passing only a
+device name as argument.  This is not a big problem (devices can never be
 links anyway).
 
 
@@ -127,48 +233,41 @@ links anyway).
 ABOUT ENVIRONMENT VARIABLES
 ---------------------------
 
-I made up an extensive but CGI script compatible (and compatible with other
-scripts  that expect a Unix system) environment handling system.  Thanks to
-Mike Meyer (mwm@contessa.phone.net) for helping me out on the problems with
-the old system.
+Environment handling remains CGI-script compatible and close to Unix
+expectations, using ENV: globals plus shell locals.
 
     Environment variable dictionaries
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 os.environ       - contains BOTH GLOBAL (ENV:) AND LOCAL (shell) variables
                    If a variable occurs both as global and as local var,
-                   the local value has higher prioriy.
+                   the local value has higher priority.
 os.globalvars    - contains ONLY GLOBAL (ENV:) variables
 os.shellvars     - contains ONLY LOCAL (shell) variables
 
-IMPORTANT:   changes  made  to the environment variables in os.environ will
-now    also    be    made    in    ENV:.    This   means   the   assignment
-os.environ['PAGER']='c:more'  will  now  also  set the environment variable
-ENV:PAGER  to "c:more".  This feature was introduced in Python version 1.4.
-Note  however  that  an  assignment  to a variable in os.environ that was a
-local  shell-var  does  NOT  result  in updating the shell variable:  a new
-global  variable  with  the same name will be created.  If this is not what
-you  want, check out the `environment' module.  Note well that the above is
-not  true  for  os.globalvars  and os.shellvars:  they remain read-only and
+IMPORTANT: changes made to the environment variables in os.environ will
+also be made in ENV:.  This means the assignment
+os.environ['PAGER']='c:more' will also set ENV:PAGER to "c:more".
+Note however that an assignment to a variable in os.environ that was a
+local shell-var does NOT result in updating the shell variable: a new
+global variable with the same name will be created.  If this is not what
+you want, check out the `environment' module.  Note well that the above is
+not true for os.globalvars and os.shellvars: they remain read-only and
 changes are not propagated to the environment.
 
-    The new function: putenv
-    ~~~~~~~~~~~~~~~~~~~~~~~~
-Python  1.4  introduced a new function in the posix module:  putenv.  So in
-our  case  the  amigamodule now also contains this function.  Portable code
-should  use  this function (os.putenv), but Amiga specific code can use the
-environment module, mentioned below.
+    putenv
+    ~~~~~~
+Portable code should use os.putenv.  Amiga-specific code can use the
+environment module.
 
     Aliases
     ~~~~~~~
-Shell   aliases   can   be   accessed  in  the  os.shellaliases  dictionary
-(read-only).
-
+Shell aliases can be accessed in the os.shellaliases dictionary (read-only).
 
     The `environment' module
     ~~~~~~~~~~~~~~~~~~~~~~~~
-This  module  contains a bunch of environment handling functions.  Read the
+This module contains a bunch of environment handling functions.  Read the
 document `environment_module' for a description of this module.
 
 
 
-SEE ALSO: os module
+SEE ALSO: os module, Dos_module, amigapath_module

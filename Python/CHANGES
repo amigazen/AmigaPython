@@ -7,7 +7,6 @@
 
 
                                Irmen de Jong
-                             irmen@bigfoot.com
 
 --------------------------------------------------------------------------
 --------------------------------------------------------------------------
@@ -179,4 +178,24 @@ dec. 1995 to dec 1996: version 1.3 releases. History stripped.
 	*SOURCE:*
 	- Applied the regular changes to make the source compile with SAS/C.
 	  Thankfully the original source code is already ANSI-C now...
+
+
+2025/2026	- AmigaPython 2.7.18 (amigazen project)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	- Interpreter and library updated from Python 2.0 to final Python
+	  2.7.18 while keeping the classic Amiga port structure and modules.
+	- amiga module: additional POSIX-style APIs (access, sleep/usleep,
+	  kill/waitpid/nice, pathconf/sysconf, urandom, fsync, closerange,
+	  gettimeofday/settimeofday, abort, _exit, getppid, …).
+	- Doslib entry points and _amigados helpers (ArgParser, FIBF_*,
+	  touch, Assign*) registered on the amiga module.
+	- amiga.to_unix / amiga.from_unix path converters.
+	- ASL FileRequest / MessageBox, locale OpenCatalog, icon DiskObject
+	  helpers on the amiga module.
+	- Docs under Python/docs updated for 2.7.18 (see Docs/NEWS and
+	  Docs/Amiga).
+	- Networking remains bsdsocket.library based; I-Net225 still out.
+
+	*SOURCE:*
+	- See project README.md / BUILD.md and Source/Modules/amiga/.
 

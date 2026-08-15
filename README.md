@@ -14,7 +14,7 @@ This is Amiga Python, a port of Python 2 to Amiga.
 
 Key to our approach is ensuring every project can be built with the same common set of development tools and configurations, so we created the ToolKit project to provide a standard configuration for Amiga development. All *amigazen project* releases will be guaranteed to build against the ToolKit standard so that anyone can download and begin contributing straightaway without having to tailor the toolchain for their own setup.
 
-The original authors of the *Python* software and its Amiga port are not affiliated with the amigazen project. This software is redistributed on terms described in the documentation, particularly the file LICENSE.md
+The original authors of the *Python* software and its Amiga port are not affiliated with amigazen project. This software is redistributed on terms described in the documentation, particularly the file LICENSE.md
 
 Our philosophy is based on openness:
 
@@ -36,7 +36,7 @@ In the process of updating Amiga Python to 2.7.18, amigazen project intends to m
 - While keeping SAS/C compiler support is desirable, pragmatically the build will probably need VBCC or GCC, and in doing so replace the POSIX dependencies with a more complete C library implementation
 - Explore further enhancements to Amiga Python such as exporting the main interpreter as a shared library, and leveraging shared libraries instead of static link libraries for zlib and bzip2 and other builtin functionality, as well as a new SlimPython runtime for every day operating system automation
 
-Note that this Amiga Python project is not currently and has never been associated with the version of Python included in OS4, however future collaboration on updating that version, as well as versions for other Amiga-like platforms, is very welcome, in the amigazen spirit of openness.
+Note that this Amiga Python project is not currently and has never been associated with the version of Python included in OS4, however future collaboration on updating that version, as well as versions for other Amiga-like platforms, is very welcome, in amigazen project spirit of openness.
 
 ## About ToolKit
 
@@ -107,15 +107,16 @@ process Unicode text and/or XML documents, AmigaPython is your tool!
   out the regular Python 2.0 news on www.python.org to find out what they are.
 
 
-Check the README file in the archive for more information.  You can also
-find more information on Python at my AmigaPython Web page;
-<http://www.bigfoot.com/~irmen/python.html>
+Check the README file in the archive for more information.  Current
+AmigaPython (2.7.18) project pages:
+https://github.com/amigazen/amigapython/
+http://www.amigazen.com/amigapython/
 
 
 IMPORTANT:
-Please let me know if you find any errors, encounter problems, or have any
-suggestions!  But, as I work on this in my spare time, don't expect
-miracles...
+Please report Amiga-specific errors, problems, or suggestions via
+amigazen project.  The text below is retained from the
+historic Aminet 2.0 readme.
 
 SUGGESTION:
 Unpack the archive to where you want the program to be.  The installation

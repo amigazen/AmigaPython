@@ -1,4 +1,21 @@
-This drawer contains Amiga specific code and other stuff.
+This drawer contains Amiga-specific helpers used while maintaining the
+AmigaPython port (docs, local tests, experimental modules, and legacy
+utilities).
 
-Also  check  out the lib/site-python directory, it contains `site-specific'
-(=Amiga specific) python modules.
+AmigaPython 2.7.18 notes:
+- Module documentation lives in Docs/ (mirrored under Python/docs/amiga
+  in the distribution tree).
+- Prefer the builtin `amiga' module for Dos helpers, ASL/catalog/icon
+  APIs, and path converters (to_unix / from_unix).
+- Site-specific Python modules belong under Lib/site-python (or the
+  versioned site-packages path for your install).
+
+Drawers:
+  Docs/                  Amiga module and port documentation
+  Diffs/                 Output area for mkdiffs.py against stock sources
+  testset/               Extra Amiga-oriented test scripts
+  experimental_modules/  Incomplete / exploratory C extension sources
+  unused/                Historic material no longer used by the build
+  test/                  Legacy Setup/config fragments
+
+See the project README / BUILD docs for how the 2.7.18 interpreter is built.

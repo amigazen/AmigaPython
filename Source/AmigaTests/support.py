@@ -53,9 +53,18 @@ def expect_raises(name, exc_type, fn):
 
 
 def try_import(name):
+    # Soft-fail any init error so one broken builtin (e.g. pyexpat) does not
+    # abort inventory; drop a half-inited entry from sys.modules if present.
     try:
         return __import__(name)
-    except ImportError, e:
+    except ImportError:
+        return None
+    except Exception:
+        if name in sys.modules:
+            try:
+                del sys.modules[name]
+            except Exception:
+                pass
         return None
 
 

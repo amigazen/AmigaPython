@@ -1,4 +1,4 @@
-import ARexx
+import arexx
 import socket
 
 # dictionary of used sockets, filedes->socket
@@ -29,14 +29,14 @@ def cmd_dispatcher(host,msg,cmd,args):
 			del sockets[fd]
 		elif cmd=='READSOCKET':
 			msg.result=sockets[args['SOCKET']].recv(args['LEN'])
-			if not msg.result: msg.rc=ARexx.RC_WARN
+			if not msg.result: msg.rc=arexx.RC_WARN
 		elif cmd=='WRITESOCKET':
 			msg.result=`sockets[args['SOCKET']].send(args['DATA'])`
 		elif cmd=='WRITESOCKETCR':
 			msg.result=`sockets[args['SOCKET']].send(args['DATA']+'\n')`
 
 	except socket.error,string:
-		msg.rc=ARexx.RC_ERROR
+		msg.rc=arexx.RC_ERROR
 		if type(string)==type(''): msg.rc2=string
 		else: msg.rc2=string[1]
 	return 1
@@ -53,7 +53,7 @@ cmds = [
 ('WRITESOCKETCR','SOCKET/A/N,DATA/A/F',None,cmd_dispatcher)
 ]
 
-h=ARexx.host('PY_SOCK',cmds)
+h=arexx.host('PY_SOCK',cmds)
 
 print 'Python ARexx host. Host is',h.name
 

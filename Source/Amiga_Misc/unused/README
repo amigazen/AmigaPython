@@ -1,1 +1,5 @@
-This directory contains some stuff I currently don't use.
+This directory contains historic AmigaPython material that is not used by
+the current AmigaPython 2.7.18 build (old library wrappers, ConvertFD, etc.).
+
+Kept for reference only.  Do not add these sources to the active Modules
+build without review.

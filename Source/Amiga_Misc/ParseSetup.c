@@ -9,7 +9,7 @@
 	and don't yet have a Python executable ofcourse).
 
 
-	Written June 1998 by Irmen de Jong. (irmen@bigfoot.com)
+	Written June 1998 by Irmen de Jong.
 
 ******************************************************************/
 

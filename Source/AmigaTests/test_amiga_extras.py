@@ -1,4 +1,4 @@
-# amigapath, environment, and Doslib Amiga-specific modules.
+# amiga path/dos helpers, environment, _arexx, and Lib/site-python/arexx.
 
 from __future__ import print_function
 
@@ -7,29 +7,47 @@ import sys
 from AmigaTests.support import check, skip, require_import, temp_path, safe_remove
 
 
-def test_amigapath():
-    ap = require_import("amigapath")
-    if not ap:
+def test_amiga_getcpu_getmachine():
+    # OS4 AmigaPython.txt: amiga.getcpu() / amiga.getmachine()
+    amiga = require_import("amiga")
+    if not amiga:
         return
-    check("has to_unix", hasattr(ap, "to_unix"))
-    check("has from_unix", hasattr(ap, "from_unix"))
-    check("has fullpath", hasattr(ap, "fullpath"))
     try:
-        u = ap.to_unix("RAM:Foo/Bar")
+        cpu = amiga.getcpu()
+        check("getcpu type", isinstance(cpu, basestring) and len(cpu) > 0)
+        check("getcpu known", cpu in (
+            "68000", "68010", "68020", "68030", "68040", "68060", "unknown"))
+    except Exception, e:
+        check("getcpu", False, str(e))
+    try:
+        mach = amiga.getmachine()
+        check("getmachine type", isinstance(mach, basestring) and len(mach) > 0)
+    except Exception, e:
+        check("getmachine", False, str(e))
+
+
+def test_amiga_path_helpers():
+    amiga = require_import("amiga")
+    if not amiga:
+        return
+    check("has to_unix", hasattr(amiga, "to_unix"))
+    check("has from_unix", hasattr(amiga, "from_unix"))
+    check("has fullpath", hasattr(amiga, "fullpath"))
+    try:
+        u = amiga.to_unix("RAM:Foo/Bar")
         check("to_unix type", isinstance(u, basestring) and len(u) > 0)
-        # Round-trip when possible
         try:
-            back = ap.from_unix(u)
+            back = amiga.from_unix(u)
             check("from_unix type", isinstance(back, basestring))
         except Exception, e:
             skip("from_unix", str(e))
     except Exception, e:
         skip("to_unix", str(e))
     try:
-        fp = ap.fullpath("RAM:")
-        check("amigapath.fullpath", isinstance(fp, basestring) and len(fp) > 0)
+        fp = amiga.fullpath("RAM:")
+        check("amiga.fullpath", isinstance(fp, basestring) and len(fp) > 0)
     except Exception, e:
-        skip("amigapath.fullpath", str(e))
+        skip("amiga.fullpath", str(e))
 
 
 def test_environment_module():
@@ -56,7 +74,6 @@ def test_environment_module():
 
     if hasattr(env, "setvar"):
         try:
-            # Amiga setvar(name, value, flags)
             env.setvar(name, value, 0)
             got = env.getvar(name)
             check("environment setvar/getvar", got == value)
@@ -67,38 +84,64 @@ def test_environment_module():
         except Exception, e:
             skip("setvar/getvar", str(e))
 
+    # OS4 amigavars names on the environment builtin
+    if hasattr(env, "GetEnv") and hasattr(env, "SetEnv"):
+        try:
+            env.SetEnv(name, value, 0)
+            got = env.GetEnv(name)
+            check("environment GetEnv/SetEnv", got == value)
+            env.UnSetEnv(name, 0)
+            check("environment UnSetEnv", env.GetEnv(name) is None)
+        except Exception, e:
+            skip("GetEnv/SetEnv", str(e))
 
-def test_doslib_basic():
-    Doslib = require_import("Doslib")
-    if not Doslib:
+
+def test_amigavars_module():
+    # OS4-compatible import name (site-python shim over environment)
+    av = require_import("amigavars")
+    if not av:
+        return
+    name = "AMIGAPY_TEST_AVARS"
+    value = "avars_value"
+    try:
+        av.SetEnv(name, value, 0)
+        check("amigavars GetEnv", av.GetEnv(name) == value)
+        av.UnSetEnv(name, 0)
+        check("amigavars UnSetEnv", av.GetEnv(name) is None)
+    except Exception, e:
+        skip("amigavars", str(e))
+
+
+def test_amigados_basic():
+    amiga = require_import("amiga")
+    if not amiga:
         return
     try:
-        ds = Doslib.DateStamp()
+        ds = amiga.DateStamp()
         check("DateStamp", ds is not None)
     except Exception, e:
         skip("DateStamp", str(e))
     try:
-        name = Doslib.GetProgramName()
+        name = amiga.GetProgramName()
         check("GetProgramName", isinstance(name, basestring) and len(name) > 0)
     except Exception, e:
         skip("GetProgramName", str(e))
     try:
-        d = Doslib.GetProgramDir()
+        d = amiga.GetProgramDir()
         check("GetProgramDir", isinstance(d, basestring) and len(d) > 0)
     except Exception, e:
         skip("GetProgramDir", str(e))
     try:
-        err = Doslib.IoErr()
+        err = amiga.IoErr()
         check("IoErr", isinstance(err, (int, long)))
     except Exception, e:
         skip("IoErr", str(e))
     try:
-        msg = Doslib.Fault(205)
+        msg = amiga.Fault(205)
         check("Fault", isinstance(msg, basestring) and len(msg) > 0)
     except Exception, e:
         skip("Fault", str(e))
     try:
-        # Examine a known file from Lib
         target = None
         for entry in sys.path:
             cand = os.path.join(entry, "os.py")
@@ -106,21 +149,22 @@ def test_doslib_basic():
                 target = cand
                 break
         if target:
-            fib = Doslib.Examine(target)
+            fib = amiga.Examine(target)
             check("Examine", fib is not None)
         else:
             skip("Examine", "no os.py found")
     except Exception, e:
         skip("Examine", str(e))
     try:
-        ok = Doslib.IsFileSystem("RAM:")
+        ok = amiga.IsFileSystem("RAM:")
         check("IsFileSystem RAM:", ok in (0, 1, True, False) or isinstance(ok, (int, long)))
     except Exception, e:
         skip("IsFileSystem", str(e))
+    check("amiga.doserror", hasattr(amiga, "doserror"))
+    check("amiga.ArgParser", hasattr(amiga, "ArgParser"))
 
 
 def test_arexx_accelerator():
-    # Private C accelerator; public API is Lib/ARexx.py.
     import sys
     check("_arexx builtin", "_arexx" in sys.builtin_module_names)
     ll = require_import("_arexx")
@@ -146,36 +190,42 @@ def test_arexx_accelerator():
         skip("port(None)", str(e))
 
 
-def test_arexx_dos_wrappers():
-    # High-level Lib wrappers (ARexx.py / Dos.py).
+def test_arexx_wrapper():
     try:
-        import Dos
-        check("import Dos", True)
-        check("Dos.DateStamp", hasattr(Dos, "DateStamp"))
-    except Exception, e:
-        skip("import Dos", str(e))
-    try:
-        import ARexx
-        check("import ARexx", True)
-        check("ARexx.privateport", hasattr(ARexx, "privateport"))
-        check("ARexx.publicport", hasattr(ARexx, "publicport"))
-        check("ARexx.host", hasattr(ARexx, "host"))
-        check("ARexx.RC_OK", getattr(ARexx, "RC_OK", None) == 0)
-        # Create/close a private port without talking to other hosts.
-        p = ARexx.privateport()
+        import arexx
+        check("import arexx", True)
+        check("arexx.privateport", hasattr(arexx, "privateport"))
+        check("arexx.publicport", hasattr(arexx, "publicport"))
+        check("arexx.Port", hasattr(arexx, "Port"))
+        check("arexx.host", hasattr(arexx, "host"))
+        check("arexx.dorexx", hasattr(arexx, "dorexx"))
+        check("arexx.RC_OK", getattr(arexx, "RC_OK", None) == 0)
+        p = arexx.privateport()
         check("privateport", p is not None)
         p.close()
         check("privateport.close", True)
     except Exception, e:
-        skip("import ARexx", str(e))
+        skip("import arexx", str(e))
+
+
+def test_os4_shims():
+    for name in ("asl", "catalog", "icon"):
+        try:
+            m = __import__(name)
+            check("import " + name, True)
+        except Exception, e:
+            skip("import " + name, str(e))
+    amiga = require_import("amiga")
+    if not amiga:
+        return
+    for attr in ("FileRequest", "MessageBox", "OpenCatalog", "DiskObject"):
+        check("amiga." + attr, hasattr(amiga, attr))
 
 
 def test_os_environ_dict():
-    # os.environ should work via amiga convertenviron
     try:
         e = os.environ
         check("os.environ mapping", hasattr(e, "get") or isinstance(e, dict))
-        # Setting a process env var
         key = "AMIGAPY_OSENV"
         os.environ[key] = "1"
         check("os.environ set/get", os.environ.get(key) == "1" or e[key] == "1")

@@ -1,25 +1,28 @@
 
-
                                  OS MODULE
 
-                     Irmen de Jong - irmen@bigfoot.com
+                               Irmen de Jong
                                 1 feb. 1998
+                     Updated notes for AmigaPython 2.7.18
 
 
 This document describes the module `os'.  This is the portable interface to
 the `amiga' module (`posix' module on Unix systems).  You should always use
-this module instead of the `amiga' module.
+this module instead of the `amiga' module for portable OS calls.
 
-This module includes everything that the `amiga' module exports.
+This module includes everything that the `amiga' module exports for the
+posix-like surface.  Amiga-only helpers (ASL, catalogs, icons, Dos entry
+points, to_unix/from_unix, crc32) remain on `amiga'; see amiga_module.
 
- 
+
 Additional functions in `os' module:
 
     execl, execle, execlp, execlpe, execvp, execvpe
 
-    All of these raise an exception because they are not implemented.
+    All of these raise an exception because they are not implemented
+    (no fork/exec process model on classic Amiga).
 
-  DATA MEMBERS: (Items marked (*): see below, ABOUT ENVIRONMENT)
+  DATA MEMBERS:
 
     curdir	: ''
     defpath	: 'C:'
@@ -35,8 +38,8 @@ Additional functions in `os' module:
     path	(=amigapath module. Always use os.path instead of amigapath)
 
 
-For documentation, see regular docs on the os module.
+For documentation, see regular Python 2.7 docs on the os module.
+Amiga path quirks are documented in amigapath_module.
 
 
 SEE ALSO: amiga module, amigapath module
-

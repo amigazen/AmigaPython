@@ -1,5 +1,5 @@
 
-	AmigaPython 2.0
+	AmigaPython 2.7.18
 
 
 	DISCLAIMER:
@@ -8,20 +8,15 @@
 ("this program" = the Python executable in this distribution in particular,
 but also all other files.)
 
-I  tried  to  make this program error-free and safe to use, for your and my
-own  benefit.   This  disclamer  applies  to the (small) part of the code I
-wrote  myself.   The  disclamer  from  the  copyright notice from Stichting
-Mathematisch  Centrum  (included  below)  applies  to the rest of the code,
-written by Guido van Rossum and others.
-  
-I  provide  this program "as is".  USE THE PROGRAM AT YOUR OWN RISK.  In no
-event will I be liable for damages to you - whether they arise from the use
-of  this  program  or  the  inability to use it, whether they are direct or
-consequential,  including,  but  not  limited  to,  the loss of data or the
-generation of inaccurate data.  No warranties are made.
+The original Amiga-specific disclaimer from Irmen de Jong still applies to
+the Amiga port code he wrote.  Updates from amigazen project are provided
+on the same "as is" basis.  USE THE PROGRAM AT YOUR OWN RISK.  In no event
+will the authors be liable for damages arising from use or inability to use
+this program.
 
-
-		Irmen de Jong.
+The Python Software Foundation / historical CWI / CNRI / BeOpen license
+terms apply to the Python core; see LICENSE / docs/LICENSE in this tree
+and LICENSE.md in the project root.
 
 
 

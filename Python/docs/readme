@@ -1,6 +1,9 @@
-
-This directory contains some Python documentation.
+This directory contains some Python documentation for the Amiga port.
 
 The Amiga subdirectory contains Amiga specific documentation.  It is
 important to read these documents because they contain vital notes and
 tips!
+
+NEWS summarises what changed between Python 2.0-era AmigaPython and this
+2.7.18 distribution.  Full language/library documentation is the official
+Python 2.7 docs at https://docs.python.org/2.7/

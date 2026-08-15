@@ -1,13 +1,13 @@
 
-
-                                PYTHON 2.0
+                                PYTHON 2.7.18
                           NOTES ON THE AMIGA PORT
 
-                             October 28, 2000.
+                             amigazen project
 
-	
-           Conversion and Amiga specific code by Irmen de Jong.
-              (Original code by Guido van Rossum and others)
+
+           Original Amiga port (through 2.0) by Irmen de Jong.
+    Updated to Python 2.7.18 by amigazen project (continuing that work).
+         (Original Python by Guido van Rossum and many others)
 
 
 
@@ -20,7 +20,7 @@
 	Contents:
 	~~~~~~~~~
 
-	1. What's new?	
+	1. What's new?
 	2. General remarks.
 	3. Troubleshooting.
 	4. Thanks.
@@ -32,14 +32,26 @@
 |                      |
 +----------------------+
 
-Well, this is Python version 2.0 (build 1)!
-See the notes in Docs/NEWS for more information on what's new since the 1.x
-versions. Be aware that there are a few language incompatibilities. Just check
-out the regular Python 2.0 news on www.python.org to find out what they are.
+This is Python version 2.7.18 for AmigaOS - the final Python 2 release,
+ported from Irmen de Jong's classic AmigaPython 2.0 line.
 
-This may very well be the last Python version I'm releasing for the Amiga.
-My A4000 is getting old and rusty... And I figured Python 2.0 had to be
-my last effort.
+See Docs/NEWS for a summary of language and library changes since Python 2.0,
+and Docs/Amiga for Amiga-specific modules and behaviour. Full upstream
+"What's New" documents for each 2.x release are at https://docs.python.org/.
+
+Notable Amiga changes since the 2.0 port:
+
+* Interpreter and library are based on Python 2.7.18 (not 2.0).
+* The builtin `amiga` module gained many POSIX-style APIs (access, sleep,
+  waitpid, pathconf/sysconf, urandom, fsync, closerange, and more).
+* Former Doslib entry points, ArgParser helpers, and path converters
+  (`to_unix` / `from_unix`) are available on the `amiga` module.
+* ASL FileRequest / MessageBox, locale OpenCatalog, and icon DiskObject
+  helpers are registered on `amiga` (OS4-style parity where practical).
+* Networking targets modern bsdsocket.library (e.g. Roadshow); I-Net225
+  remains unsupported (as since late 1.5.x).
+* Build is aimed at ToolKit-compatible Amiga toolchains (SAS/C and/or
+  VBCC/PosixLib depending on the Source tree you use).
 
 
 +----------------------+
@@ -48,45 +60,38 @@ my last effort.
 |                      |
 +----------------------+
 
-* The MAIN PYTHON SITE is <http://www.python.org>. All general documentation
-  can be obtained from here (Python tutorial, language reference, library
-  reference and much more).
+* The MAIN PYTHON SITE is <https://www.python.org>.  Tutorial, language
+  reference, and library reference for Python 2.7 are at
+  <https://docs.python.org/2.7/>.
 
-* The AmigaPython homepage is at http://www.bigfoot.com/~irmen/python.html
-  (note the new address!). Check it out for news, future plans, bugs etc.
+* AmigaPython pages (amigazen project):
+	https://github.com/amigazen/amigapython/
+	http://www.amigazen.com/amigapython/
 
 * In the `Docs/Amiga' directory you can find the docs for the Amiga specific
   modules and features. Read them, they contain vital information!
 
 * The Python library contains an extensive test set.
   To try it yourself, type (after installation):
-	Python -c "import test.autotest" (and have patience...)
-	Python -c "import test.autotest" (and have patience...)
-  (Yes: do it TWICE because the generated .pyc files need to be checked too).
+	Python -c "import test.autotest"
   (You can also start the RunTest.py script from the Workbench).
   Some tests cannot run on the Amiga - they will be skipped.
-  The report at the end should say something like:
-	31 tests OK.
-	18 tests skipped:  .....
-  If you don't start AmiTCP first, test_socket and test_select will fail.
+  If you don't start a TCP stack first, test_socket and test_select will fail.
   If usergroup.library cannot be opened, crypt, grp and pwd will fail.
 
-* To  see  some  command  line  options,  use  the -?  option, or any other
+* To see some command line options, use the -? option, or any other
   unrecognised option.
 
 * To run a speed benchmark, type:
 	Python -c "import test.pystone; test.pystone.main()"
-  and have some patience. On my system, I get 355 pystones/second.
 
 * In the `Icons' directory there are some icon suggestions.
   def_py.info is an icon for Python source files (.py)
-  def_pyc.info is an icon for Pytnon bytecode files (.pyc)
+  def_pyc.info is an icon for Python bytecode files (.pyc)
 
-* Mail  me  if  you encounter any Amiga specific problems, or if you have any
-  Amiga  related  questions  about  Python,  or  just  for fun.  General
-  questions are better asked on the usenet newsgroup comp.lang.python.  A lot
-  of   information,   including  an  online  manual,  can  be  obtained  from
-  <http://www.python.org/>. Read the FAQ before asking!
+* Amiga-specific questions: toolkit@amigazen.com or the project GitHub.
+  General Python questions: https://www.python.org/ (and historic
+  newsgroup/archives for Python 2).
 
 
 +-----------------------+
@@ -95,38 +100,41 @@ my last effort.
 |                       |
 +-----------------------+
 
-* When  I  try  to  install  Python,  I  get  "Unable  to  open  your tool
+* When I try to install Python, I get "Unable to open your tool
   'installer'"!
 
-  The Installer® utility is required for installation, but it is not included
-  in  the  archive.   Get  it  from  somewhere  else  and  copy it to your C:
+  The Installer utility is required for installation, but it is not included
+  in the archive.  Get it from somewhere else and copy it to your C:
   directory or somewhere where Workbench can find it.
 
 * When I start python, I get "This program requires a math co-processor"!
 
-  You should upgrade your computer to at least a 68030 with a FPU.
+  You need at least a 68020/68030 class CPU; an FPU is required for builds
+  that expect a floating-point unit.
 
-* I   get   "Couldn't   open   bsdsocket.library"   or   "Couldn't   open
+* I get "Couldn't open bsdsocket.library" or "Couldn't open
   usergroup.library" errors!
 
-  You  are  trying to use functions that need one of these libraries.  AmiTCP
-  is required if you want to use all (network) functions.
+  You are trying to use functions that need one of these libraries.  A TCP
+  stack that provides bsdsocket.library is required for network modules.
+  usergroup.library is needed for pwd/grp/crypt-style APIs.
 
 * Python crashes when executing complex (recursive) code!
 
   This should not happen; you should get a MemoryError exception.  If it does
-  crash, increase your stack size and try again.  Python's default stack size
-  is 40K, which should be enough for most programs.
+  crash, increase your stack size and try again.  Default stack needs are
+  higher than in the old 2.0 binary; raise the stack if you see crashes on
+  deep recursion or large imports.
 
 * Functions which use the PIPE: device (like os.popen) seem to work
   incorrectly!
 
   The default l:queue-handler is buggy.  Make sure you have installed a fixed
-  l:queue-handler (I'm using util/sys/HWGQueue.lha from Aminet)
+  l:queue-handler (e.g. util/sys/HWGQueue.lha from Aminet).
 
 * Other errors
 
-  Mail me at irmen@bigfoot.com with a clear description of the problem.
+  Report Amiga-specific problems via amigazen project.
 
 
 +-----------------------+
@@ -135,28 +143,14 @@ my last effort.
 |                       |
 +-----------------------+
 
-Ofcourse this product could never have happened without the support of various
-people. Amongst others I'd like to thank:
+Of course this product could never have happened without the support of
+various people. Amongst others:
 
 Guido van Rossum - for creating Python in the first place
-Mike Meyer for his various suggestions and problem reports
-Kent Polk for his various suggestions and problem reports
-Lyster E. Wick for his various contributions (NewIcons/ARexx/WB/bugreports)
-Marc Christiansen for his detailed description of the strftime and
-  amiga.crc32 problems (and persuading me to fix them)
-Bablos to make me start polishing up the embedded python code.
-Adam Chodorowski for a few new doslib functions.
+Irmen de Jong - original AmigaPython (through 2.0)
+Mike Meyer, Kent Polk, Lyster E. Wick, Marc Christiansen, Bablos,
+  Adam Chodorowski - suggestions, ARexx/WB/Dos contributions and bug reports
 
-And ofcourse thanks to my friends who supported me in the first phase of
-this project and pushed me to continue this work (that was LONG ago, in the
-Python 1.2 days).
+And everyone who used and tested classic AmigaPython over the years.
 
-If you think your name is missing here, drop me a line!
-
-To every AmigaPython user out there: thanks for your interest!
-
-
-
-
-					Irmen de Jong
-					(irmen@bigfoot.com)
+amigazen project continues that line for Python 2.7.18.

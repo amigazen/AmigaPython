@@ -5,10 +5,18 @@
 
                           Dos and Doslib modules
 	
-                   by Irmen de Jong - irmen@bigfoot.com
+                            by Irmen de Jong
 
                           Last update: 1-Oct-2000
                           (raw console functions)
+
+                 AmigaPython 2.7.18 note (amigazen):
+                 These APIs are now registered on the builtin
+                 `amiga' module (amiga_init_dos), with ArgParser /
+                 constants / touch / Assign* from Lib/site-python/_amigados.py.
+                 Prefer:  import amiga
+                 Classic `Dos' / `Doslib' names may still appear in
+                 older scripts and site-python helpers.
 
 
 ***************************************************************************
@@ -19,22 +27,23 @@
 
                               MODULE: Doslib
 
-                            FILE: N/A (builtin)
+                    FILE: N/A (builtin; merged into amiga)
 
 ***************************************************************************
 
-This module provides the low-level dos.library functionality.
+This  module  historically  provided  the  low-level  dos.library
+functionality.  In AmigaPython 2.7.18 the same entry points are attached to
+the builtin `amiga' module (exception type: amiga.doserror).
 
-IMPORTANT:   It  is  DISCOURAGED  to  use this module directly, use the Dos
-module  instead  (see  below).  The Dos module imports everything from this
-module  so  you can access everything through the Dos module instead.  This
-is  much  like  how the string module uses the builtin strop module:  don't
-use the builtin lowlevel module directly!
+IMPORTANT: Prefer accessing these functions through `amiga' (or a thin Dos
+wrapper if present in site-python).  Do not rely on a separate Doslib module
+name in new code.
 
 This module defines the following exception:
 
   error		- The exception that will be raised when an
-		  error occurs related to dos.library. ('Doslib.error')
+		  error occurs related to dos.library.
+		  (Historically Doslib.error; now also amiga.doserror.)
 
 
 +--------------------------------------+
@@ -184,14 +193,17 @@ PutString(string)	*** NEW ***
 
                                 MODULE: Dos
 
-                               FILE: Dos.py
+                    FILE: Dos.py / _amigados.py / amiga
 
 ***************************************************************************
 
-This module is the interface to the Amiga's dos.library.
+This  module  is  the  high-level  interface  to  the  Amiga's dos.library
+helpers.  In 2.7.18, ArgParser and related constants/helpers are loaded from
+Lib/site-python/_amigados.py onto the `amiga' module.  A site-python `Dos' / `dos'
+wrapper may still re-export the same names for compatibility.
 
-IMPORTANT:  this module uses the builtin Doslib module.  Don't use it
-yourself directly, always use the `Dos' module.
+IMPORTANT:  New code should use `amiga' (or `import Dos' if your install
+still ships Dos.py as a facade).  Do not use a raw Doslib module name.
 
 NOTE:
  The whole lot of Dos LVO's that are not covered are considered:

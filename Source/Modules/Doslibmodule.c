@@ -19,9 +19,9 @@
 
 Module members:
 
-	error       -- Exeption string object.  ('Doslib.error')
+	doserror    -- Exception ('amiga.doserror'); registered on amiga.
 	ReadArgs    -- dos.library/ReadArgs function.
-				   result=Doslib.ReadArgs(template,args,types)
+				   result=amiga.ReadArgs(template,args,types)
 
 	WaitSignal  -- generic Wait() function, like select. Waits for certain
 				   signals to occur.
@@ -59,6 +59,7 @@ Module members:
 #include <proto/exec.h>
 #pragma default-align
 #include "Python.h"
+#include "amiga_ext.h"
 
 static PyObject *error;    /* Exception */
 
@@ -935,16 +936,20 @@ static struct PyMethodDef Doslib_global_methods[] = {
 	{NULL,      NULL}       /* sentinel */
 };
 
+/*
+ * Former Doslib builtin: methods and doserror live on amiga.
+ * Call from initamiga() after Py_InitModule("amiga", ...).
+ */
 void
-initDoslib Py_PROTO((void))
+amiga_init_dos(PyObject *m)
 {
-	PyObject *m, *d;
+	PyObject *d;
 
-	m = Py_InitModule3("Doslib", Doslib_global_methods, "Lowlevel Amiga dos.library module.");
+	amiga_add_methods(m, Doslib_global_methods);
 	d = PyModule_GetDict(m);
 
-	/* Initialize error exception */
-	error = PyErr_NewException("Doslib.error", NULL, NULL);
+	/* Keep name distinct from amiga.error (OSError). */
+	error = PyErr_NewException("amiga.doserror", NULL, NULL);
 	if (error != NULL)
-		PyDict_SetItemString(d, "error", error);
+		PyDict_SetItemString(d, "doserror", error);
 }

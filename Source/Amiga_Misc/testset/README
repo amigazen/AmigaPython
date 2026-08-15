@@ -1,3 +1,9 @@
-This directory contains some additional test programs.
+This directory contains additional Amiga-oriented test programs and
+helpers used when exercising the port.
 
-The usual test set can be found in lib/test.
+The main Python regression suite lives under Lib/test.
+Amiga-specific automated checks also live under Source/AmigaTests/ for
+the 2.7.18 port.
+
+Scripts here may assume classic Amiga path syntax, Dos/amiga helpers,
+and (where relevant) ARexx or networking.

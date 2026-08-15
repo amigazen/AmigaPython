@@ -1,4 +1,4 @@
-import Dos
+import amiga
 
 TestError = 'FAILED --- ArgParser'
 
@@ -8,7 +8,7 @@ def test(a,b):
 
 print 'TESTING ARGPARSER SETUP...'
 
-ap=Dos.ArgParser('ONE')
+ap=amiga.ArgParser('ONE')
 test(ap.defaults,{'ONE': None})
 test(ap.types,(('ONE', 'X'),))
 ap.new('ONE,TWO')
@@ -113,7 +113,7 @@ def terr(f,a):
  try:
 	try:
 		f(a)
-	except (Dos.error,ValueError,SystemError,TypeError):
+	except (amiga.error,ValueError,SystemError,TypeError):
 		fault=1
  finally:
 	if not fault:

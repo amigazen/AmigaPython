@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 import sys
-from AmigaTests.support import check, skip, require_import
+from AmigaTests.support import check, skip, require_import, try_import
 
 
 def test_math_cmath():
@@ -403,3 +403,70 @@ def test_struct_module_name():
     struct = require_import("struct")
     if struct:
         check("struct.calcsize", struct.calcsize("!I") == 4)
+
+
+def test_pyexpat():
+    # Statically linked Modules/expat - always available on Amiga builds.
+    import sys
+    check("pyexpat listed builtin", "pyexpat" in sys.builtin_module_names)
+    px = require_import("pyexpat")
+    check("ParserCreate", callable(getattr(px, "ParserCreate", None)))
+    check("ErrorString", callable(getattr(px, "ErrorString", None)))
+    check("ExpatError", hasattr(px, "ExpatError"))
+    try:
+        p = px.ParserCreate()
+        p.Parse("<a>x</a>", 1)
+        check("pyexpat Parse", True)
+    except Exception, e:
+        check("pyexpat Parse", False, str(e))
+
+    # Handlers / attributes
+    try:
+        seen = []
+        def start(name, attrs):
+            seen.append(("start", name))
+        def end(name):
+            seen.append(("end", name))
+        def char(data):
+            seen.append(("char", data))
+        p = px.ParserCreate()
+        p.StartElementHandler = start
+        p.EndElementHandler = end
+        p.CharacterDataHandler = char
+        p.Parse("<root><child>hi</child></root>", 1)
+        check("handler start root", ("start", "root") in seen)
+        check("handler start child", ("start", "child") in seen)
+        check("handler char", ("char", "hi") in seen)
+        check("handler end child", ("end", "child") in seen)
+    except Exception, e:
+        check("pyexpat handlers", False, str(e))
+
+    # Public xml.parsers.expat wrapper
+    try:
+        import xml.parsers.expat as expat
+        check("xml.parsers.expat", expat is not None)
+        p = expat.ParserCreate()
+        p.Parse("<b/>", 1)
+        check("xml.parsers.expat Parse", True)
+    except ImportError, e:
+        skip("xml.parsers.expat", str(e))
+    except Exception, e:
+        check("xml.parsers.expat", False, str(e))
+
+    # ElementTree when Lib/xml is present (needs codecs ascii_encode)
+    try:
+        import xml.etree.ElementTree as ET
+        root = ET.fromstring("<doc id='1'><item>ok</item></doc>")
+        check("ElementTree tag", root.tag == "doc")
+        check("ElementTree attrib", root.get("id") == "1")
+        check("ElementTree child", root.find("item").text == "ok")
+    except ImportError, e:
+        skip("ElementTree", str(e))
+    except AttributeError, e:
+        # Same gap as str.encode ascii on this port.
+        if "ascii_encode" in str(e):
+            skip("ElementTree", "ascii_encode not in _codecs yet")
+        else:
+            check("ElementTree", False, str(e))
+    except Exception, e:
+        check("ElementTree", False, str(e))

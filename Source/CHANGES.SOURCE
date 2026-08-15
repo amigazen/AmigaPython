@@ -1,183 +1,136 @@
-Changes to the original 1.6 source code distribution:
+Changes to the original Python source for AmigaPython
 -------------------------------------------------------
+
+This file historically described diffs against stock Python **1.6**.
+AmigaPython is now based on **Python 2.7.18**.  Keep the classic notes
+below as a record of the original port techniques; prefer the current
+Source/ tree, vmakefile / SMAKEFILE, and project VCS history for what
+actually ships in 2.7.18.
+
+
+AmigaPython 2.7.18 (amigazen project) — summary
+-----------------------------------------------
+
+- Interpreter / library updated from the classic 2.0 Amiga line to final
+  Python 2.7.18 (Include/patchlevel.h VERSION "2.7.18").
+- Primary build path: VBCC + PosixLib (vmakefile → Python27).  SAS/C
+  SMAKEFILE retained as a legacy path (Python27_sas).
+- Builtin `amiga` module: expanded POSIX surface; Doslib helpers,
+  ArgParser / constants via _amiga_dos; to_unix / from_unix; ASL
+  FileRequest / MessageBox; locale OpenCatalog; icon DiskObject.
+- ARexx as `_arexx` / `arexx`; I-Net225 remains unsupported; networking
+  via bsdsocket.library.
+- Amiga docs: Amiga_Misc/Docs and Python/docs/amiga updated for 2.7.18.
+
+
+Classic notes (against original 1.6 source)
+-------------------------------------------
 
 General:
 
-At different places I've added, removed or changed some code.
-I tried to do this by using the preprocessor symbols:
+At different places Amiga-specific code was added, removed or changed,
+typically gated with preprocessor symbols:
 _AMIGA : Defined when compiling on Amiga.
          Indicates Amiga specific code.
 __SASC : Defined when compiling with the SAS/C compiler.
          Indicates SAS/C specific code.
-AMITCP : Defined when using AmiTCP as networking software.
-         Indicates AmiTCP specific code, but maybe this
-         is easily converted to, say, Inet.
-INET225: Defined when using INET-225 as networking software.
+AMITCP : Defined when using AmiTCP / bsdsocket-style networking.
+INET225: Defined when using INET-225 (no longer supported).
 
 
 Added subdir Amiga_Misc with:
-	README                  - small describing text
+	README                  - describing text
 	mkdiffs.py              - makes diffs against original distribution
 	Diffs/                  - output dir for mkdiff.py
-	make_gst.c              - for building the GST
-	Python_netlib/          - contains source for python_net.lib
-	python_net.lib          - custom version of AmiTCP's net.lib,
-				  including some additional code like custom
-				  WB startup, environment functions etc.
-	DISCL_and_COPYRIGHT     - my disclaimer & CWI's copyright message
+	DISCL_and_COPYRIGHT     - disclaimer & historic copyright text
 	testset/                - additional tests for Amiga modules
 	unused/                 - currently unused stuff
 	Docs/                   - Amiga docs for distribution
+	experimental_modules/   - exploratory extensions
 
 
 - Supplied custom makefile for Amiga's SAS/C: SMAKEFILE.
   Supplied SAS/C compiler options file: SCOPTIONS.
-  You don't need any of the original makefiles (just delete them if you like).
-  (new since 1.5: SMAKEFILE splitted, one for each main directory)
+  (Later: SMAKEFILE split per main directory; VBCC vmakefile added for 2.7.18)
 
-- Added Prototype files for many source files.
+- Added Prototype files for many source files (SAS/C era).
   See `protos' directories in: Modules, Objects, Parser, Python.
 
-- Created Include/config.h
-- Created Include/protos.h
-- Created Modules/config.c
-- Created Modules/environment.c
-- Created Modules/amigamodule.c
-- Created Modules/ARexxmodule.c
-- Created Modules/Doslibmodule.c
+- Created / maintained Amiga config and modules:
+	Include/pyconfig.h (and historic config.h)
+	Include/osdefs.h Amiga defines
+	Modules/config.c
+	Modules/environment related code
+	Modules/amiga/amigamodule.c (and related amiga_*.c)
+	Modules/ARexxmodule.c / _arexx
+	Modules/Doslibmodule.c (APIs now also on amiga)
 
 
 Include/Python.h:
-	- added #include "protos.h"
-	- added #include <fcntl.h>
-	- added SAS/C math includes
+	- Amiga / SAS/C includes as required by the toolchain
 
 Include/osdefs.h:
-	- added AMIGA specific #defines
-
-Include/compile.h:
-	- removed _node decl for SAS/C
-
-Include/bitset.h:
-	- replaced BYTE def on _AMIGA with #include <exec/types.h>
+	- AMIGA specific #defines; VERSION string for the port
 
 Parser/intrcheck.c:
-	- Added SAS/C specific ^C handling
+	- SAS/C specific ^C handling (classic)
 
-Objects/longobject.c: (line 1690)
-	- changed sizeof(PyLongObject) to sizeof(struct _longobject) because of
-	  illegal sizeof expression (?)
+Objects/longobject.c:
+	- sizeof workarounds for SAS/C where needed
 
 Python/sigcheck.c:
-	- Added stack checking code
+	- stack checking code
 
 Python/sysmodule.c:
-	- Added #include "protos.h"
-	- Added code for absolute path check in PySys_SetArgv
+	- absolute path check in PySys_SetArgv
 
 Python/import.c:
-	- Fixed path building in find_module, now uses dos.library/AddPart
-	- Added Amiga version of check_case: now the imports are case sensitive
+	- path building via dos.library/AddPart (classic)
+	- case-sensitive import check (PYTHONCASEOK to relax)
 
 Python/pythonrun.c:
-	- Case insensive filename match for .pyc and .pyo
+	- filename match behaviour for .pyc / .pyo on Amiga
 
 
 Modules/mathmodule.c:
-	- added SAS/C versions of function macros which call the math
-	  functions directly. Calling them through a function pointer
-	  (the original way) results in bigger code and rounding errors (!?)
+	- SAS/C direct math call macros (classic)
 
 Modules/getbuildinfo.c:
-	- Added Amiga version string ($VER)
-
-Modules/md5c.c:
-	- added lines to use regular memcpy and memset on AMIGA
-
-Modules/binascii.c:
-	- fixed unsigned char bytes -1 --> 0xFF
+	- Amiga version string ($VER)
 
 Modules/timemodule.c:
-	- added #include "protos.h"
-	- added code for floatsleep() (uses select() if available)
+	- floatsleep() (uses select() when available)
 
 Modules/getpath.c:
-	- added #include "protos.h"
-	- added Amiga version of PYTHONPATH #define
-	- added Amiga versions for getting full path of executable,
-	  reduce, checking if path is relative, ...
-	- added proto for getxfile
+	- Amiga PYTHONPATH / executable path / assign handling
 
-Modules/cryptmodule.c:
-	- added AMITCP/INET includes
+Modules/cryptmodule.c, grpmodule.c, pwdmodule.c, syslogmodule.c:
+	- AmiTCP / usergroup includes and adaptations
 
-Modules/grpmodule.c:
-	- added AMITCP/INET includes
-	- added AMITCP/INET code changes
+Modules/socketmodule.c:
+	- AmiTCP / bsdsocket includes and API shims
+	- IoctlSocket for setblocking, etc.
 
-Modules/pwdmodule.c:
-	- added AMITCP/INET includes
-	- added AMITCP/INET code changes
-
-Modules/syslogmodule.c:
-	- added AMITCP/INET includes
-	- added AMITCP/INET code changes
-
-Modules/socketmodule.c: 
-	- added #include <sys/param.h>
-	- added check(s) for _AMIGA
-	- Added AMITCP/INET includes
-	- Added a couple of #defines for AMITCP/INET API
-	- Changed use of fcntl to IoctlSocket (for s.setblocking)
-	- Clear socket buffer for new socket (PySocketSock_New)
-
-Modules/main.c:
-	- Added AmiTCP/INET init & cleanup functions to Modules/main.c
-		(checkXXXXlib functions)
-	- Tweaked some other things in main()
+Modules/main.c / Embed/AmigaPythonEmbed.c:
+	- AmiTCP init & cleanup; Workbench / assign startup pieces
 
 Modules/selectmodule.c:
-	- Added AmiTCP/INET #include
-	- Added Amiga's version of select funcion (with optional 5th parameter)
+	- optional 5th AmigaDOS signal-mask argument
 
 
+- Lib/plat-amiga and site-python / Amiga path modules
+- Lib/lib-dynload directory historically for exec_prefix behaviour
+- Library tweaks: os.py, tempfile.py, posixpath stub, amigapath,
+  site.py, Amiga-aware tests
 
 
-- Added Lib/plat-amiga directory with files.
+Unicode (classic 1.6/2.0 era notes; 2.7.18 uses stock Unicode with
+Amiga build options as configured):
 
-- Created Lib/lib-dynload directory to fix sys.exec_prefix behavior.
-
-
-- Changes to library files in Lib drawer. These changes are also documented
-  in the README file. Files involved:
-	os.py           (amiga additions)
-	tempfile.py     (temp path try order is: T:, :T, SYS:T)
-	posixpath.py    (stub for old posixpath.py)
-	amigapath.py    (amiga's replacement for posixpath.py)
-	site.py		(exit string for Amiga)
-	test/test_posixpath.py		(special separator stuff for Amiga)
-	test/test_hash.py		(fixed import of test_support)
+Modules/unicodedata / database loading may still use Amiga-specific
+strategies depending on toolchain limits — see Modules/amiga and
+pyconfig.h for the active build.
 
 
-
-**************************************** TODO *******************************************
-
-
-Modules/unicodedata.c:
-	- Added amiga specific code to initialize the unicode database.
-
-Modules/unicodedatabase.c:
-	- Removed, replaced with an Amiga specific version
-	  ("amigaunicodedatabase.c") that reads the database from disk files.
-	  This is done because the original file is too large to compile and
-	  the dynamic data loading saves memory.
-
-
-
-
-
-- Moved some unneeded files from parser to Parser/NON-AMIGA,
-  from Modules to Modules/NON-AMIGA, from Lib to Lib/NON-AMIGA,
-  and from Python to Python/NON-AMIGA.
-  (these files are not included in the source archive for space reasons)
-
+NON-AMIGA trees historically held unused upstream files omitted from
+Aminet source archives for space.

@@ -2,8 +2,9 @@
 
                             ENVIRONMENT MODULE
 
-                     Irmen de Jong - irmen@bigfoot.com
+                              Irmen de Jong
                                27 dec. 1996
+                     Still applies to AmigaPython 2.7.18
 
 
 This  document  describes  the  builtin  module `environment'.  This module

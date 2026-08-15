@@ -1022,8 +1022,10 @@ write_compiled_module(PyCodeObject *co, char *cpathname, struct stat *srcstat, t
 #endif
         return;
     }
-    /* Now write the true mtime (as a 32-bit field) */
-    fseek(fp, 4L, 0);
+    /* Now write the true mtime (as a 32-bit field).
+     * SEEK_SET macro required: VBCC/PosixLib use AmigaDOS whence
+     * values (SEEK_SET=-1); a literal 0 is SEEK_CUR. */
+    fseek(fp, 4L, SEEK_SET);
     assert(mtime <= 0xFFFFFFFF);
     PyMarshal_WriteLongToFile((long)mtime, fp, Py_MARSHAL_VERSION);
     fflush(fp);

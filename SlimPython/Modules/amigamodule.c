@@ -2,7 +2,7 @@
 **                                                            **
 **  AMIGA module implementation, for SAS/C version 6.58       **
 **                                                            **
-**  Made by Irmen de Jong (irmen@bigfoot.com)                 **
+**  Made by Irmen de Jong                 **
 **                                                            **
 **  27-mar-96: Added a lot of AmiTCP functions!               **
 **   2-apr-96: Many small fixes & enhancements.               **

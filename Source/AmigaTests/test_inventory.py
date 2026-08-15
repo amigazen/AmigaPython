@@ -10,7 +10,6 @@ from AmigaTests.support import check, skip, try_import
 # Always linked as builtins (see Modules/config.c).
 ALWAYS_BUILTIN = (
     "amiga",
-    "amigapath",
     "array",
     "math",
     "time",
@@ -42,7 +41,7 @@ ALWAYS_BUILTIN = (
     "environment",
     "strop",
     "_arexx",
-    "Doslib",
+    "pyexpat",
     "marshal",
     "imp",
     "_ast",

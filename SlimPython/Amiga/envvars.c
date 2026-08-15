@@ -10,7 +10,7 @@
 **  November 7, 1996: replaced static buffer by buffer on stack
 **
 **      © Irmen de Jong
-**      <irmen@bigfoot.com>
+**      
 */
 
 #include <stdlib.h>

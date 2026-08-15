@@ -1,7 +1,7 @@
 /*
  * AMIGA module implementation for Python 2.7.18
  *
- * Original by Irmen de Jong (irmen@bigfoot.com)
+ * Original by Irmen de Jong
  * Enhanced for modern AmigaOS with PosixLib integration
  *
  * Key Changes from Original:
@@ -33,6 +33,7 @@
 
 #include "Python.h"
 #include "osdefs.h"
+#include "amiga_ext.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -519,6 +520,48 @@ amiga_umask(PyObject *self, PyObject *args)
 }
 #endif
 
+/* OS4 AmigaPython extras: CPU / machine identity from ExecBase AttnFlags.
+ * Classic Amiga has no Exec GetMachine(); getmachine() reports "Amiga". */
+static const char *
+amiga_cpu_model(void)
+{
+	struct ExecBase *sysbase;
+	ULONG attnflags;
+
+	sysbase = *((struct ExecBase **)4);
+	if (sysbase == NULL)
+		return "unknown";
+	attnflags = sysbase->AttnFlags;
+	if (attnflags & AFF_68060)
+		return "68060";
+	if (attnflags & AFF_68040)
+		return "68040";
+	if (attnflags & AFF_68030)
+		return "68030";
+	if (attnflags & AFF_68020)
+		return "68020";
+	if (attnflags & AFF_68010)
+		return "68010";
+	return "68000";
+}
+
+static PyObject *
+amiga_getcpu(PyObject *self, PyObject *args)
+{
+	if (!PyArg_ParseTuple(args, ":getcpu"))
+		return NULL;
+	return PyString_FromString(amiga_cpu_model());
+}
+
+static PyObject *
+amiga_getmachine(PyObject *self, PyObject *args)
+{
+	if (!PyArg_ParseTuple(args, ":getmachine"))
+		return NULL;
+	/* OS4 returns board names (AmigaOne, etc.). On OS3 report platform. */
+	return PyString_FromString("Amiga");
+}
+
 #ifdef HAVE_UNAME
 /* PosixLib has no sys/utsname.h; build the posix-style 5-tuple from ExecBase. */
 static PyObject *
@@ -527,8 +570,8 @@ amiga_uname(PyObject *self, PyObject *args)
 	struct ExecBase *sysbase;
 	char version[32];
 	char release[16];
-	const char *machine;
-	ULONG attnflags;
+	char machine[16];
+	const char *cpu;
 
 	if (!PyArg_NoArgs(args))
 		return NULL;
@@ -556,19 +599,9 @@ amiga_uname(PyObject *self, PyObject *args)
 	else
 		strcpy(release, "1.x");
 
-	attnflags = sysbase->AttnFlags;
-	if (attnflags & AFF_68060)
-		machine = "m68060";
-	else if (attnflags & AFF_68040)
-		machine = "m68040";
-	else if (attnflags & AFF_68030)
-		machine = "m68030";
-	else if (attnflags & AFF_68020)
-		machine = "m68020";
-	else if (attnflags & AFF_68010)
-		machine = "m68010";
-	else
-		machine = "m68000";
+	cpu = amiga_cpu_model();
+	/* uname machine field historically used m680x0 spelling */
+	sprintf(machine, "m%s", cpu);
 
 	/* nodename: hostname is not always available without TCP; use fixed id. */
 	return Py_BuildValue("(sssss)",
@@ -1617,6 +1650,9 @@ static struct PyMethodDef amiga_methods[] = {
 #ifdef HAVE_UNAME
 	{"uname",   amiga_uname},
 #endif
+	/* OS4 AmigaPython.txt extras (CPU / machine identity). */
+	{"getcpu", amiga_getcpu, 1},
+	{"getmachine", amiga_getmachine, 1},
 	{"unlink",  amiga_unlink},
 	{"remove",  amiga_unlink},
 #if defined(AMITCP) || defined(INET225)
@@ -1917,6 +1953,19 @@ initamiga(void)
 
 	/* Initialize exception */
 	PyDict_SetItemString(d, "error", PyExc_OSError);
+
+	/* Former Doslib / amigapath + OS4 ASL/catalog/icon APIs */
+	amiga_init_dos(m);
+	amiga_init_path(m);
+	amiga_init_asl(m);
+	amiga_init_catalog(m);
+	amiga_init_icon(m);
+
+	/*
+	 * Do not import Lib/site-python/_amigados.py here: os.py does "from amiga import *"
+	 * while still loading, so a nested import of _amigados (which imports os)
+	 * fails during bootstrap. site.main() loads _amigados after path/os are ready.
+	 */
 }
 
 #ifdef HAVE_FTRUNCATE

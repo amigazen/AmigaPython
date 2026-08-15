@@ -1,137 +1,101 @@
 
-             GENERAL NOTES ON THE AMIGA VERSION OF PYTHON 1.5
+             GENERAL NOTES ON THE AMIGA VERSION OF PYTHON 2.7.18
 
-                     Irmen de Jong - irmen@bigfoot.com
-                               28 sep. 1999
+                     Original notes: Irmen de Jong
+                     Updated for AmigaPython 2.7.18
 
 
 REGULAR PYTHON DOCUMENTATION AND RESOURCES
 ------------------------------------------
 
-This  Amiga  documentation assumes you are familiar with Python in general.
-If  not,  the  base  documentation  (tutorial, language reference guide and
-library reference manual) can be obtained from http://www.python.org.  This
-is  the main Python site.  This documentation is also available from Aminet
-(www.aminet.org)   as   dev/lang/Python_Doc.lha,   and  this  may  be  more
-convenient  because  this  is compressed with our well-known LhA instead of
-Unix tar and gzip.
+This Amiga documentation assumes you are familiar with Python in general.
+If not, the base documentation (tutorial, language reference guide and
+library reference manual) for Python 2.7 can be obtained from
+https://docs.python.org/2.7/.  This is the main Python documentation site.
+
+Historic AmigaPython 2.0 docs and Aminet archives remain useful background
+for Amiga-only behaviour; this tree documents the 2.7.18 port.
 
 
-MODULE SEARCH PATH (changed again in 1.5)
------------------------------------------
+MODULE SEARCH PATH
+------------------
 
-Version  1.4  introduced  a  different treatment of the module search path.
-The  current  directory  is  no longer by default part of the module search
-path.   Instead,  the  following  procedure  gives  the  module search path
-(sys.path):
+sys.path construction follows modern Python 2.7 rules, adapted for Amiga
+path syntax (semicolon-separated PYTHONPATH entries, Amiga assigns, etc.):
 
-- sys.path is set to the default PYTHONPATH, which is "Python:lib"
-- if  the  global  environment  variable  PYTHONPATH is set, the paths listed
-  there  will be inserted before the default path.  PYTHONPATH is a semicolon
-  (;) separated list of directories, like "WORK:pylib;Python:lib/mymods".
-- the  path of the script which was given as an argument is inserted in front
-  of the search path. If no script was given as argument, '' will be inserted
-  (which is the current directory).
+- Paths are derived from the executable location / PYTHONHOME when set.
+- If the global environment variable PYTHONPATH is set, those directories
+  are inserted.  PYTHONPATH is a semicolon (;) separated list, e.g.
+  "WORK:pylib;Python:lib".
+- The directory of the script given on the command line is inserted in
+  front of the search path.  If no script was given, '' (current directory)
+  is inserted.
 
-Version 1.5 introduced yet more changes to this behavior.  From Misc/NEWS:
+site.py is imported by default when Python is initialized; use -S to
+disable it.  site.py extends the path with site-packages under the versioned
+library directory (lib/python2.7/), site-python under lib/, and pathnames
+mentioned in *.pth files found in those directories.
 
-"The  default  module  search  path  is  now  much saner.  Both on Unix and
-Windows  [and  Amiga],  it  is  essentially  derived  from  the path to the
-executable  (which  can  be  overridden by setting the environment variable
-$PYTHONHOME)."
-
-"On Unix, when using sys.argv[0] to insert the script directory in front of
-sys.path,  expand  a  symbolic  link.   You  can now install a program in a
-private directory and have a symbolic link to it in a public bin directory,
-and it will put the private directory in the module search path.  Note that
-the  symlink  is expanded in sys.path[0] but not in sys.argv[0], so you can
-still tell the name by which you were invoked."
-
-"More  changes  to  import:   the site.py module is now imported by default
-when  Python  is  initialized;  use  -S  to disable it.  The site.py module
-extends  the  path with several more directories:  site-packages inside the
-lib/python1.5/  directory, site-python in the lib/ directory, and pathnames
-mentioned  in  *.pth  files  found  in  either  of  those directories.  See
-http://grail.cnri.reston.va.us/python/essays/packages.html for more info."
-
-For  those  who  want  to  know  everything,  see the source of the GetPath
-function (Modules/getpath.c). Ofcourse you should also read the manual.
+For those who want to know everything, see Modules/getpath.c and the
+official Python 2.7 docs on sys.path / PYTHONHOME / PYTHONPATH.
 
 
 MODULE FILENAMES AND CASE SENSITIVITY
 -------------------------------------
 
-AmigaPython  now checks the case of the imported module against the case of
-the module's filename.  Say you try to "import stringio", this used to work
-in  the old versions of AmigaPython but now you will get an error.  This is
-because  the  module's  file  is named "StringIO.py" and not "stringio.py":
-the  case is different.  If you don't like this behavior (because it breaks
-too  much  existing  code,  for instance) you can disable it by setting the
-local or global environment variable PYTHONCASEOK to some value.
+AmigaPython checks the case of the imported module against the case of
+the module's filename.  Say you try to "import stringio", this will fail
+if the file is named "StringIO.py": the case is different.  If you don't
+like this behavior (because it breaks older code) you can disable it by
+setting the local or global environment variable PYTHONCASEOK to some value.
 
 
 AMIGA SPECIFIC MODULES
 ----------------------
 
-Version  1.4 introduced a clean way of installing platform specific library
-files.   In  the Lib drawer there is anoter drawer called site-python.  All
-Amiga  specific modules are put here.  There is a simple way of using them:
-place the
+Amiga-specific library files live under lib/site-python (and related site
+paths).  site.py is imported by default (unless -S), so those modules are
+normally importable without extra path fiddling.
 
-	import site
-
-statement  somewhere  at  the  top  of all code that must use site-specific
-modules.   This  will  modify  the module search path and also run any site
-specific  initialization code (by importing the sitecustomize module, which
-should  also  be  placed in the site-python drawer).  Currently there is no
-sitecustomize  module  on  the Amiga.  If you don't like to import the site
-module (why?) just use sys.path.append('Python:Lib/site-python').
-
-You  can  now  simply import any Amiga specific modules, regardless of them
-being built-in (like ARexxll) or in a .py source file:
+You can import Amiga specific modules whether they are builtin (like parts
+of ARexx support) or .py files:
 
 	import ARexx
 
-NOTE!  For version 1.5, site.py is imported by default.  (see above) Unless
-you use the -S command line argument.
-
+In 2.7.18, many Dos.library helpers, path converters, ASL/catalog/icon
+APIs are also available directly on the builtin `amiga` module.  See
+amiga_module and Dos_module.
 
 
 POSIX REPLACEMENTS
 ------------------
 
-In  lib/ there is a dummy module `posixpath'.  It just imports `amigapath',
-thereby  making  some  other  modules and files work because they don't use
+In lib/ there is a dummy module `posixpath'.  It just imports `amigapath',
+thereby making some other modules and files work because they don't use
 os.path but posixpath.
 
+The builtin `amiga' module fills the role of Unix `posix' for the `os'
+package.  Prefer `import os` for portable code.
 
-About the networking support (AmiTCP)
--------------------------------------
 
-The  python  binary is compiled with AmiTCP support.  The interpreter still
-works  even  if  you don't have AmiTCP, but the extra functionality (mainly
-the  socket  module)  can't be used without AmiTCP (obviously).  Some extra
-functions  already work if you only have the usergroup.library, and not the
-full  AmiTCP  package:   the  crypt,  pwd  and grp modules for instance.  A
-MultiuserFileSystem-compatible  usergroup.library can be found on Aminet (I
-didn't  try it -- beware).  Usergroup.library can also be found in the demo
-version of AmiTCP, which is also on Aminet.
+About the networking support (bsdsocket.library)
+------------------------------------------------
 
-Python is compiled for version 4 of AmiTCP.  Maybe it works with version 3
-too, but I haven't tried it.
+The interpreter works without a TCP stack, but socket-related modules need
+bsdsocket.library (AmiTCP historically; modern stacks such as Roadshow also
+provide it).  Some extra functions already work if you only have
+usergroup.library: crypt, pwd and grp for instance.
+
+I-Net225 is not supported (dropped in late 1.5.x AmigaPython).
 
 
 About Timezones
 ---------------
 
-As  another  side-effect  of  linking  in AmiTCP stuff, Python extracts the
-timezone information from your current locale preferences.  No need anymore
-for a TZ environment var.  (One small problem:  the name of the timezone is
-no longer known, and is replaced by the empty string ''.  Note that this is
-different  from previous versions, where it was replaced by '???', but that
-caused  incompatibilities.)  If  the  locale  prefs  couldn't  be read, the
-timezone  information  is  taken  from  ENV:TZ, which must be a string like
-'MET-1' (MET, -1 hour from GMT).
+Timezone information is taken from locale preferences when available.
+If locale prefs couldn't be read, timezone information is taken from
+ENV:TZ, which must be a string like 'MET-1' (MET, -1 hour from GMT).
+The timezone name string may be empty ('') depending on the C library.
 
 
 sys.platform
@@ -139,43 +103,35 @@ sys.platform
 
 This is defined as 'amiga'. No upper case A.
 
+
 os.uname
 --------
 
-The machine information correctly identifies the Kickstart release version
-and determines if you have a 1.x, 2.x or 3.x machine.
+The machine information identifies the Kickstart release version and
+related hardware/OS details exposed by the port's uname implementation.
+
 
 os.popen
 --------
 
 When opening a pipe for writing (like f=os.popen('command','w')), using the
-standard  'More'  command  doesn't  work.   This is a fault of More.  Use a
+standard 'More' command doesn't work.  This is a fault of More.  Use a
 better pager like Most (available on Aminet).
+
 
 About modifying library files
 -----------------------------
 
-You  should  not  change anything in one of the library files.  The library
-files  should  always  behave the same on all platforms that supports them.
-(Note:   I  said BEHAVE.  You are free to modify the implementation but the
-BEHAVIOR should remain the same.)
-Put Amiga specific library files in the right place: lib/site-python.
+You should not change the *behaviour* of standard library modules in ways
+that break cross-platform expectations.  Put Amiga specific library files
+in the right place: lib/site-python (or site-packages as appropriate).
 
 
 Workbench startup
 -----------------
 
-[NOTE:   This  paragraph has been rewritten and also describes new features
-in Python 1.5.1 buildnumber 13 and higher!  (marked 'NEW in #13')]
-
-Since  1.4,  Amiga Python contains some code to make it possible to use the
-Workbench  to start python or python programs.  The interpreter already has
-an  icon.   Doubleclick  it  to  start python in interactive mode.  Use the
-well-known multiselect (shift-click) to select any scripts to execute.  Any
-additional  files  which  are multi-selected will be passed as command line
-arguments.
-
-PRECISE DESCRIPTION OF HOW THE WORKBENCH STARTUP CODE WORKS:
+Amiga Python contains code to start the interpreter and scripts from the
+Workbench.
 
 1. Just starting Python from the Workbench.
    Tooltypes are converted to command-line arguments.
@@ -187,51 +143,34 @@ PRECISE DESCRIPTION OF HOW THE WORKBENCH STARTUP CODE WORKS:
    the arguments from the tooltypes from Python's icon.
 
 3. Datafile with project icon normally used for Python scripts.
-   Python tries to start the datafile as a Python script, which is not what
-   you want. But see below under: DATA FILES.
+   See MAGIC TOOLTYPES / DATA FILES below.
 
-SCRIPT  ICONS.
-Look  in  the  `Icons'  directory  for icon templates:  use def_py.info and
-def_pyc.info  as icon templates for .py and .pyc files.  Just make sure the
-default  tool  is  set  to  `Python:Python'.  Any tooltypes in the icon are
-converted  to  command  line  arguments  for  the  Python  interpreter (one
+SCRIPT ICONS.
+Look in the `Icons' directory for icon templates: use def_py.info and
+def_pyc.info as icon templates for .py and .pyc files.  Just make sure the
+default tool is set to `Python:Python'.  Any tooltypes in the icon are
+converted to command line arguments for the Python interpreter (one
 tooltype is exactly one command line argument).
 
-MAGIC TOOLTYPES.	[NEW in #13]
-Two  'magic  tooltypes'  have been defined to make it easier to control the
-way Python parses the icons and tooltypes.  They are 'PYTHONSCRIPT=...' and
-'PYSCRIPTARG=...'.  See below for a description.
+MAGIC TOOLTYPES.
+Two 'magic tooltypes' control how icons and tooltypes are parsed:
+'PYTHONSCRIPT=...' and 'PYSCRIPTARG=...'.
 
-DATA FILES.	[NEW in #13]
-It  is  possible to start Python with a given script by doubleclicking on a
-DATA  FILE'S ICON!  You can associate a Python script as a default tool for
-project  (data)  files!   To  do  this, give the data file the usual Python
-script   icon.    The   icon's  default  tool  should  already  be  set  to
-Python:Python.   Add  ONE  tooltype  at  the top containing the name of the
-script you want to run.  Doubleclick the datafile's icon and voila:  Python
-starts  running the specified script which gets the datafile as an argument
-in  sys.argv  (and possibly other specified tooltypes too)!  NOTE:  to make
-things  clearer  and  easier,  a  special  magic tooltype has been defined:
-PYTHONSCRIPT=..., where ...  must be your script.  Using this tooltype will
-just  put  your  script  in  front of all other tooltypes so it will be the
-first command line argument, and thus be executed as script.
+DATA FILES.
+It is possible to start Python with a given script by doubleclicking on a
+DATA FILE'S ICON.  Give the data file a Python script icon whose default
+tool is Python:Python.  Add a tooltype PYTHONSCRIPT=... naming the script
+to run.  The data file becomes an argument in sys.argv.
 
-SCRIPT ARGUMENTS TOOLTYPES.	[NEW in #13]
-Before  1.5.1  #13  it  was not possible to pass any parameters to a Python
-script  started  from  Workbench.   But  since  the  addition  of the magic
-tooltype  'PYSCRIPTARG=...'  this  is  no  longer a problem.  This tooltype
-causes  the  '...'  part to be moved to the end of the argument list, after
-the  script  name.   So  it will become a parameter string for your script,
-instead  of  a  Python interpreter option.  Note that in the case of a data
-file  (as described above) the data file's filename will be placed *before*
-the script arguments.
+SCRIPT ARGUMENTS TOOLTYPES.
+The magic tooltype 'PYSCRIPTARG=...' moves the '...' part to the end of the
+argument list, after the script name, so it becomes a script parameter
+rather than an interpreter option.  For a data file, the data file's
+filename is placed *before* the script arguments.
 
-NO-SCRIPT PYTHON SCRIPTS?!
-Another  nice  tricks  is this:  it is possible to embed a Python script in
-the  icon alone, no scriptfile on disk needed.  Remember that all tooltypes
-are  converted  to  command line parameters.  So make a tooltype '-c' and a
-NEW TOOLTYPE directly below it, containing the script code, without quotes.
-Example:
+NO-SCRIPT PYTHON SCRIPTS.
+You can embed a tiny script in the icon alone: tooltype '-c' and the next
+tooltype containing the code (without quotes), for example:
 
 -c
 import os,sys; print sys.argv; print os.uname()
@@ -240,12 +179,7 @@ import os,sys; print sys.argv; print os.uname()
 SOURCE CODE and other files
 ---------------------------
 
-For  the original source code distribution, which also includes all library
-files,    a    bunch   of   docs   and   many   example   programs,   check
-http://www.python.org.    BTW,   this  site  contains  a  lot  more  stuff:
-reference  manuals,  contributed  files, online documentation, FAQ's, news,
-etc.  etc.
+Official Python 2.7 sources and docs: https://www.python.org / docs.python.org.
 
-For the Amiga source code, see Aminet in the same location as you found
-this.  It should be named `Python_Src.lha'.
-
+Amiga port sources and build notes live in the Source/ tree of this project
+(amigazen AmigaPython).  See also the project README and BUILD documentation.

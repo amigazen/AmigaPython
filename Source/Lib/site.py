@@ -285,7 +285,21 @@ def getsitepackages():
             continue
         seen.add(prefix)
 
-        if sys.platform in ('os2emx', 'riscos', 'amiga'):
+        if sys.platform == 'amiga':
+            # Classic AmigaPython: Amiga-specific .py modules live in
+            # Lib/site-python (beside the stdlib Lib on sys.path).
+            # Prefer paths next to Lib already on sys.path - sys.prefix alone
+            # may be the repo root while Lib is Source/Lib.
+            for p in sys.path:
+                if not p:
+                    continue
+                base = os.path.basename(p)
+                if base in ('Lib', 'lib'):
+                    sitepackages.append(os.path.join(p, 'site-python'))
+                    sitepackages.append(os.path.join(p, 'site-packages'))
+            sitepackages.append(os.path.join(prefix, "Lib", "site-python"))
+            sitepackages.append(os.path.join(prefix, "Lib", "site-packages"))
+        elif sys.platform in ('os2emx', 'riscos'):
             sitepackages.append(os.path.join(prefix, "Lib", "site-packages"))
         elif os.sep == '/':
             sitepackages.append(os.path.join(prefix, "lib",
@@ -520,7 +534,10 @@ def main():
         ENABLE_USER_SITE = False
     elif ENABLE_USER_SITE is None:
         ENABLE_USER_SITE = check_enableusersite()
-    if sys.platform != 'amiga':
+    if sys.platform == 'amiga':
+        # site-python holds arexx, asl, catalog, icon, _amigados, etc.
+        known_paths = addsitepackages(known_paths)
+    else:
         known_paths = addusersitepackages(known_paths)
         known_paths = addsitepackages(known_paths)
     if sys.platform == 'os2emx':
@@ -533,6 +550,14 @@ def main():
     execsitecustomize()
     if ENABLE_USER_SITE:
         execusercustomize()
+    # Amiga: install ArgParser / FIBF_* onto builtin amiga
+    # (Lib/site-python/_amigados.py). Cannot load from initamiga() -
+    # os imports amiga before os finishes.
+    if sys.platform == 'amiga':
+        try:
+            import _amigados
+        except ImportError:
+            pass
     # Remove sys.setdefaultencoding() so that users cannot change the
     # encoding after initialization.  The test for presence is needed when
     # this module is run as a script, because this code is executed twice.

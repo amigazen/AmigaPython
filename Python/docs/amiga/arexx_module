@@ -3,20 +3,22 @@
 
                            PYTHON AREXX SUPPORT
 
-                         ARexx and ARexxll modules
+                         ARexx and _arexx modules
 	
-                   by Irmen de Jong - irmen@bigfoot.com
+                  			 by Irmen de Jong
 
                           Last update: 3-Jan-99
 
-                               BETA VERSION
+                 AmigaPython 2.7.18: ARexx support is retained
+                 from the classic port; treat the "BETA" notes below
+                 as historical — report issues via amigazen project.
 
 ***************************************************************************
 
-As  this  document  describes  the  BETA VERSION of the ARexx support there
-might  be  changes  to what is described below.  This depends on bugs found
-and  suggestions  received.   So please:  test the ARexx support and let me
-hear any problems/bugs/suggestions (irmen@bigfoot.com).
+As  this  document  describes  the  (originally) BETA VERSION of the ARexx
+support there might be differences from what is described below depending
+on bugs found and later fixes.  Please test ARexx support and report
+problems via the AmigaPython project.
 
 NOTE:  The ARexx support relies on the dos.library support; please read the
 documentation on that subject first (Dos_module, python module Dos.py).

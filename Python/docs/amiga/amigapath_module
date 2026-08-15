@@ -2,13 +2,17 @@
 
                              AMIGAPATH MODULE
 
-                     Irmen de Jong - irmen@bigfoot.com
+                     Irmen de Jong
                                28 apr. 1999
+                     Updated notes for AmigaPython 2.7.18
 
 
 This  document describes the module `amigapath'.  This is the Amiga version
 of  the  `posixpath' module which is used on Unix.  You should not directly
 import this module!  Always use module `os' instead and then use os.path.
+
+In 2.7.18, Amiga/Unix path string converters are also available on the
+builtin amiga module as amiga.to_unix and amiga.from_unix (see below).
 
 Functions in this module:
 
@@ -45,9 +49,9 @@ different from the ones in the posixpath module and are described below.
 
   fullpath
   ~~~~~~~~
-New Amiga-only function.  Returns the full pathname of a file/directory
+Amiga-only function.  Returns the full pathname of a file/directory
 (i.e.  expands assigns).  Implemented in amiga module but don't use it
-directly from there, always use os.path.fullpath.
+directly from there for portable code; always use os.path.fullpath.
 
 
   isabs
@@ -95,4 +99,16 @@ the Amiga this is useful (not on Unix).
   ~~~~
 As  the  Amiga  doesn't  know  the  concept of '.' and '..' directories, no
 exceptions are made for them.
+
+
+  to_unix / from_unix  (amiga module, 2.7.18)
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+These are registered on the builtin `amiga' module (not required for normal
+os.path use):
+
+  amiga.to_unix(path)    - Amiga device:path  ->  Unix-like /device/path
+  amiga.from_unix(path)  - Unix-like /device/path  ->  Amiga device:path
+
+Use them when bridging Amiga paths with Unix-oriented libraries.  For
+everyday Amiga path work, stay with os.path (amigapath semantics above).
 

@@ -732,6 +732,9 @@ read_directory(const char *archive)
         return NULL;
     }
 
+    /* Locate the End Of Central Directory (last 22 bytes).
+     * Use SEEK_* macros, never a literal 0 for SEEK_SET: VBCC/PosixLib
+     * use AmigaDOS values (SEEK_SET=-1, SEEK_CUR=0, SEEK_END=1). */
     if (fseek(fp, -22, SEEK_END) == -1) {
         goto file_error;
     }
@@ -776,7 +779,7 @@ read_directory(const char *archive)
 
     /* Start of Central Directory */
     count = 0;
-    if (fseek(fp, (long)header_position, 0) == -1) {
+    if (fseek(fp, (long)header_position, SEEK_SET) == -1) {
         goto file_error;
     }
     for (;;) {
@@ -944,7 +947,7 @@ get_data(const char *archive, PyObject *toc_entry)
     }
 
     /* Check to make sure the local file header is correct */
-    if (fseek(fp, file_offset, 0) == -1) {
+    if (fseek(fp, file_offset, SEEK_SET) == -1) {
         goto file_error;
     }
     if (fread(buffer, 1, 30, fp) != 30) {
@@ -978,7 +981,7 @@ get_data(const char *archive, PyObject *toc_entry)
     }
     buf = PyString_AsString(raw_data);
 
-    if (fseek(fp, file_offset, 0) == -1) {
+    if (fseek(fp, file_offset, SEEK_SET) == -1) {
         goto file_error;
     }
     if (fread(buf, 1, data_size, fp) != (size_t)data_size) {

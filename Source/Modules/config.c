@@ -65,12 +65,11 @@ extern void init_csv(void);
 /* extern void initunicodedata(void); */
 extern void initenvironment(void);
 extern void initstrop(void);
-extern void initDoslib(void);
 
 /* Amiga-specific modules */
 extern void initamiga(void);
-extern void initamigapath(void);
 extern void init_arexx(void);
+extern void initpyexpat(void);
 /* _socket is a LoadSeg plugin (lib-dynload/_socket.module), not builtin */
 #if defined(AMITCP) /* || defined(INET225) */
 /* Network modules - only if networking is available */
@@ -86,7 +85,6 @@ struct _inittab _PyImport_Inittab[] = {
 
     /* Amiga-specific modules */
     {"amiga", initamiga},
-    {"amigapath", initamigapath},
 
     /* Standard modules */
     {"array", initarray},
@@ -124,9 +122,10 @@ struct _inittab _PyImport_Inittab[] = {
     /* {"unicodedata", initunicodedata}, */
     {"environment", initenvironment},
     {"strop", initstrop},
-    /* Low-level ARexx accelerator; use Lib/ARexx.py for the public API. */
+    /* Low-level ARexx accelerator; use Lib/site-python/arexx.py for the public API. */
     {"_arexx", init_arexx},
-    {"Doslib", initDoslib},
+    /* XML: statically linked Modules/expat (see vmakefile.modules). */
+    {"pyexpat", initpyexpat},
 
 #if defined(AMITCP) /* || defined(INET225) */
     /* Network modules (not _socket — that is LoadSeg'd) */

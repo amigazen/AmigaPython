@@ -46,6 +46,8 @@
 #  define bool int
 #  define false 0
 #  define true 1
+#elif defined(_AMIGA)
+/* bool/true/false from expat_config.h when HAVE_EXPAT_CONFIG_H */
 #else
 #  include <stdbool.h>
 #endif

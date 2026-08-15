@@ -2,6 +2,14 @@
  Python Unicode Integration                            Proposal Version: 1.7
 -----------------------------------------------------------------------------
 
+NOTE (AmigaPython 2.7.18): This file is the historic Unicode integration
+proposal from the Python 2.0 era.  Unicode is a mature, built-in part of
+Python 2.7; use the official 2.7 Unicode docs at
+https://docs.python.org/2.7/howto/unicode.html rather than treating this
+proposal as current specification.  Kept here for historical reference.
+
+-----------------------------------------------------------------------------
+
 
 Introduction:
 -------------

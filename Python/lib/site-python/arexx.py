@@ -2,12 +2,12 @@
 High level ARexx interface.
 (c)Irmen de Jong
 
-$VER: ARexx.py 1.5 (3.1.99)
+$VER: arexx.py 2.0 (OS3 AmigaPython; OS4-compatible dorexx)
 """
 
 import _arexx
 import string
-import Dos
+import amiga
 import sys
 
 error = _arexx.error
@@ -19,6 +19,17 @@ RC_OK    =  0  # success
 RC_WARN  =  5  # warning only
 RC_ERROR = 10  # something's wrong
 RC_FATAL = 20  # complete or severe failure
+
+
+def dorexx(port, cmd, scope=None):
+	"""
+	Send a command to an ARexx host.
+	Returns (rc1, rc2, result). Optional scope dict is synced to/from
+	ARexx variables (nested dicts map to stem.var names).
+	"""
+	if scope is None:
+		return _arexx.dorexx(port, cmd)
+	return _arexx.dorexx(port, cmd, scope)
 
 
 #### PORT #################################
@@ -56,7 +67,7 @@ class port:
 		self.port.setstringmsgs(flag)
 	def settokenizeline(self,flag):
 		self.port.settokenizeline(flag)
-	
+
 
 
 class privateport(port):
@@ -83,6 +94,10 @@ class publicport(port):
 		port.__init__(self,name)
 
 	# currently, inherits all methods of port superclass unchanged
+
+
+# OS4-style name
+Port = publicport
 
 
 #### HOST ##################################
@@ -116,7 +131,7 @@ class host(publicport):
 			self.setcommand(c,t,d,f)
 	def setcommand(self,cmd,template,defaults,func):
 		if template==None: parser=None
-		else: parser=Dos.ArgParser(template)
+		else: parser=amiga.ArgParser(template)
 		self.commands[string.upper(cmd)]=(parser,func)
 		if defaults: self.setdefaults(cmd,defaults)
 	def setdefaults(self,cmd,defaults):
@@ -146,7 +161,7 @@ class host(publicport):
 						res=func(self,m,cmd,parser.parse(args))
 					else:
 						res=func(self,m,cmd,args)
-			except Dos.error,str:
+			except amiga.doserror,str:
 				m.rc=RC_ERROR; m.rc2=str[0]	# ReadArgs() probably failed
 			except:
 				if self.catch:
@@ -221,5 +236,3 @@ def SendARexxMsg(Port, Message):
 def CallARexxFunc(Func, *Args):
  return SendARexxMsg('REXX',
 	'"Return '+Func+'('+reduce(lambda x,y: x+','+`y`,Args,'')[1:]+')')
-
-

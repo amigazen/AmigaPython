@@ -2,7 +2,7 @@
 **                                                            **
 **  UNIX 'emulation' functions for AmigaDOS                   **
 **                                                            **
-**  Made by Irmen de Jong (irmen@bigfoot.com)                 **
+**  Made by Irmen de Jong                 **
 **                                                            **
 **  21-jan-98: Created. Moved some functions from             **
 **             Modules/Amigamodule.c to here.                 **

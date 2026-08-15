@@ -934,20 +934,180 @@ ARexx_errorstring(PyObject *self, PyObject *args)
 	return PyString_FromString(buf);
 }
 
-/* High-level dorexx function for simple command sending */
+/* Build dotted ARexx name: prefix + "." + key, or just key if prefix empty. */
+static int
+arexx_make_varname(char *buf, int buflen, const char *prefix, const char *key)
+{
+	int plen;
+	int klen;
+
+	if (key == NULL)
+		return -1;
+	klen = (int)strlen(key);
+	if (prefix == NULL || prefix[0] == '\0') {
+		if (klen >= buflen)
+			return -1;
+		strcpy(buf, key);
+		return 0;
+	}
+	plen = (int)strlen(prefix);
+	if (plen + 1 + klen >= buflen)
+		return -1;
+	strcpy(buf, prefix);
+	buf[plen] = '.';
+	strcpy(buf + plen + 1, key);
+	return 0;
+}
+
+/* Convert a Python value to a string for SetRexxVar. Caller owns result. */
+static char *
+arexx_value_as_string(PyObject *v)
+{
+	PyObject *s;
+	char *out;
+
+	if (PyString_Check(v)) {
+		out = PyMem_Malloc((size_t)PyString_GET_SIZE(v) + 1);
+		if (out == NULL) {
+			PyErr_NoMemory();
+			return NULL;
+		}
+		memcpy(out, PyString_AS_STRING(v), (size_t)PyString_GET_SIZE(v) + 1);
+		return out;
+	}
+	s = PyObject_Str(v);
+	if (s == NULL)
+		return NULL;
+	out = PyMem_Malloc((size_t)PyString_GET_SIZE(s) + 1);
+	if (out == NULL) {
+		Py_DECREF(s);
+		PyErr_NoMemory();
+		return NULL;
+	}
+	memcpy(out, PyString_AS_STRING(s), (size_t)PyString_GET_SIZE(s) + 1);
+	Py_DECREF(s);
+	return out;
+}
+
+/* Push scope dict (nested dicts = stems) into RexxMsg variables. */
+static int
+arexx_scope_set(struct RexxMsg *rm, PyObject *obj, const char *prefix)
+{
+	PyObject *key;
+	PyObject *value;
+	Py_ssize_t pos;
+	char name[256];
+
+	if (!PyDict_Check(obj)) {
+		PyErr_SetString(PyExc_TypeError, "scope must be a dict");
+		return -1;
+	}
+	if (!CheckRexxMsg(rm)) {
+		PyErr_SetString(error, "invalid RexxMsg for scope");
+		return -1;
+	}
+
+	pos = 0;
+	while (PyDict_Next(obj, &pos, &key, &value)) {
+		char *kstr;
+		char *vstr;
+
+		if (!PyString_Check(key)) {
+			PyErr_SetString(PyExc_TypeError,
+				"scope keys must be strings");
+			return -1;
+		}
+		kstr = PyString_AS_STRING(key);
+		if (arexx_make_varname(name, (int)sizeof(name), prefix, kstr) < 0) {
+			PyErr_SetString(PyExc_ValueError, "scope variable name too long");
+			return -1;
+		}
+		if (PyDict_Check(value)) {
+			if (arexx_scope_set(rm, value, name) < 0)
+				return -1;
+		} else {
+			vstr = arexx_value_as_string(value);
+			if (vstr == NULL)
+				return -1;
+			if (SetRexxVar(rm, name, vstr, (LONG)strlen(vstr)) != 0) {
+				PyMem_Free(vstr);
+				PyErr_SetString(error, "SetRexxVar failed");
+				return -1;
+			}
+			PyMem_Free(vstr);
+		}
+	}
+	return 0;
+}
+
+/* Pull scope dict values back from RexxMsg (same key shape). */
+static int
+arexx_scope_get(struct RexxMsg *rm, PyObject *obj, const char *prefix)
+{
+	PyObject *key;
+	PyObject *value;
+	Py_ssize_t pos;
+	char name[256];
+
+	if (!PyDict_Check(obj)) {
+		PyErr_SetString(PyExc_TypeError, "scope must be a dict");
+		return -1;
+	}
+	if (!CheckRexxMsg(rm))
+		return 0;
+
+	pos = 0;
+	while (PyDict_Next(obj, &pos, &key, &value)) {
+		char *kstr;
+		STRPTR val;
+
+		if (!PyString_Check(key))
+			continue;
+		kstr = PyString_AS_STRING(key);
+		if (arexx_make_varname(name, (int)sizeof(name), prefix, kstr) < 0)
+			continue;
+		if (PyDict_Check(value)) {
+			if (arexx_scope_get(rm, value, name) < 0)
+				return -1;
+		} else {
+			val = NULL;
+			if (GetRexxVar(rm, name, &val) == 0 && val != NULL) {
+				PyObject *s = PyString_FromString((char *)val);
+				if (s == NULL)
+					return -1;
+				if (PyDict_SetItem(obj, key, s) < 0) {
+					Py_DECREF(s);
+					return -1;
+				}
+				Py_DECREF(s);
+			}
+		}
+	}
+	return 0;
+}
+
+/* High-level dorexx: (rc1, rc2, result); optional scope dict. */
 static PyObject *
 ARexx_dorexx(PyObject *self, PyObject *args)
 {
 	char *port, *message;
+	PyObject *scope = Py_None;
 	struct RexxHost *temp_host;
 	struct RexxMsg *sentrm;
 	struct RexxMsg *rm;
 	PyObject *result;
-	long rc;
+	long rc1;
+	long rc2;
+	char *resstr;
 	BOOL waiting;
 
-	if (!PyArg_ParseTuple(args, "ss", &port, &message))
+	if (!PyArg_ParseTuple(args, "ss|O:dorexx", &port, &message, &scope))
 		return NULL;
+
+	if (scope != Py_None && !PyDict_Check(scope)) {
+		PyErr_SetString(PyExc_TypeError, "scope must be a dict or omitted");
+		return NULL;
+	}
 
 	if (RexxSysBase == NULL) {
 		PyErr_SetString(error, "rexxsyslib.library not available");
@@ -961,12 +1121,38 @@ ARexx_dorexx(PyObject *self, PyObject *args)
 		return NULL;
 	}
 
-	sentrm = ARexx_SendToPort(temp_host, port, message, ZERO_BPTR);
+	/* Create message, apply scope, then PutMsg (same as SendToPort). */
+	sentrm = CreateRexxCommand(temp_host, message, ZERO_BPTR);
 	if (!sentrm)
 	{
 		CloseDownARexxHost(temp_host);
-		PyErr_SetString(error, "can't send to port");
+		PyErr_SetString(error, "can't create RexxMsg");
 		return NULL;
+	}
+
+	if (scope != Py_None) {
+		if (arexx_scope_set(sentrm, scope, "") < 0) {
+			FreeRexxCommand(sentrm);
+			CloseDownARexxHost(temp_host);
+			return NULL;
+		}
+	}
+
+	{
+		struct MsgPort *rexxport;
+
+		Forbid();
+		rexxport = FindPort(port);
+		if (rexxport == NULL) {
+			Permit();
+			FreeRexxCommand(sentrm);
+			CloseDownARexxHost(temp_host);
+			PyErr_SetString(error, "can't send to port");
+			return NULL;
+		}
+		PutMsg(rexxport, &sentrm->rm_Node);
+		Permit();
+		++temp_host->replies;
 	}
 
 	result = NULL;
@@ -983,16 +1169,22 @@ ARexx_dorexx(PyObject *self, PyObject *args)
 			{
 				if(rm == sentrm)
 				{
-					rc = rm->rm_Result1;
+					rc1 = rm->rm_Result1;
+					resstr = NULL;
+					if (rc1 == 0) {
+						rc2 = 0;
+						if (rm->rm_Result2)
+							resstr = (char *)rm->rm_Result2;
+					} else {
+						rc2 = (long)rm->rm_Result2;
+					}
 
-					if(!rc && rm->rm_Result2)
-					{
-						result = Py_BuildValue("(iss)", rc, NULL, rm->rm_Result2);
-					}
-					else
-					{
-						result = Py_BuildValue("(iis)", rc, rm->rm_Result2, NULL);
-					}
+					if (scope != Py_None)
+						arexx_scope_get(rm, scope, "");
+
+					/* OS4 shape: (rc1, rc2, result) */
+					result = Py_BuildValue("(iiz)",
+						(int)rc1, (int)rc2, resstr);
 
 					waiting = FALSE;
 				}
@@ -1037,17 +1229,17 @@ init_arexx(void)
 			"# _arexx: rexxsyslib.library not found (ARexx unavailable)\n");
 	}
 
-	/* Leading underscore: private C accelerator (public API is Lib/ARexx.py). */
+	/* Leading underscore: private C accelerator (public API is Lib/site-python/arexx.py). */
 	m = Py_InitModule3("_arexx", ARexx_global_methods,
 		"Amiga ARexx low-level module (_arexx).\n"
-		"Prefer import ARexx for the high-level wrapper.\n"
+		"Prefer import arexx for the high-level wrapper.\n"
 		"Functions: port(), errorstring(), dorexx().");
 	if (m == NULL)
 		return;
 	d = PyModule_GetDict(m);
 
-	/* Exception name matches the public ARexx wrapper. */
-	error = PyErr_NewException("ARexx.error", NULL, NULL);
+	/* Exception name matches the public arexx wrapper. */
+	error = PyErr_NewException("arexx.error", NULL, NULL);
 	if (error != NULL)
 		PyDict_SetItemString(d, "error", error);
 }

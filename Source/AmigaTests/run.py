@@ -52,10 +52,13 @@ SUITE = [
 
 # Not run by default. Prefer: python27 AmigaTests/test_socket_net.py
 # netmods = pwd/grp/crypt/syslog; socket* = _socket LoadSeg / remote TCP.
+# Optional: GUI requesters (pops ASL/EasyRequest - skip in headless runs).
 OPTIONAL = [
     ("netmods", "AmigaTests.test_net_modules"),
     ("socket", "AmigaTests.test_socket_local"),
     ("socket_net", "AmigaTests.test_socket_net"),
+    ("gui", "AmigaTests.test_amiga_gui"),
+    ("ziplib", "AmigaTests.test_ziplib"),
 ]
 
 ALL_GROUPS = SUITE + OPTIONAL

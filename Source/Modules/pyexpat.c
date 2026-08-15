@@ -2,11 +2,20 @@
 #include <ctype.h>
 
 #include "frameobject.h"
+
+/* Bundled Modules/expat (compiled with VBCC). Do not use Amiga
+ * expat.library for callbacks — GCC library → VBCC handlers fault
+ * (JMP to data). Same-binary setters/handlers are required. */
 #include "expat.h"
 
 #include "pyexpat.h"
 
 #define XML_COMBINED_VERSION (10000*XML_MAJOR_VERSION+100*XML_MINOR_VERSION+XML_MICRO_VERSION)
+
+#define PYEXPAT_CALLBACK
+#define PYEXPAT_HANDLER static
+#define EXPAT_CB_CHAR_NOOP   noop_character_data_handler
+#define EXPAT_CB_ERR_EEREF   error_external_entity_ref_handler
 
 #ifndef PyDoc_STRVAR
 
@@ -96,7 +105,13 @@ struct HandlerInfo {
     PyObject *nameobj;
 };
 
+/* Runtime table; filled from handler_info_template in MODULE_INITFUNC
+ * (avoids a second static definition of the same name on VBCC). */
 static struct HandlerInfo handler_info[64];
+static const struct HandlerInfo handler_info_template[];
+
+#define call_handler_setter(self, handlernum, handler) \
+    (handler_info[handlernum].setter((self)->itself, (handler)))
 
 /* Set an integer attribute on the error object; return true on success,
  * false on an exception.
@@ -228,7 +243,7 @@ static void clear_handlers(xmlparseobject *self, int initial);
 /* This handler is used when an error has been detected, in the hope
    that actual parsing can be terminated early.  This will only help
    if an external entity reference is encountered. */
-static int
+PYEXPAT_HANDLER int
 error_external_entity_ref_handler(XML_Parser parser,
                                   const XML_Char *context,
                                   const XML_Char *base,
@@ -244,7 +259,7 @@ error_external_entity_ref_handler(XML_Parser parser,
    from within the character data handler, but can be replaced.  It is
    used only from the character data handler trampoline, and must be
    used right after `flag_error()` is called. */
-static void
+PYEXPAT_HANDLER void PYEXPAT_CALLBACK
 noop_character_data_handler(void *userData, const XML_Char *data, int len)
 {
     /* Do nothing. */
@@ -254,8 +269,7 @@ static void
 flag_error(xmlparseobject *self)
 {
     clear_handlers(self, 0);
-    XML_SetExternalEntityRefHandler(self->itself,
-                                    error_external_entity_ref_handler);
+    XML_SetExternalEntityRefHandler(self->itself, EXPAT_CB_ERR_EEREF);
 }
 
 static PyCodeObject*
@@ -356,7 +370,10 @@ call_with_frame(PyCodeObject *c, PyObject* func, PyObject* args,
     if (res == NULL) {
         if (tstate->curexc_traceback == NULL)
             PyTraceBack_Here(f);
+        /* Stop parsing early after a Python exception in a handler. */
+#if defined(XML_STATUS_SUSPENDED)
         XML_StopParser(self->itself, XML_FALSE);
+#endif
 #ifdef FIX_TRACE
         if (trace_frame_exc(tstate, f) < 0) {
             return NULL;
@@ -433,8 +450,7 @@ call_character_handler(xmlparseobject *self, const XML_Char *buffer, int len)
     if (temp == NULL) {
         Py_DECREF(args);
         flag_error(self);
-        XML_SetCharacterDataHandler(self->itself,
-                                    noop_character_data_handler);
+        XML_SetCharacterDataHandler(self->itself, EXPAT_CB_CHAR_NOOP);
         return -1;
     }
     PyTuple_SET_ITEM(args, 0, temp);
@@ -447,8 +463,7 @@ call_character_handler(xmlparseobject *self, const XML_Char *buffer, int len)
     Py_DECREF(args);
     if (temp == NULL) {
         flag_error(self);
-        XML_SetCharacterDataHandler(self->itself,
-                                    noop_character_data_handler);
+        XML_SetCharacterDataHandler(self->itself, EXPAT_CB_CHAR_NOOP);
         return -1;
     }
     Py_DECREF(temp);
@@ -466,7 +481,7 @@ flush_character_buffer(xmlparseobject *self)
     return rc;
 }
 
-static void
+PYEXPAT_HANDLER void PYEXPAT_CALLBACK
 my_CharacterDataHandler(void *userData, const XML_Char *data, int len)
 {
     xmlparseobject *self = (xmlparseobject *) userData;
@@ -494,7 +509,7 @@ my_CharacterDataHandler(void *userData, const XML_Char *data, int len)
     }
 }
 
-static void
+PYEXPAT_HANDLER void PYEXPAT_CALLBACK
 my_StartElementHandler(void *userData,
                        const XML_Char *name, const XML_Char *atts[])
 {
@@ -582,7 +597,7 @@ my_StartElementHandler(void *userData,
 
 #define RC_HANDLER(RC, NAME, PARAMS, INIT, PARAM_FORMAT, CONVERSION, \
                 RETURN, GETUSERDATA) \
-static RC \
+PYEXPAT_HANDLER RC PYEXPAT_CALLBACK \
 my_##NAME##Handler PARAMS {\
     xmlparseobject *self = GETUSERDATA ; \
     PyObject *args = NULL; \
@@ -713,7 +728,7 @@ conv_content_model(XML_Content * const model,
     return result;
 }
 
-static void
+PYEXPAT_HANDLER void PYEXPAT_CALLBACK
 my_ElementDeclHandler(void *userData,
                       const XML_Char *name,
                       XML_Content *model)
@@ -762,7 +777,12 @@ my_ElementDeclHandler(void *userData,
     }
  finally:
     Py_XDECREF(args);
+    /* XML_FreeContentModel is Expat 2.0+; 1.95.x uses free(). */
+#if XML_COMBINED_VERSION >= 20000
     XML_FreeContentModel(self->itself, model);
+#else
+    free(model);
+#endif
     return;
 }
 
@@ -1133,8 +1153,7 @@ xmlparse_ExternalEntityParserCreate(xmlparseobject *self, PyObject *args)
         if (handler != NULL) {
             Py_INCREF(handler);
             new_parser->handlers[i] = handler;
-            handler_info[i].setter(new_parser->itself,
-                                   handler_info[i].handler);
+            call_handler_setter(new_parser, i, handler_info[i].handler);
         }
     }
     return (PyObject *)new_parser;
@@ -1540,7 +1559,7 @@ sethandler(xmlparseobject *self, const char *name, PyObject* v)
         }
         self->handlers[handlernum] = v;
         Py_XDECREF(temp);
-        handler_info[handlernum].setter(self->itself, c_handler);
+        call_handler_setter(self, handlernum, c_handler);
         return 1;
     }
     return 0;
@@ -1832,7 +1851,7 @@ PyMODINIT_FUNC
 MODULE_INITFUNC(void)
 {
     PyObject *m, *d;
-    PyObject *errmod_name = PyString_FromString(MODULE_NAME ".errors");
+    PyObject *errmod_name;
     PyObject *errors_module;
     PyObject *modelmod_name;
     PyObject *model_module;
@@ -1841,6 +1860,19 @@ MODULE_INITFUNC(void)
     static struct PyExpat_CAPI capi;
     PyObject* capi_object;
 
+    /* Populate handler name/callback table (single definition; see above). */
+    {
+        int hi;
+        for (hi = 0; handler_info_template[hi].name != NULL; hi++)
+            handler_info[hi] = handler_info_template[hi];
+        handler_info[hi].name = NULL;
+        handler_info[hi].setter = NULL;
+        handler_info[hi].handler = NULL;
+        handler_info[hi].tb_code = NULL;
+        handler_info[hi].nameobj = NULL;
+    }
+
+    errmod_name = PyString_FromString(MODULE_NAME ".errors");
     if (errmod_name == NULL)
         return;
     modelmod_name = PyString_FromString(MODULE_NAME ".model");
@@ -1977,8 +2009,11 @@ MODULE_INITFUNC(void)
     MYCONST(XML_ERROR_ENTITY_DECLARED_IN_PE);
     MYCONST(XML_ERROR_FEATURE_REQUIRES_XML_DTD);
     MYCONST(XML_ERROR_CANT_CHANGE_FEATURE_ONCE_PARSING);
+#if XML_COMBINED_VERSION >= 19507
     /* Added in Expat 1.95.7. */
     MYCONST(XML_ERROR_UNBOUND_PREFIX);
+#endif
+#if XML_COMBINED_VERSION >= 19508
     /* Added in Expat 1.95.8. */
     MYCONST(XML_ERROR_UNDECLARING_PREFIX);
     MYCONST(XML_ERROR_INCOMPLETE_PE);
@@ -1990,6 +2025,7 @@ MODULE_INITFUNC(void)
     MYCONST(XML_ERROR_ABORTED);
     MYCONST(XML_ERROR_FINISHED);
     MYCONST(XML_ERROR_SUSPEND_PE);
+#endif
 
     PyModule_AddStringConstant(errors_module, "__doc__",
                                "Constants used to describe error conditions.");
@@ -2065,78 +2101,80 @@ clear_handlers(xmlparseobject *self, int initial)
             temp = self->handlers[i];
             self->handlers[i] = NULL;
             Py_XDECREF(temp);
-            handler_info[i].setter(self->itself, NULL);
+            call_handler_setter(self, i, NULL);
         }
     }
 }
 
-static struct HandlerInfo handler_info[] = {
+#define HSET(name) ((xmlhandlersetter)XML_Set##name)
+
+static const struct HandlerInfo handler_info_template[] = {
     {"StartElementHandler",
-     (xmlhandlersetter)XML_SetStartElementHandler,
+     HSET(StartElementHandler),
      (xmlhandler)my_StartElementHandler},
     {"EndElementHandler",
-     (xmlhandlersetter)XML_SetEndElementHandler,
+     HSET(EndElementHandler),
      (xmlhandler)my_EndElementHandler},
     {"ProcessingInstructionHandler",
-     (xmlhandlersetter)XML_SetProcessingInstructionHandler,
+     HSET(ProcessingInstructionHandler),
      (xmlhandler)my_ProcessingInstructionHandler},
     {"CharacterDataHandler",
-     (xmlhandlersetter)XML_SetCharacterDataHandler,
+     HSET(CharacterDataHandler),
      (xmlhandler)my_CharacterDataHandler},
     {"UnparsedEntityDeclHandler",
-     (xmlhandlersetter)XML_SetUnparsedEntityDeclHandler,
+     HSET(UnparsedEntityDeclHandler),
      (xmlhandler)my_UnparsedEntityDeclHandler},
     {"NotationDeclHandler",
-     (xmlhandlersetter)XML_SetNotationDeclHandler,
+     HSET(NotationDeclHandler),
      (xmlhandler)my_NotationDeclHandler},
     {"StartNamespaceDeclHandler",
-     (xmlhandlersetter)XML_SetStartNamespaceDeclHandler,
+     HSET(StartNamespaceDeclHandler),
      (xmlhandler)my_StartNamespaceDeclHandler},
     {"EndNamespaceDeclHandler",
-     (xmlhandlersetter)XML_SetEndNamespaceDeclHandler,
+     HSET(EndNamespaceDeclHandler),
      (xmlhandler)my_EndNamespaceDeclHandler},
     {"CommentHandler",
-     (xmlhandlersetter)XML_SetCommentHandler,
+     HSET(CommentHandler),
      (xmlhandler)my_CommentHandler},
     {"StartCdataSectionHandler",
-     (xmlhandlersetter)XML_SetStartCdataSectionHandler,
+     HSET(StartCdataSectionHandler),
      (xmlhandler)my_StartCdataSectionHandler},
     {"EndCdataSectionHandler",
-     (xmlhandlersetter)XML_SetEndCdataSectionHandler,
+     HSET(EndCdataSectionHandler),
      (xmlhandler)my_EndCdataSectionHandler},
     {"DefaultHandler",
-     (xmlhandlersetter)XML_SetDefaultHandler,
+     HSET(DefaultHandler),
      (xmlhandler)my_DefaultHandler},
     {"DefaultHandlerExpand",
-     (xmlhandlersetter)XML_SetDefaultHandlerExpand,
+     HSET(DefaultHandlerExpand),
      (xmlhandler)my_DefaultHandlerExpandHandler},
     {"NotStandaloneHandler",
-     (xmlhandlersetter)XML_SetNotStandaloneHandler,
+     HSET(NotStandaloneHandler),
      (xmlhandler)my_NotStandaloneHandler},
     {"ExternalEntityRefHandler",
-     (xmlhandlersetter)XML_SetExternalEntityRefHandler,
+     HSET(ExternalEntityRefHandler),
      (xmlhandler)my_ExternalEntityRefHandler},
     {"StartDoctypeDeclHandler",
-     (xmlhandlersetter)XML_SetStartDoctypeDeclHandler,
+     HSET(StartDoctypeDeclHandler),
      (xmlhandler)my_StartDoctypeDeclHandler},
     {"EndDoctypeDeclHandler",
-     (xmlhandlersetter)XML_SetEndDoctypeDeclHandler,
+     HSET(EndDoctypeDeclHandler),
      (xmlhandler)my_EndDoctypeDeclHandler},
     {"EntityDeclHandler",
-     (xmlhandlersetter)XML_SetEntityDeclHandler,
+     HSET(EntityDeclHandler),
      (xmlhandler)my_EntityDeclHandler},
     {"XmlDeclHandler",
-     (xmlhandlersetter)XML_SetXmlDeclHandler,
+     HSET(XmlDeclHandler),
      (xmlhandler)my_XmlDeclHandler},
     {"ElementDeclHandler",
-     (xmlhandlersetter)XML_SetElementDeclHandler,
+     HSET(ElementDeclHandler),
      (xmlhandler)my_ElementDeclHandler},
     {"AttlistDeclHandler",
-     (xmlhandlersetter)XML_SetAttlistDeclHandler,
+     HSET(AttlistDeclHandler),
      (xmlhandler)my_AttlistDeclHandler},
 #if XML_COMBINED_VERSION >= 19504
     {"SkippedEntityHandler",
-     (xmlhandlersetter)XML_SetSkippedEntityHandler,
+     HSET(SkippedEntityHandler),
      (xmlhandler)my_SkippedEntityHandler},
 #endif
 

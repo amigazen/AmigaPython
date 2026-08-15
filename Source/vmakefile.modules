@@ -8,6 +8,10 @@ MKDIR=MakeDir ALL
 CONFIG=+aos68k_posix
 CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -D__USE_NEW_TIMEVAL__ -D__NO_NETINCLUDE_TIMEVAL -IInclude -I$(SRCDIR) -Inetinclude: -cpu=68020 -fpu=soft
 
+# Bundled Modules/expat (static). Compile pyexpat + xml*.c against this tree.
+EXPAT_DIR=$(SRCDIR)/expat
+EXPAT_CFLAGS=-I$(EXPAT_DIR) -DHAVE_EXPAT_CONFIG_H -DXML_POOR_ENTROPY=1 -c99
+
 # Source directory
 SRCDIR=Modules
 
@@ -17,7 +21,8 @@ OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
     binascii.o _codecsmodule.o cStringIO.o cPickle.o \
     errnomodule.o operator.o _weakref.o _struct.o \
     selectmodule.o zlibmodule.o zipimport.o \
-    amigamodule.o amigapathmodule.o socketmodule.o \
+    amigamodule.o amigapathmodule.o amiga_ext.o amiga_asl.o \
+    amiga_catalog.o amiga_icon.o socketmodule.o \
 	pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o syslog.o \
     gcmodule.o \
     _sre.o \
@@ -37,6 +42,10 @@ OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
     _csv.o \
     Doslibmodule.o \
     ARexxmodule.o \
+    pyexpat.o \
+    xmlparse.o \
+    xmlrole.o \
+    xmltok.o \
     stropmodule.o \
     posix_helpers.o \
     _math.o
@@ -145,6 +154,22 @@ $(ODIR)/amigapathmodule.o: $(SRCDIR)/amiga/amigapathmodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
+$(ODIR)/amiga_ext.o: $(SRCDIR)/amiga/amiga_ext.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/amiga_asl.o: $(SRCDIR)/amiga/amiga_asl.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $< -lamiga
+
+$(ODIR)/amiga_catalog.o: $(SRCDIR)/amiga/amiga_catalog.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $< -lamiga
+
+$(ODIR)/amiga_icon.o: $(SRCDIR)/amiga/amiga_icon.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $< -lamiga
+
 $(ODIR)/socketmodule.o: $(SRCDIR)/socketmodule.c Include/pyconfig.h
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $< -lamiga
@@ -245,6 +270,22 @@ $(ODIR)/_csv.o: $(SRCDIR)/_csv.c
 $(ODIR)/ARexxmodule.o: $(SRCDIR)/ARexxmodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $<
+
+$(ODIR)/pyexpat.o: $(SRCDIR)/pyexpat.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) $(EXPAT_CFLAGS) -o $@ $<
+
+$(ODIR)/xmlparse.o: $(EXPAT_DIR)/xmlparse.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) $(EXPAT_CFLAGS) -o $@ $<
+
+$(ODIR)/xmlrole.o: $(EXPAT_DIR)/xmlrole.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) $(EXPAT_CFLAGS) -o $@ $<
+
+$(ODIR)/xmltok.o: $(EXPAT_DIR)/xmltok.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) $(EXPAT_CFLAGS) -o $@ $<
 
 $(ODIR)/Doslibmodule.o: $(SRCDIR)/Doslibmodule.c
 	@$(MKDIR) $(ODIR)

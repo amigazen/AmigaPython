@@ -1,13 +1,13 @@
-
 This  directory  contains  Amiga specific documentation.  First consult the
-regular Python documentation (available from http://www.python.org) on the
+regular Python 2.7 documentation (https://docs.python.org/2.7/) on the
 required subjects.
 
 
 IMPORTANT FILES:
 ~~~~~~~~~~~~~~~~
-Dos_module, ARexx_module.
-They contain the documentation on the new Amiga-specific modules.
+amiga_module, Dos_module, ARexx_module.
+They contain the documentation on the Amiga-specific modules and on APIs
+that used to live in separate Dos/Doslib modules (now also on `amiga`).
 
 
 
@@ -27,14 +27,18 @@ general			module search path
 
 amigapath_module	amigapath module
 			os.path
+			to_unix / from_unix (also on amiga)
 
 amiga_module		amiga module
 			os module
+			POSIX additions (2.7.18)
+			Doslib APIs on amiga
+			ASL / catalog / icon helpers
 			filesystem link support
 			environment vars
 
-Dos_module		Dos module
-			Doslib module
+Dos_module		Dos / Doslib APIs
+			(now exposed via amiga + _amigados)
 			ArgParser class
 
 ARexx_module		ARexx module
@@ -46,9 +50,6 @@ os_module		os module
 			os.path
 
 other			select module
-			urllib module
-			urlop module
-			time module
 			time module
 			tempfile module
 
@@ -64,14 +65,15 @@ amiga module		amiga_module
 os module		os_module, amiga_module
 environment		environment_module, amiga_module
 filesystem links	amiga_module
+ASL FileRequest		amiga_module
+locale catalogs		amiga_module
+DiskObject / icons	amiga_module
+to_unix / from_unix	amiga_module, amigapath_module
 select module		other
-urllib module		other
-urlop module		other
 time module		other
 tempfile module		other
-Dos module		Dos_module
-Doslib module		Dos_module
-ArgParser class		Dos_module
+Dos / Doslib APIs	Dos_module, amiga_module
+ArgParser class		Dos_module, amiga_module
 ARexx module		ARexx_module
 ARexxll module		ARexx_module
 
