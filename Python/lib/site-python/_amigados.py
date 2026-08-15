@@ -145,7 +145,8 @@ class ArgParser:
 				else:
 					raise ValueError, 'wrong /M combination'
 
-			types.append(a[0], type)
+			# One tuple per keyword: (name, type-letter).
+			types.append((a[0], type))
 			try:
 				keywdic[a[0]] = keywdic[a[0]] + 1
 			except KeyError:

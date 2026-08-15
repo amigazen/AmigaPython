@@ -5,17 +5,21 @@ utilities).
 AmigaPython 2.7.18 notes:
 - Module documentation lives in Docs/ (mirrored under Python/docs/amiga
   in the distribution tree).
-- Prefer the builtin `amiga' module for Dos helpers, ASL/catalog/icon
-  APIs, and path converters (to_unix / from_unix).
+- Prefer the builtin `amiga' module for Dos helpers, ASL/catalog/icon,
+  EasyRequest/CurrentTime/DisplayBeep, AvailMem, and path converters.
+- Prefer builtin `amigagui' for simple Intuition windows (plot/line).
+- Secondary raw LVO FFI: builtin `amigalibs' + Tools/ConvertFD.py +
+  Lib/site-python/*lib.py (see intuitionlib.py). Not for general apps.
 - Site-specific Python modules belong under Lib/site-python (or the
   versioned site-packages path for your install).
 
 Drawers:
   Docs/                  Amiga module and port documentation
   Diffs/                 Output area for mkdiffs.py against stock sources
-  testset/               Extra Amiga-oriented test scripts
-  experimental_modules/  Incomplete / exploratory C extension sources
-  unused/                Historic material no longer used by the build
+  testset/               Extra Amiga-oriented test scripts (also in AmigaTests)
+  experimental_modules/  Historic simplegfx/Execlib sources (shipped as
+                         amigagui / amiga.AvailMem in the main build)
+  unused/                Historic ConvertFD/amigalibs/intuitionlib snapshots
   test/                  Legacy Setup/config fragments
 
 See the project README / BUILD docs for how the 2.7.18 interpreter is built.

@@ -2,6 +2,11 @@
  * Declarations shared between the different parts of the io module
  */
 
+/* Amiga: map Unicode text APIs to 8-bit str when Unicode is disabled. */
+#ifndef Py_USING_UNICODE
+#include "io_nounicode.h"
+#endif
+
 /* ABCs */
 extern PyTypeObject PyIOBase_Type;
 extern PyTypeObject PyRawIOBase_Type;

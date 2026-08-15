@@ -84,6 +84,20 @@ def test_crc32():
         check("crc32", False, str(e))
 
 
+def test_availmem():
+    amiga = require_import("amiga")
+    if not amiga:
+        return
+    if not hasattr(amiga, "AvailMem"):
+        skip("AvailMem", "not built")
+        return
+    try:
+        n = amiga.AvailMem()
+        check("AvailMem int", isinstance(n, (int, long)) and n >= 0)
+    except Exception, e:
+        check("AvailMem", False, str(e))
+
+
 def test_strerror_uname_ids():
     amiga = require_import("amiga")
     if not amiga:

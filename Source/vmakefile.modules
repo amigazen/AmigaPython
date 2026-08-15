@@ -22,6 +22,7 @@ OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
     errnomodule.o operator.o _weakref.o _struct.o \
     selectmodule.o zlibmodule.o zipimport.o \
     amigamodule.o amigapathmodule.o amiga_ext.o amiga_asl.o \
+    amiga_intuition.o amigaguimodule.o amigalibsmodule.o \
     amiga_catalog.o amiga_icon.o socketmodule.o \
 	pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o syslog.o \
     gcmodule.o \
@@ -50,8 +51,12 @@ OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
     posix_helpers.o \
     _math.o
 
+# _io objects live under Modules/_io/ (built with dedicated rules below)
+IO_OBJECTS = _io/_iomodule.o _io/iobase.o _io/fileio.o _io/bytesio.o \
+    _io/bufferedio.o _io/textio.o _io/stringio.o _io/io_nounicode.o
+
 # Convert to full paths
-OBJ=$(patsubst %,$(ODIR)/%,$(OBJECTS))
+OBJ=$(patsubst %,$(ODIR)/%,$(OBJECTS)) $(patsubst %,$(ODIR)/%,$(IO_OBJECTS))
 
 # Default target - build zlib first, then compile all .c files
 all: zlib $(OBJ)
@@ -146,6 +151,41 @@ $(ODIR)/zipimport.o: $(SRCDIR)/zipimport.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
+# PEP 3116 _io (8-bit text when !Py_USING_UNICODE)
+IO_CFLAGS=$(CFLAGS) -I$(SRCDIR)/_io
+
+$(ODIR)/_io/_iomodule.o: $(SRCDIR)/_io/_iomodule.c
+	@$(MKDIR) $(ODIR)/_io
+	$(CC) $(CONFIG) $(IO_CFLAGS) -o $@ $<
+
+$(ODIR)/_io/iobase.o: $(SRCDIR)/_io/iobase.c
+	@$(MKDIR) $(ODIR)/_io
+	$(CC) $(CONFIG) $(IO_CFLAGS) -o $@ $<
+
+$(ODIR)/_io/fileio.o: $(SRCDIR)/_io/fileio.c
+	@$(MKDIR) $(ODIR)/_io
+	$(CC) $(CONFIG) $(IO_CFLAGS) -o $@ $<
+
+$(ODIR)/_io/bytesio.o: $(SRCDIR)/_io/bytesio.c
+	@$(MKDIR) $(ODIR)/_io
+	$(CC) $(CONFIG) $(IO_CFLAGS) -o $@ $<
+
+$(ODIR)/_io/bufferedio.o: $(SRCDIR)/_io/bufferedio.c
+	@$(MKDIR) $(ODIR)/_io
+	$(CC) $(CONFIG) $(IO_CFLAGS) -o $@ $<
+
+$(ODIR)/_io/textio.o: $(SRCDIR)/_io/textio.c
+	@$(MKDIR) $(ODIR)/_io
+	$(CC) $(CONFIG) $(IO_CFLAGS) -o $@ $<
+
+$(ODIR)/_io/stringio.o: $(SRCDIR)/_io/stringio.c
+	@$(MKDIR) $(ODIR)/_io
+	$(CC) $(CONFIG) $(IO_CFLAGS) -o $@ $<
+
+$(ODIR)/_io/io_nounicode.o: $(SRCDIR)/_io/io_nounicode.c
+	@$(MKDIR) $(ODIR)/_io
+	$(CC) $(CONFIG) $(IO_CFLAGS) -o $@ $<
+
 $(ODIR)/amigamodule.o: $(SRCDIR)/amiga/amigamodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $< -lamiga
@@ -159,6 +199,18 @@ $(ODIR)/amiga_ext.o: $(SRCDIR)/amiga/amiga_ext.c
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
 $(ODIR)/amiga_asl.o: $(SRCDIR)/amiga/amiga_asl.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $< -lamiga
+
+$(ODIR)/amiga_intuition.o: $(SRCDIR)/amiga/amiga_intuition.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $< -lamiga
+
+$(ODIR)/amigaguimodule.o: $(SRCDIR)/amiga/amigaguimodule.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $< -lamiga
+
+$(ODIR)/amigalibsmodule.o: $(SRCDIR)/amiga/amigalibsmodule.c
 	@$(MKDIR) $(ODIR)
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $< -lamiga
 

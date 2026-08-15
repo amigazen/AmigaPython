@@ -187,10 +187,19 @@ Doslib_ReadArgs(PyObject *self, PyObject *arg)
 					PyObject *tup, *val;
 					BOOL result_ok=TRUE;
 					int cnt=0;
-					while (result_ok && (tup=PyTuple_GetItem(types, cnt)))
+					int ntypes;
+
+					ntypes = (int)PyTuple_Size(types);
+					while (result_ok && cnt < ntypes)
 					{
 						PyObject *keyword, *type;
 						char *type_c;
+
+						tup = PyTuple_GetItem(types, cnt);
+						if (tup == NULL) {
+							result_ok = FALSE;
+							break;
+						}
 
 						if(PyTuple_Size(tup)!=2)
 						{

@@ -868,6 +868,14 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
     self->encodefunc = NULL;
     self->writenl = NULL;
 
+#ifndef Py_USING_UNICODE
+    /* No Unicode: default text encoding is ascii (skip locale/codecs). */
+    if (encoding == NULL && self->encoding == NULL) {
+        self->encoding = PyString_FromString("ascii");
+        if (self->encoding == NULL)
+            goto error;
+    }
+#else
     if (encoding == NULL && self->encoding == NULL) {
         if (_PyIO_locale_module == NULL) {
             _PyIO_locale_module = PyImport_ImportModule("locale");
@@ -899,6 +907,7 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
                 Py_CLEAR(self->encoding);
         }
     }
+#endif
     if (self->encoding != NULL)
         encoding = PyString_AsString(self->encoding);
     else if (encoding != NULL) {
@@ -912,12 +921,26 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
         goto error;
     }
 
+#ifndef Py_USING_UNICODE
+    /* Without Unicode, only 8-bit identity encodings; skip codecs. */
+    if (!_PyIO_NoUni_EncodingAllowed(encoding)) {
+        PyErr_Format(PyExc_ValueError,
+                     "encoding '%s' requires Unicode "
+                     "(disabled on this Amiga build); "
+                     "use ascii, latin-1, or utf-8",
+                     encoding);
+        Py_CLEAR(self->encoding);
+        goto error;
+    }
+    codec_info = NULL;
+#else
     /* Check we have been asked for a real text encoding */
     codec_info = _PyCodec_LookupTextEncoding(encoding, "codecs.open()");
     if (codec_info == NULL) {
         Py_CLEAR(self->encoding);
         goto error;
     }
+#endif
 
     /* XXX: Failures beyond this point have the potential to leak elements
      * of the partially constructed object (like self->encoding)
@@ -958,6 +981,14 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
     if (r == -1)
         goto error;
     if (r == 1) {
+#ifndef Py_USING_UNICODE
+        /* Identity text + newline filter; codecs need Unicode. */
+        self->decoder = PyObject_CallFunction(
+            (PyObject *)&PyIncrementalNewlineDecoder_Type,
+            "Oi", Py_None, (int)self->readtranslate);
+        if (self->decoder == NULL)
+            goto error;
+#else
         self->decoder = _PyCodecInfo_GetIncrementalDecoder(codec_info,
                                                            errors);
         if (self->decoder == NULL)
@@ -971,6 +1002,7 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
                 goto error;
             Py_XSETREF(self->decoder, incrementalDecoder);
         }
+#endif
     }
 
     /* Build the encoder object */
@@ -982,6 +1014,39 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
     if (r == -1)
         goto error;
     if (r == 1) {
+#ifndef Py_USING_UNICODE
+        /* Specialized 8-bit encode only; no IncrementalEncoder. */
+        {
+            encodefuncentry *e = encodefuncs;
+            self->encoder = NULL;
+            self->encodefunc = (encodefunc_t) latin1_encode;
+            while (e->name != NULL) {
+                if (!strcmp(encoding, e->name)
+                    || (!strcmp(encoding, "latin-1")
+                        && !strcmp(e->name, "iso8859-1"))
+                    || (!strcmp(encoding, "latin1")
+                        && !strcmp(e->name, "iso8859-1"))
+                    || (!strcmp(encoding, "iso-8859-1")
+                        && !strcmp(e->name, "iso8859-1"))
+                    || (!strcmp(encoding, "utf8")
+                        && !strcmp(e->name, "utf-8"))) {
+                    self->encodefunc = e->encodefunc;
+                    break;
+                }
+                e++;
+            }
+            if (self->encodefunc == (encodefunc_t) utf16_encode
+                || self->encodefunc == (encodefunc_t) utf16be_encode
+                || self->encodefunc == (encodefunc_t) utf16le_encode
+                || self->encodefunc == (encodefunc_t) utf32_encode
+                || self->encodefunc == (encodefunc_t) utf32be_encode
+                || self->encodefunc == (encodefunc_t) utf32le_encode) {
+                PyErr_SetString(PyExc_ValueError,
+                                "utf-16/utf-32 text I/O requires Unicode");
+                goto error;
+            }
+        }
+#else
         self->encoder = _PyCodecInfo_GetIncrementalEncoder(codec_info,
                                                            errors);
         if (self->encoder == NULL)
@@ -1005,10 +1070,15 @@ textiowrapper_init(textio *self, PyObject *args, PyObject *kwds)
             }
         }
         Py_XDECREF(res);
+#endif
     }
 
     /* Finished sorting out the codec details */
+#ifdef Py_USING_UNICODE
     Py_DECREF(codec_info);
+#else
+    (void)codec_info;
+#endif
 
     self->buffer = buffer;
     Py_INCREF(buffer);
@@ -1258,13 +1328,25 @@ textiowrapper_write(textio *self, PyObject *args)
 
     CHECK_ATTACHED(self);
 
+#ifndef Py_USING_UNICODE
+    if (!PyArg_ParseTuple(args, "O:write", &text)) {
+        return NULL;
+    }
+    if (!PyUnicode_Check(text)) {
+        PyErr_Format(PyExc_TypeError,
+                     "string argument expected, got '%.200s'",
+                     Py_TYPE(text)->tp_name);
+        return NULL;
+    }
+#else
     if (!PyArg_ParseTuple(args, "U:write", &text)) {
         return NULL;
     }
+#endif
 
     CHECK_CLOSED(self);
 
-    if (self->encoder == NULL) {
+    if (self->encoder == NULL && self->encodefunc == NULL) {
         PyErr_SetString(PyExc_IOError, "not writable");
         return NULL;
     }

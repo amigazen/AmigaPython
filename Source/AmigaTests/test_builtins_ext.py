@@ -172,6 +172,9 @@ def test_hash_zlib():
 
 def test_zipimport():
     # Builtin zipimport (Modules/zipimport.c); zlib used for deflated members.
+    # Build a minimal stored zip without Lib/zipfile (needs unicode on this port).
+    import struct
+    import zlib as zlibmod
     from AmigaTests.support import temp_path, safe_remove
 
     zi = require_import("zipimport")
@@ -180,7 +183,6 @@ def test_zipimport():
     check("zipimporter", hasattr(zi, "zipimporter"))
     check("ZipImportError", issubclass(zi.ZipImportError, ImportError))
     check("zipimport in builtins", "zipimport" in sys.builtin_module_names)
-    # Startup should have registered the path hook when zipimport is builtin.
     hooks = getattr(sys, "path_hooks", None)
     if hooks is not None:
         check("zipimporter on path_hooks",
@@ -196,19 +198,52 @@ def test_zipimport():
     except Exception, e:
         skip("zipimporter missing archive", str(e))
 
-    zipfile = require_import("zipfile")
-    if not zipfile:
-        return
+    def _dos_time_date():
+        # Fixed DOS time/date for headers (not used for logic).
+        return 0, 0
+
+    def _crc(data):
+        return zlibmod.crc32(data) & 0xffffffff
+
+    def _write_stored_zip(path, members):
+        # members: list of (name, data) with forward-slash names
+        f = open(path, "wb")
+        try:
+            central = []
+            for name, data in members:
+                t, d = _dos_time_date()
+                crc = _crc(data)
+                n = len(name)
+                offset = f.tell()
+                # local file header
+                f.write(struct.pack("<IHHHHHIIIHH",
+                    0x04034b50, 20, 0, 0, t, d, crc,
+                    len(data), len(data), n, 0))
+                f.write(name)
+                f.write(data)
+                central.append((name, data, crc, t, d, offset))
+            cd_start = f.tell()
+            for name, data, crc, t, d, offset in central:
+                n = len(name)
+                f.write(struct.pack("<IHHHHHHIIIHHHHHII",
+                    0x02014b50, 20, 20, 0, 0, t, d, crc,
+                    len(data), len(data), n, 0, 0, 0, 0, 0, offset))
+                f.write(name)
+            cd_size = f.tell() - cd_start
+            f.write(struct.pack("<IHHHHIIH",
+                0x06054b50, 0, 0, len(central), len(central),
+                cd_size, cd_start, 0))
+        finally:
+            f.close()
+
     path = temp_path("amigatest_zipimport.zip")
     safe_remove(path)
     try:
-        zf = zipfile.ZipFile(path, "w", zipfile.ZIP_STORED)
-        try:
-            zf.writestr("amigaziptest.py", "VALUE = 42\n")
-            zf.writestr("amigazippkg/__init__.py", "PKG = 1\n")
-            zf.writestr("amigazippkg/mod.py", "NESTED = 7\n")
-        finally:
-            zf.close()
+        _write_stored_zip(path, [
+            ("amigaziptest.py", "VALUE = 42\n"),
+            ("amigazippkg/__init__.py", "PKG = 1\n"),
+            ("amigazippkg/mod.py", "NESTED = 7\n"),
+        ])
 
         imp = zi.zipimporter(path)
         check("zipimporter archive attr",
@@ -239,7 +274,6 @@ def test_zipimport():
             cache = getattr(sys, "path_importer_cache", None)
             if cache is not None and path in cache:
                 del cache[path]
-            # Also drop directory-cache entry used by zipimport.
             zcache = getattr(zi, "_zip_directory_cache", None)
             if zcache is not None and path in zcache:
                 del zcache[path]
@@ -247,15 +281,35 @@ def test_zipimport():
         check("import from zip", False, str(e))
     safe_remove(path)
 
-    # Deflated member needs zlib (already linked).
+    # Deflated member (method 8) via zlib; still no zipfile module.
     path2 = temp_path("amigatest_zipimport_deflate.zip")
     safe_remove(path2)
     try:
-        zf = zipfile.ZipFile(path2, "w", zipfile.ZIP_DEFLATED)
+        raw = "DEFLATED = 99\n"
+        # zip expects raw deflate (no zlib header): wbits=-15
+        comp = zlibmod.compress(raw)[2:-4]
+        f = open(path2, "wb")
         try:
-            zf.writestr("amigazipdeflate.py", "DEFLATED = 99\n")
+            name = "amigazipdeflate.py"
+            t, d = _dos_time_date()
+            crc = _crc(raw)
+            n = len(name)
+            offset = 0
+            f.write(struct.pack("<IHHHHHIIIHH",
+                0x04034b50, 20, 0, 8, t, d, crc,
+                len(comp), len(raw), n, 0))
+            f.write(name)
+            f.write(comp)
+            cd_start = f.tell()
+            f.write(struct.pack("<IHHHHHHIIIHHHHHII",
+                0x02014b50, 20, 20, 0, 8, t, d, crc,
+                len(comp), len(raw), n, 0, 0, 0, 0, 0, offset))
+            f.write(name)
+            cd_size = f.tell() - cd_start
+            f.write(struct.pack("<IHHHHIIH",
+                0x06054b50, 0, 0, 1, 1, cd_size, cd_start, 0))
         finally:
-            zf.close()
+            f.close()
         sys.path.insert(0, path2)
         try:
             if "amigazipdeflate" in sys.modules:

@@ -98,6 +98,7 @@ static clock_t amiga_times_func(struct tms *buffer)
 
 /* AmigaOS-specific headers - only include what we actually need */
 #include <exec/types.h>
+#include <exec/memory.h>
 #include <dos/dosextens.h>
 #include <dos/var.h>
 #include <dos/dostags.h>
@@ -1472,6 +1473,25 @@ amiga_crc32(PyObject *self, PyObject *args)
 	return PyInt_FromLong(CalcCRC32(startcrc,PyString_AsString(py_str), PyString_Size(py_str)));
 }
 
+PyDoc_STRVAR(AvailMem_doc,
+"AvailMem([flags]) -> int\n"
+"Return available memory (exec.library AvailMem). Default flags are\n"
+"MEMF_ANY|MEMF_TOTAL.");
+
+static PyObject *
+amiga_AvailMem(PyObject *self, PyObject *args)
+{
+	unsigned long flags = MEMF_ANY | MEMF_TOTAL;
+	ULONG avail;
+
+	if (!PyArg_ParseTuple(args, "|k:AvailMem", &flags))
+		return NULL;
+	Py_BEGIN_ALLOW_THREADS
+	avail = AvailMem((ULONG)flags);
+	Py_END_ALLOW_THREADS
+	return PyLong_FromUnsignedLong((unsigned long)avail);
+}
+
 static PyObject *
 amiga_abort(PyObject *self, PyObject *args)
 {
@@ -1779,6 +1799,7 @@ static struct PyMethodDef amiga_methods[] = {
 	{"pipe",    amiga_pipe},
 #endif
 	{"crc32",	amiga_crc32, 1},
+	{"AvailMem",	amiga_AvailMem, METH_VARARGS, AvailMem_doc},
 	{"set_verbose", amiga_set_verbose, 1},
 	{NULL,      NULL}        /* Sentinel */
 };
@@ -1958,6 +1979,7 @@ initamiga(void)
 	amiga_init_dos(m);
 	amiga_init_path(m);
 	amiga_init_asl(m);
+	amiga_init_intuition(m);
 	amiga_init_catalog(m);
 	amiga_init_icon(m);
 

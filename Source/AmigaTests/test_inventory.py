@@ -10,6 +10,8 @@ from AmigaTests.support import check, skip, try_import
 # Always linked as builtins (see Modules/config.c).
 ALWAYS_BUILTIN = (
     "amiga",
+    "amigagui",
+    "amigalibs",
     "array",
     "math",
     "time",
@@ -24,6 +26,7 @@ ALWAYS_BUILTIN = (
     "select",
     "zlib",
     "zipimport",
+    "_io",
     "_sre",
     "md5",
     "cmath",

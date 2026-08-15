@@ -111,6 +111,16 @@ Notes
 Amiga-specific module documentation: Amiga_Misc/Docs/ (also shipped under
 Python/docs/amiga in the distribution tree).
 
+Builtin GUI / OS helpers:
+  amiga          Dos, ASL, EasyRequest/CurrentTime/DisplayBeep, AvailMem, ...
+  amigagui       Simple Intuition window (plot/line); not named simplegfx
+  amigalibs      Secondary raw LVO FFI (with Tools/ConvertFD.py and
+                 Lib/site-python/*lib.py). Prefer curated APIs above.
+  intuition      Thin re-export of curated EasyRequest helpers (site-python)
+  intuitionlib   Example ConvertFD LVO table for amigalibs (site-python)
+
+ctypes is not enabled for classic Amiga LVOs; amigalibs fills that niche.
+
 Language and library reference: https://docs.python.org/2.7/
 
 Some tests fail or are skipped on the Amiga.  socket / select need

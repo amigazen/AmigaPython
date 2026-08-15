@@ -2,8 +2,18 @@ This directory contains additional Amiga-oriented test programs and
 helpers used when exercising the port.
 
 The main Python regression suite lives under Lib/test.
-Amiga-specific automated checks also live under Source/AmigaTests/ for
+Amiga-specific automated checks live under Source/AmigaTests/ for
 the 2.7.18 port.
 
-Scripts here may assume classic Amiga path syntax, Dos/amiga helpers,
-and (where relevant) ARexx or networking.
+Legacy scripts here were folded into AmigaTests/test_legacy_amiga.py:
+  test_argparser.py  -> test_argparser_*
+  test_misc.py       -> test_crc32_vectors (IEEE vectors for Amiga/crc32.c),
+                       test_touch_and_dates
+  test_links.py      -> test_links_optional (skips without root/links)
+  as.py              -> ARexx+socket host demo (not a unit test)
+
+Also: _amigados.ArgParser had a types.append bug (two args); fixed so
+the ArgParser suite can run.
+
+Scripts here may still be run manually; they assume classic Amiga path
+syntax, Dos/amiga helpers, and (where relevant) ARexx or networking.

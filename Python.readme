@@ -109,8 +109,8 @@ Notable Amiga changes since the 2.0 port:
 
 * When I start python, I get "This program requires a math co-processor"!
 
-  You need at least a 68020/68030 class CPU; an FPU is required for builds
-  that expect a floating-point unit.
+  You need at least a 68020 class CPU; and an FPU is required for builds
+  that expect a floating-point unit, but as shipped Python does not use FPU.
 
 * I get "Couldn't open bsdsocket.library" or "Couldn't open
   usergroup.library" errors!

@@ -1,6 +1,6 @@
 /*
- * ASL / Intuition helpers for the amiga module (OS4 asl module parity).
- * Lazy-opens asl.library and intuition.library.
+ * ASL helpers for the amiga module (OS4 asl module parity).
+ * Library bases live in amiga_ext.c.
  */
 
 #include "amiga_posixtimer.h"
@@ -13,36 +13,6 @@
 #include <proto/asl.h>
 #include <proto/intuition.h>
 #include "amiga_ext.h"
-
-/* Defined for proto/asl.h and proto/intuition.h (not static). */
-struct Library *AslBase = NULL;
-struct IntuitionBase *IntuitionBase = NULL;
-
-static int
-ensure_asl(void)
-{
-	if (AslBase == NULL)
-		AslBase = OpenLibrary("asl.library", 37L);
-	if (AslBase == NULL) {
-		PyErr_SetString(PyExc_RuntimeError, "asl.library not available");
-		return 0;
-	}
-	return 1;
-}
-
-static int
-ensure_intuition(void)
-{
-	if (IntuitionBase == NULL)
-		IntuitionBase = (struct IntuitionBase *)
-			OpenLibrary("intuition.library", 37L);
-	if (IntuitionBase == NULL) {
-		PyErr_SetString(PyExc_RuntimeError,
-			"intuition.library not available");
-		return 0;
-	}
-	return 1;
-}
 
 PyDoc_STRVAR(FileRequest_doc,
 "FileRequest(title=None, drawer=None, filename=None, pattern=None)\n"
@@ -67,7 +37,7 @@ amiga_FileRequest(PyObject *self, PyObject *args, PyObject *kw)
 			&title, &drawer, &filename, &pattern))
 		return NULL;
 
-	if (!ensure_asl())
+	if (!amiga_ensure_asl())
 		return NULL;
 
 	fr = (struct FileRequester *)AllocAslRequestTags(ASL_FileRequest,
@@ -114,7 +84,7 @@ amiga_MessageBox(PyObject *self, PyObject *args)
 	if (!PyArg_ParseTuple(args, "sss:MessageBox", &title, &body, &gadgets))
 		return NULL;
 
-	if (!ensure_intuition())
+	if (!amiga_ensure_intuition())
 		return NULL;
 
 	es.es_StructSize = sizeof(struct EasyStruct);

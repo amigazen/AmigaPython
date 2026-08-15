@@ -1,90 +1,49 @@
-This  directory  contains  Amiga specific documentation.  First consult the
-regular Python 2.7 documentation (https://docs.python.org/2.7/) on the
-required subjects.
+Amiga-specific library documentation
+======================================
+
+These notes document AmigaPython 2.7.18 behaviour that differs from, or
+extends, the standard library.  They follow the same structure as the
+Python 2.7 Library Reference (``Doc/library/*.rst``): module synopsis,
+sections, ``.. function::`` / ``.. data::`` / ``.. exception::`` entries,
+and Availability notes.
+
+For portable APIs (``os``, ``os.path``, ``select``, …) read the official
+docs first: https://docs.python.org/2.7/library/
+
+Amiga-only modules and shims live under ``Lib/site-python/`` (added to
+``sys.path`` by ``site`` on Amiga).  The builtin ``amiga`` module is the
+POSIX stand-in used by ``os``.
 
 
-IMPORTANT FILES:
-~~~~~~~~~~~~~~~~
-amiga_module, Dos_module, ARexx_module.
-They contain the documentation on the Amiga-specific modules and on APIs
-that used to live in separate Dos/Doslib modules (now also on `amiga`).
+Module documents
+---------------
+
+=====================  =====================================================
+File                   Subject
+=====================  =====================================================
+``amiga.rst``          Builtin ``amiga`` (POSIX + Dos + ASL/catalog/icon)
+``os.rst``             ``os`` / ``os.path`` Amiga notes
+``arexx.rst``          ``arexx`` / ``_arexx``
+``environment.rst``    ``environment`` / ``amigavars``
+``general.rst``        Platform notes (paths, Workbench, networking, …)
+``other.rst``          ``select``, ``time``, ``tempfile`` Amiga notes
+=====================  =====================================================
 
 
+Quick index
+-----------
 
-FILE			CONTAINS SUBJECT
-~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~~~~~~~~~~~~~~~~~~~
-general			module search path
-			module filename case sensitivity
-			Amiga specific modules
-			posix replacements
-			networking support
-			timezones
-			sys.platform
-			modifying library files
-			source code
-			other files
-			Workbench startup
-
-amigapath_module	amigapath module
-			os.path
-			to_unix / from_unix (also on amiga)
-
-amiga_module		amiga module
-			os module
-			POSIX additions (2.7.18)
-			Doslib APIs on amiga
-			ASL / catalog / icon helpers
-			filesystem link support
-			environment vars
-
-Dos_module		Dos / Doslib APIs
-			(now exposed via amiga + _amigados)
-			ArgParser class
-
-ARexx_module		ARexx module
-			ARexxll module
-
-environment_module	environment module
-			
-os_module		os module
-			os.path
-
-other			select module
-			time module
-			tempfile module
-
-
-
-
-
-WHAT SUBJECT		WHERE CAN IT BE FOUND (FILE)
-~~~~~~~~~~~~~~~~~~~~~~~ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-amigapath module	amigapath_module
-os.path			amigapath_module, os_module
-amiga module		amiga_module
-os module		os_module, amiga_module
-environment		environment_module, amiga_module
-filesystem links	amiga_module
-ASL FileRequest		amiga_module
-locale catalogs		amiga_module
-DiskObject / icons	amiga_module
-to_unix / from_unix	amiga_module, amigapath_module
-select module		other
-time module		other
-tempfile module		other
-Dos / Doslib APIs	Dos_module, amiga_module
-ArgParser class		Dos_module, amiga_module
-ARexx module		ARexx_module
-ARexxll module		ARexx_module
-
-module search path	general
-module case sensitivity	general
-Amiga specific modules	general
-posix replacements	general
-networking support	general
-timezones		general
-sys.platform		general
-modifying library files	general
-source code		general
-other files		general
-Workbench startup	general
+===========================  ==================
+Topic                        Document
+===========================  ==================
+``amiga`` / ``os``           ``amiga.rst``, ``os.rst``
+``os.path`` / ``:`` / ``//`` ``os.rst``
+Dos.library helpers           ``amiga.rst``
+``ArgParser``                ``amiga.rst``
+ASL / catalog / icon          ``amiga.rst``
+``arexx``                    ``arexx.rst``
+ENV: / shell variables       ``environment.rst``, ``amiga.rst``
+``select`` signal mask       ``other.rst``
+sys.path / PYTHONCASEOK     ``general.rst``
+Workbench startup             ``general.rst``
+===========================  ==================

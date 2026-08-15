@@ -48,6 +48,7 @@ extern void init_struct(void);
 extern void initselect(void);
 extern void initzlib(void);
 extern void initzipimport(void);
+extern void init_io(void);
 extern void init_sre(void);
 extern void init_md5(void);
 extern void initcmath(void);
@@ -68,6 +69,8 @@ extern void initstrop(void);
 
 /* Amiga-specific modules */
 extern void initamiga(void);
+extern void initamigagui(void);
+extern void initamigalibs(void);
 extern void init_arexx(void);
 extern void initpyexpat(void);
 /* _socket is a LoadSeg plugin (lib-dynload/_socket.module), not builtin */
@@ -85,6 +88,8 @@ struct _inittab _PyImport_Inittab[] = {
 
     /* Amiga-specific modules */
     {"amiga", initamiga},
+    {"amigagui", initamigagui},
+    {"amigalibs", initamigalibs},
 
     /* Standard modules */
     {"array", initarray},
@@ -103,6 +108,8 @@ struct _inittab _PyImport_Inittab[] = {
     {"zlib", initzlib},
     /* Builtin (same as Unix Setup); needs zlib for deflated zip members. */
     {"zipimport", initzipimport},
+    /* PEP 3116 io; text is 8-bit str when Py_USING_UNICODE is off. */
+    {"_io", init_io},
     {"_sre", init_sre},
     {"md5", init_md5},
     {"cmath", initcmath},

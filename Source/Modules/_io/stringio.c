@@ -464,7 +464,12 @@ stringio_write(stringio *self, PyObject *obj)
 
     CHECK_INITIALIZED(self);
     if (!PyUnicode_Check(obj)) {
-        PyErr_Format(PyExc_TypeError, "unicode argument expected, got '%s'",
+        PyErr_Format(PyExc_TypeError,
+#ifndef Py_USING_UNICODE
+                     "str argument expected, got '%s'",
+#else
+                     "unicode argument expected, got '%s'",
+#endif
                      Py_TYPE(obj)->tp_name);
         return NULL;
     }
@@ -571,7 +576,11 @@ stringio_init(stringio *self, PyObject *args, PyObject *kwds)
     }
     if (value && value != Py_None && !PyUnicode_Check(value)) {
         PyErr_Format(PyExc_TypeError,
+#ifndef Py_USING_UNICODE
+                     "initial_value must be str or None, not %.200s",
+#else
                      "initial_value must be unicode or None, not %.200s",
+#endif
                      Py_TYPE(value)->tp_name);
         return -1;
     }

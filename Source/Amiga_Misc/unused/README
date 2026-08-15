@@ -1,5 +1,12 @@
 This directory contains historic AmigaPython material that is not used by
 the current AmigaPython 2.7.18 build (old library wrappers, ConvertFD, etc.).
 
-Kept for reference only.  Do not add these sources to the active Modules
-build without review.
+Live equivalents:
+  amigalibsmodule.c / asm  -> Modules/amiga/amigalibsmodule.c +
+                              Amiga/amigalibs_calllib.asm
+  ConvertFD.py             -> Tools/ConvertFD.py
+  intuitionlib.py          -> Lib/site-python/intuitionlib.py
+  (simplegfx)              -> Modules/amiga/amigaguimodule.c (amigagui)
+
+Kept for reference only.  Do not add these unused/ sources to the active
+Modules build without review.

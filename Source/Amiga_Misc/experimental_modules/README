@@ -1,0 +1,7 @@
+This directory held incomplete experimental C sources.
+
+Shipped in the main build as:
+  simplegfxmodule.c  -> Modules/amiga/amigaguimodule.c (builtin amigagui)
+  execlibmodule.c    -> amiga.AvailMem() on the amiga builtin
+
+Do not build these experimental copies.

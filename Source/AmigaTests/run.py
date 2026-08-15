@@ -46,18 +46,22 @@ SUITE = [
     ("os_path", "AmigaTests.test_os_path"),
     ("amiga", "AmigaTests.test_amiga_module"),
     ("extras", "AmigaTests.test_amiga_extras"),
+    ("legacy", "AmigaTests.test_legacy_amiga"),
     ("builtins", "AmigaTests.test_builtins_ext"),
+    ("io", "AmigaTests.test_io"),
     ("tier_a", "AmigaTests.test_tier_a"),
 ]
 
-# Not run by default. Prefer: python27 AmigaTests/test_socket_net.py
-# netmods = pwd/grp/crypt/syslog; socket* = _socket LoadSeg / remote TCP.
-# Optional: GUI requesters (pops ASL/EasyRequest - skip in headless runs).
+# Optional groups (not in default suite):
+# netmods = pwd/grp/crypt/syslog; socket* = TCP; gui = interactive Intuition/ASL
+# Prefer standalone: python27 AmigaTests/test_amiga_gui.py
+# Prefer standalone: python27 AmigaTests/test_socket_net.py
 OPTIONAL = [
     ("netmods", "AmigaTests.test_net_modules"),
     ("socket", "AmigaTests.test_socket_local"),
     ("socket_net", "AmigaTests.test_socket_net"),
     ("gui", "AmigaTests.test_amiga_gui"),
+    ("amigalibs", "AmigaTests.test_amigalibs"),
     ("ziplib", "AmigaTests.test_ziplib"),
 ]
 
