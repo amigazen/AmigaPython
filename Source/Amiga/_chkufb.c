@@ -27,17 +27,12 @@ long ASM fdCallback(REG(d0) int fd, REG(d1) int action);
  */
 long _install_AmiTCP_callback(void)
 {
-  /* needs bsdsocket.library */
-  if(checksocketlib())
+  /* needs an already-open bsdsocket.library (do not OpenLibrary here) */
+  if(have_socketlib())
   {
     if (SocketBaseTags(SBTM_SETVAL(SBTC_FDCALLBACK), &fdCallback, TAG_END)) {
-      syslog(LOG_ERR, "Cannot install fdCallback!");
       return 1;
     }
-  }
-  else
-  {
-    PyErr_Clear();             /* don't report error if socketlib not found */
   }
 
   /*

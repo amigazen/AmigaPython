@@ -38,8 +38,9 @@ from AmigaTests import support
 from AmigaTests.support import run_module_tests, summary, reset_counters
 
 # Default suite: offline / local only (matches enabled Amiga build modules).
-# Never call AmiTCP/usergroup/bsdsocket APIs here - they hard-crash without a stack.
-# AmiTCP / socket tests stay optional (bsdsocket may be absent or gated).
+# Never call AmiTCP LVO macros with a missing library base - that hard-crashes.
+# libcheck opens usergroup on demand; bsdsocket only after import _socket /
+# PosixLib __init_bsdsocket. AmiTCP / socket tests stay optional.
 SUITE = [
     ("inventory", "AmigaTests.test_inventory"),
     ("runtime", "AmigaTests.test_runtime"),

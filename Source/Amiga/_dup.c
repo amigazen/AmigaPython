@@ -50,7 +50,7 @@ dup(int old_fd)
    */
   if ((ufbflg & UFB_SOCK) == UFB_SOCK) {
     /* needs bsdsocket.library */
-    if(!checksocketlib()) return -1;
+    if(!have_socketlib()) return -1;
     return Dup2Socket(old_fd, -1);
   } else {
     errno = EBADF;

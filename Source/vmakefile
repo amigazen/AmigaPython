@@ -11,8 +11,9 @@ MKDIR=MakeDir ALL
 # VBCC configuration for AmigaOS 3.2 with PosixLib (softfloat for maximum compatibility)
 # Objects are compiled with -g (Amiga hunkdebug via +aos68k_posix). Release link omits
 # -g so vc inserts -ldnodb (-s -Rshort) and strips; Debug link keeps symbols with -g.
+# Include order for PosixLib #include_next — see vmakefile.amiga.
 CONFIG=+aos68k_posix
-CFLAGS=-c -g -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data
+CFLAGS=-c -g -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -Ivbcc:PosixLib/include -IInclude -Ivincludeos3: -Iinclude: -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data
 ODIR=build-vbcc
 
 # Program names
@@ -23,8 +24,10 @@ PROGRAM_DEBUG=Python27_Debug
 AMIGAPYTHONLIBNAM=amigapythonamitcp.lib
 AMIGAPYTHONLIB=$(ODIR)/Amiga/$(AMIGAPYTHONLIBNAM)
 
-# Link libraries - VBCC provides system libraries
-CLIBS=-lamiga -lmieee build-vbcc/Modules/zlib/libz.a
+# Link libraries. Do not add -lamiga here: +aos68k_posix already links
+# -lposix -lamiga. An earlier -lamiga pulls umask.o from amiga.lib and
+# then clashes with PosixLib's umask in posix.lib(prot.c).
+CLIBS=-lmieee build-vbcc/Modules/zlib/libz.a
 
 # Main objects
 OBJECTS=$(ODIR)/Modules/python.o $(ODIR)/Modules/main.o $(ODIR)/Amiga/finite.o
@@ -40,9 +43,11 @@ OBJECTS_OBJECTS=$(ODIR)/Objects/abstract.o $(ODIR)/Objects/fileobject.o $(ODIR)/
 
 AMIGA_OBJECTS=$(ODIR)/Amiga/envvars.o $(ODIR)/Amiga/fmod.o $(ODIR)/Amiga/rexxvars.o $(ODIR)/Amiga/crc32.o $(ODIR)/Amiga/amigalibs_calllib.o $(ODIR)/Amiga/wbargs.o $(ODIR)/Amiga/printuserfault.o $(ODIR)/Amiga/dosio_init.o $(ODIR)/Amiga/strftime.o $(ODIR)/Amiga/stackinit.o $(ODIR)/Amiga/CheckStack.o $(ODIR)/Amiga/vbcc_runtime.o $(ODIR)/Amiga/libcheck.o $(ODIR)/Amiga/io2errno.o $(ODIR)/Amiga/int64_ops.o $(ODIR)/Amiga/pyamiga_host.o
 
-# All objects together
+# All objects together (link line). Build each subdirectory once via a
+# single phony target — do not list every .o as a rule target or make
+# re-enters that subdirectory once per object.
 ALL_OBJECTS=$(OBJECTS) $(MODULES_OBJECTS) $(PARSER_OBJECTS) $(PYTHON_OBJECTS) $(OBJECTS_OBJECTS) $(AMIGA_OBJECTS)
-OBJS_READY=$(OBJECTS) modules $(PARSER_OBJECTS) $(PYTHON_OBJECTS) $(OBJECTS_OBJECTS) $(AMIGA_OBJECTS)
+OBJS_READY=$(OBJECTS) modules parser_dir python_dir objects_dir amiga_dir
 
 # Prepare variables for target 'clean'
 RM=Delete ALL
@@ -75,29 +80,29 @@ $(ODIR)/Amiga/finite.o: Amiga/finite.c
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
 # Build all individual object files
-# Do not depend on "Modules" — Amiga FS is case-insensitive, so that
-# collides with this target name and make reports a circular dependency.
+# Do not name a target "Modules" — Amiga FS is case-insensitive, so that
+# collides with the Modules/ directory and make reports a circular dependency.
 modules:
 	@echo "******************** ENTERING MODULES/ "
 	$(MAKE) -f vmakefile.modules ODIR=$(ODIR)/Modules
 	@echo "******************** LEAVING MODULES/ "
 
-$(PARSER_OBJECTS): Parser
+parser_dir:
 	@echo "******************** ENTERING PARSER/ "
 	$(MAKE) -f vmakefile.parser ODIR=$(ODIR)/Parser
 	@echo "******************** LEAVING PARSER/ "
 
-$(PYTHON_OBJECTS): Python
+python_dir:
 	@echo "******************** ENTERING PYTHON/ "
 	$(MAKE) -f vmakefile.python ODIR=$(ODIR)/Python
 	@echo "******************** LEAVING PYTHON/ "
 
-$(OBJECTS_OBJECTS): Objects
+objects_dir:
 	@echo "******************** ENTERING OBJECTS/ "
 	$(MAKE) -f vmakefile.objects ODIR=$(ODIR)/Objects
 	@echo "******************** LEAVING OBJECTS/ "
 
-$(AMIGA_OBJECTS): Amiga
+amiga_dir:
 	@echo "******************** ENTERING Amiga/ "
 	$(MAKE) -f vmakefile.amiga ODIR=$(ODIR)/Amiga
 	@echo "******************** LEAVING Amiga/ "
@@ -108,4 +113,4 @@ clean:
 	-$(RM) $(ODIR)
 	-$(RM) $(PROGRAM) $(PROGRAM_DEBUG) $(PROGRAM)_debug
 
-.PHONY: all clean debug modules plugins
+.PHONY: all clean debug modules plugins parser_dir python_dir objects_dir amiga_dir

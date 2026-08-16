@@ -9,6 +9,18 @@
 #ifndef _SYSLOG_H
 #define _SYSLOG_H
 
+/* Priorities (subset used by syslogmodule; full set in netinclude sys/syslog.h) */
+#ifndef LOG_EMERG
+#define LOG_EMERG   0
+#define LOG_ALERT   1
+#define LOG_CRIT    2
+#define LOG_ERR     3
+#define LOG_WARNING 4
+#define LOG_NOTICE  5
+#define LOG_INFO    6
+#define LOG_DEBUG   7
+#endif
+
 /* Facility codes - not provided by netinclude */
 #define LOG_KERN     (0<<3)  /* kernel messages */
 #define LOG_USER     (1<<3)  /* random user-level messages */
@@ -49,6 +61,7 @@
 void openlog(const char *ident, int logopt, int facility);
 void closelog(void);
 int setlogmask(int maskpri);
-void syslog(int priority, const char *format, ...);
+/* AmiTCP LVO wrapper — implemented in syslog.c; do not call raw syslog(). */
+void amiga_syslog(int priority, const char *message);
 
 #endif /* _SYSLOG_H */ 

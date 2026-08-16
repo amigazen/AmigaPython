@@ -34,10 +34,11 @@ int pclose(FILE *stream);
 /* Error conversion */
 int __io2errno(int ioerr);
 
-/* Networking */
-#ifdef AMITCP
+/* Networking / AmiTCP companion libs (see Amiga/libcheck.c) */
+int have_usergrouplib(void);
+int have_socketlib(void);
 int checkusergrouplib(void);
-#endif
+int checksocketlib(void);
 
 /* AmiTCP-specific functions - these are now provided by PosixLib */
 #ifdef AMITCP

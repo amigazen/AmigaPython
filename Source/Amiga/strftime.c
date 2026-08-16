@@ -275,6 +275,8 @@ static int _conv(int n, int digits, char pad)
     char buf[10];
     register char *p;
 
+    /* NUL at end so _add stops; without this, output is garbage. */
+    buf[sizeof(buf) - 1] = '\0';
     for (p = buf + sizeof(buf) - 2; n > 0 && p > buf; n /= 10, --digits)
         *p-- = n % 10 + '0';
     while (p > buf && digits-- > 0)

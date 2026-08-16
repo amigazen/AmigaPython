@@ -1,63 +1,45 @@
 /*
  * Fill the process-global PyHost for Amiga LoadSeg plugins.
  *
- * Opening bsdsocket.library must also call SocketBaseTags so the stack
- * uses this process's errno/h_errno. Without that, console I/O can stop
- * updating after import _socket (no further >>> prompt).
+ * Networking goes through PosixLib (HAVE_POSIXLIB): __init_bsdsocket()
+ * opens bsdsocket.library and installs errno via SocketBaseTagList.
+ * Do not include AmiTCP proto/socket.h here — with PosixLib first on -I
+ * those headers clash on the socket/bind/... macros.
+ *
+ * Gated so we do not open the TCP stack until import _socket (avoids
+ * hang/block when no stack is running).
  */
-#define PYAMIGA_HOST_BUILD
-#include "pyamiga_plugin.h"
 
 #include <errno.h>
 #include <proto/exec.h>
 
+#define PYAMIGA_HOST_BUILD
+#include "pyamiga_plugin.h"
+
 /*
- * PosixLib #defines gethostid()/gethostname()/getdtablesize() as macros.
- * proto/socket.h prototypes the same names and vbcc then errors. Undef
- * only in this file before the bsdsocket headers.
+ * PosixLib bsdsocket.c — returns 0 on success after SocketBase is open.
+ * Argument -1 means "only ensure library init", no fd check.
  */
-#ifdef gethostid
-#undef gethostid
-#endif
-#ifdef gethostname
-#undef gethostname
-#endif
-#ifdef getdtablesize
-#undef getdtablesize
-#endif
-
-#include <proto/socket.h>
-#include <libraries/bsdsocket.h>
-
+extern int __init_bsdsocket(int);
 extern void init_socket(void);
 extern struct Library *SocketBase;
-extern int h_errno;
 
 static struct PyHost pyamiga_host;
 
 static void
 pyamiga_init_socket_gated(void)
 {
-    struct Library *base;
-
-    if (SocketBase != NULL && SocketBase != (struct Library *)1) {
+    if (SocketBase != NULL) {
         init_socket();
         return;
     }
 
-    base = OpenLibrary((STRPTR)"bsdsocket.library", 4);
-    if (base == NULL) {
+    if (__init_bsdsocket(-1) != 0 || SocketBase == NULL) {
         PyErr_SetString(PyExc_ImportError,
                         "bsdsocket.library required for _socket "
                         "(no TCP/IP stack)");
         return;
     }
-
-    SocketBase = base;
-    SocketBaseTags(SBTM_SETVAL(SBTC_ERRNOPTR(sizeof(errno))), &errno,
-                   SBTM_SETVAL(SBTC_HERRNOLONGPTR), &h_errno,
-                   SBTM_SETVAL(SBTC_LOGTAGPTR), "Python",
-                   TAG_END);
 
     init_socket();
 }

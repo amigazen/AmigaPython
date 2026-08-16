@@ -58,7 +58,7 @@ __write(int fd, const void *buffer, unsigned int length)
 
   /* check if socket, then this function needs bsdsocket.library */
   if (ufb->ufbflg & UFB_SOCK)
-    if(!checksocketlib()) return -1;
+    if(!have_socketlib()) return -1;
 
   /*
    * Check if translation is not needed

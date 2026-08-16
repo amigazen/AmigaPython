@@ -42,7 +42,7 @@ int fstat(int fd, struct stat *st)
     long size = sizeof(value);
 
     /* Needs both usergroup.library and bsdsocket.library */
-    if(!checkusergrouplib() || !checksocketlib()) return -1;
+    if(!have_usergrouplib() || !have_socketlib()) return -1;
 
     bzero(st, sizeof(*st));
 

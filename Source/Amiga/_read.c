@@ -49,7 +49,7 @@ __read(int fd, void *buffer, unsigned int length)
   }
 
   if (ufb->ufbflg & UFB_SOCK)
-    if(!checksocketlib()) return -1;
+    if(!have_socketlib()) return -1;
 
   /*
    * Do the Actual read

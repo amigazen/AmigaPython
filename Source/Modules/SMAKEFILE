@@ -6,7 +6,7 @@
 OBJECTS = config.o getpath.o environment.o \
         arraymodule.o mathmodule.o timemodule.o \
         binascii.o _codecsmodule.o cStringIO.o cPickle.o \
-        errnomodule.o posixmodule.o operator.o _weakref.o _struct.o \
+        errnomodule.o operator.o _weakref.o _struct.o \
         selectmodule.o zlibmodule.o \
         amigamodule.o amigapathmodule.o socketmodule.o \
         pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o \
@@ -42,7 +42,7 @@ cPickle.o : cPickle.c /Include/cStringIO.h /Include/Python.h
 
 errnomodule.o : errnomodule.c /Include/Python.h
 
-posixmodule.o : posixmodule.c /Include/Python.h
+# posixmodule.c is not built — OS builtin is amiga (posix is a runtime alias).
 
 operator.o : operator.c /Include/Python.h
 

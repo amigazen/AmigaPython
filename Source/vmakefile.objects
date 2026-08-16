@@ -6,7 +6,8 @@ CC=vc
 VLINK=vlink
 MKDIR=MakeDir ALL
 CONFIG=+aos68k_posix
-CFLAGS=-c -g -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -maxoptpasses=1
+# Include order for PosixLib #include_next — see vmakefile.amiga.
+CFLAGS=-c -g -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -Ivbcc:PosixLib/include -IInclude -Ivincludeos3: -Iinclude: -maxoptpasses=1
 
 # Source directory
 SRCDIR=Objects

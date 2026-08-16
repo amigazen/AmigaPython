@@ -17,7 +17,7 @@ _codecs _codecsmodule.c
 cStringIO cStringIO.c
 cPickle cPickle.c
 errno errnomodule.c
-posix posixmodule.c
+# posixmodule.c is not built — OS builtin is amiga (sys.modules['posix'] alias at runtime)
 operator operator.c
 _weakref _weakref.c
 _struct _struct.c

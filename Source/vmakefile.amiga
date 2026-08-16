@@ -6,8 +6,12 @@ CC=vc
 VASM=vasmm68k_mot
 VLINK=vlink
 MKDIR=MakeDir ALL
+# PosixLib uses #include_next to reach vbcc's headers (vincludeos3:).
+# That path must appear before -Iinclude: (NDK). Otherwise #include_next
+# picks up NDK string.h, bcopy/bzero macros break PosixLib strings.h.
+# Order: PosixLib → project Include → vincludeos3 → NDK include: → netinclude:
 CONFIG=+aos68k_posix
-CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -Inetinclude: -cpu=68020 -fpu=soft
+CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -Ivbcc:PosixLib/include -IInclude -Ivincludeos3: -Iinclude: -Inetinclude: -cpu=68020 -fpu=soft
 
 # Source directory
 SRCDIR=Amiga

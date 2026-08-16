@@ -711,11 +711,13 @@ amiga_getpgrp(PyObject *self, PyObject *args)
 {
 	if (!PyArg_Parse(args,""))
 		return NULL;
-#ifdef GETPGRP_HAVE_ARG
-	return PyInt_FromLong((long)getpgrp(0));
-#else /* GETPGRP_HAVE_ARG */
-	return PyInt_FromLong((long)getpgrp());
-#endif /* GETPGRP_HAVE_ARG */
+	/*
+	 * PosixLib has no getpgrp(). Linking an AmiTCP usergroup stub
+	 * calls through UserGroupBase and can hang (OpenLibrary on a
+	 * missing AmiTCP: volume) or crash. AmigaOS has no process groups;
+	 * match getpid() and return the Task address.
+	 */
+	return PyInt_FromLong((long)FindTask(0));
 }
 #endif /* HAVE_GETPGRP */
 
@@ -725,12 +727,7 @@ amiga_setpgrp(PyObject *self, PyObject *args)
 {
 	if (!PyArg_Parse(args,""))
 		return NULL;
-#ifdef SETPGRP_HAVE_ARG
-	if (setpgrp(0, 0) < 0)
-#else /* SETPGRP_HAVE_ARG */
-	if (setpgrp() < 0)
-#endif /* SETPGRP_HAVE_ARG */
-		return amiga_error();
+	/* No process groups on AmigaOS 3 — succeed as a no-op. */
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -850,8 +847,7 @@ amiga_setsid(PyObject *self, PyObject *args)
 {
 	if (!PyArg_Parse(args,""))
 		return NULL;
-	if ((int)setsid() < 0)
-		return amiga_error();
+	/* No sessions on AmigaOS 3 — succeed as a no-op. */
 	Py_INCREF(Py_None);
 	return Py_None;
 }
@@ -1982,6 +1978,18 @@ initamiga(void)
 	amiga_init_intuition(m);
 	amiga_init_catalog(m);
 	amiga_init_icon(m);
+
+	/*
+	 * Alias for Unix-oriented code that does "import posix".
+	 * posixmodule.c is not built on Amiga; amiga is the OS builtin.
+	 * Do not put "posix" in config.c inittab — os.py would then take the
+	 * posix branch before amiga. This only adds sys.modules['posix'].
+	 */
+	Py_INCREF(m);
+	if (PyDict_SetItemString(PyImport_GetModuleDict(), "posix", m) != 0) {
+		Py_DECREF(m);
+		return;
+	}
 
 	/*
 	 * Do not import Lib/site-python/_amigados.py here: os.py does "from amiga import *"

@@ -100,7 +100,7 @@ struct _inittab _PyImport_Inittab[] = {
     {"cStringIO", initcStringIO},
     {"cPickle", initcPickle},
     {"errno", initerrno},
-    /* {"posix", initposix}, */
+    /* {"posix", initposix}, */  /* not built; amiga is the OS builtin (+ sys.modules alias) */
     {"operator", initoperator},
     {"_weakref", init_weakref},
     {"_struct", init_struct},

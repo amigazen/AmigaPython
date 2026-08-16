@@ -6,7 +6,9 @@ CC=vc
 VLINK=vlink
 MKDIR=MakeDir ALL
 CONFIG=+aos68k_posix
-CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -D__USE_NEW_TIMEVAL__ -D__NO_NETINCLUDE_TIMEVAL -IInclude -I$(SRCDIR) -Inetinclude: -cpu=68020 -fpu=soft
+# Include order for PosixLib #include_next — see vmakefile.amiga.
+# -IAmiga for libcheck.h (usergroup/bsdsocket open checks).
+CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -D__USE_NEW_TIMEVAL__ -D__NO_NETINCLUDE_TIMEVAL -Ivbcc:PosixLib/include -IInclude -IAmiga -Ivincludeos3: -Iinclude: -I$(SRCDIR) -Inetinclude: -cpu=68020 -fpu=soft
 
 # Bundled Modules/expat (static). Compile pyexpat + xml*.c against this tree.
 EXPAT_DIR=$(SRCDIR)/expat
@@ -240,11 +242,11 @@ $(ODIR)/cryptmodule.o: $(SRCDIR)/cryptmodule.c
 
 $(ODIR)/syslogmodule.o: $(SRCDIR)/syslogmodule.c
 	@$(MKDIR) $(ODIR)
-	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $<
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
 $(ODIR)/syslog.o: $(SRCDIR)/syslog.c
 	@$(MKDIR) $(ODIR)
-	$(CC) $(CONFIG) $(CFLAGS) -Inetinclude: -o $@ $<
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 
 $(ODIR)/gcmodule.o: $(SRCDIR)/gcmodule.c
 	@$(MKDIR) $(ODIR)

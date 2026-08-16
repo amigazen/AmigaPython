@@ -53,8 +53,10 @@ Revision history:
 #include "osdefs.h"
 
 #ifdef _AMIGA
-#include <sys/syslog.h>
+/* Prefer project syslog.h (constants + openlog/amiga_syslog). Avoid
+ * pulling netinclude proto/socket.h via sys/syslog.h side paths. */
 #include "syslog.h"
+#include "libcheck.h"
 #else
 #include <syslog.h>
 #endif
@@ -138,6 +140,14 @@ syslog_openlog(PyObject * self, PyObject * args, PyObject *kwds)
      * If NULL, just let openlog figure it out (probably using C argv[0]).
      */
 
+#ifdef _AMIGA
+    if (!have_socketlib()) {
+        PyErr_SetString(PyExc_SystemError,
+                        "bsdsocket.library not open "
+                        "(import _socket or start a TCP/IP stack)");
+        return NULL;
+    }
+#endif
     openlog(S_ident_o ? PyString_AsString(S_ident_o) : NULL, logopt, facility);
     S_log_open = 1;
 
@@ -175,9 +185,21 @@ syslog_syslog(PyObject * self, PyObject * args)
         }
     }
 
+#ifdef _AMIGA
+    if (!have_socketlib()) {
+        PyErr_SetString(PyExc_SystemError,
+                        "bsdsocket.library not open "
+                        "(import _socket or start a TCP/IP stack)");
+        return NULL;
+    }
+    Py_BEGIN_ALLOW_THREADS;
+    amiga_syslog(priority, message);
+    Py_END_ALLOW_THREADS;
+#else
     Py_BEGIN_ALLOW_THREADS;
     syslog(priority, "%s", message);
     Py_END_ALLOW_THREADS;
+#endif
     Py_INCREF(Py_None);
     return Py_None;
 }

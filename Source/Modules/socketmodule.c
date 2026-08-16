@@ -323,69 +323,41 @@ int h_errno; /* not used */
 
 #ifdef _AMIGA
 /*
- * Roadshow netdb.h / arpa/inet.h are mostly types-only; calls live in
- * proto/socket.h (AmiTCP LVOs). PosixLib may have #define'd the same
- * names onto __P* stubs — drop those so vbcc sees pointer-returning
- * AmiTCP prototypes (otherwise "invalid types for assignment").
+ * Use PosixLib's __P* socket APIs (macros in sys/socket.h). Do NOT switch
+ * to AmiTCP proto/socket.h LVOs: those return raw stack descriptors that
+ * are not in PosixLib __fdesc[], so select()/fcntl() return EBADF and
+ * settimeout() cannot bound connect/recv — HTTP GETs hang forever.
+ *
+ * PosixLib netdb.h lacks addrinfo/EAI_*; keep local getaddrinfo wrappers
+ * that call PosixLib gethostbyname/inet_ntoa (safe LVOs via posix.lib).
  */
-#ifdef gethostbyname
-#undef gethostbyname
-#endif
-#ifdef gethostbyaddr
-#undef gethostbyaddr
-#endif
-#ifdef getservbyname
-#undef getservbyname
-#endif
-#ifdef getservbyport
-#undef getservbyport
-#endif
-#ifdef getprotobyname
-#undef getprotobyname
-#endif
-#ifdef getprotobynumber
-#undef getprotobynumber
-#endif
-#ifdef inet_addr
-#undef inet_addr
-#endif
-#ifdef inet_network
-#undef inet_network
-#endif
-#ifdef gethostid
-#undef gethostid
-#endif
-#ifdef gethostname
-#undef gethostname
-#endif
-#ifdef getdtablesize
-#undef getdtablesize
-#endif
-
-#include <proto/socket.h>
+#include <sys/ioctl.h>
+#include <sys/filio.h>
 
 extern int h_errno;
 
-/* AmiTCP provides Inet_NtoA(in_addr_t), not BSD inet_ntoa(struct in_addr). */
-static char *
-amiga_inet_ntoa(struct in_addr addr)
-{
-    return (char *)Inet_NtoA(addr.s_addr);
-}
-#define inet_ntoa(addr) amiga_inet_ntoa(addr)
-
-/* AmiTCP netinet/in.h has INADDR_ANY / BROADCAST but not LOOPBACK. */
 #ifndef INADDR_LOOPBACK
 #define INADDR_LOOPBACK 0x7f000001UL
 #endif
 
-/*
- * Roadshow headers define getaddrinfo/getnameinfo LVOs at large negative
- * offsets (-810/-822). Classic AmiTCP/Miami jump tables are shorter, so
- * those calls JMP into data and panic. socket.gethostbyname() goes through
- * setipaddr()->getaddrinfo and makeipaddr()->getnameinfo — replace the
- * macros with gethostbyname/Inet_NtoA wrappers that use safe LVOs only.
- */
+#ifdef HAVE_GETADDRINFO
+#undef HAVE_GETADDRINFO
+#define _AMIGA_RESTORE_GETADDRINFO 1
+#endif
+#ifdef HAVE_GETNAMEINFO
+#undef HAVE_GETNAMEINFO
+#define _AMIGA_RESTORE_GETNAMEINFO 1
+#endif
+#include "addrinfo.h"
+#ifdef _AMIGA_RESTORE_GETADDRINFO
+#define HAVE_GETADDRINFO 1
+#undef _AMIGA_RESTORE_GETADDRINFO
+#endif
+#ifdef _AMIGA_RESTORE_GETNAMEINFO
+#define HAVE_GETNAMEINFO 1
+#undef _AMIGA_RESTORE_GETNAMEINFO
+#endif
+
 #ifdef getaddrinfo
 #undef getaddrinfo
 #endif
@@ -593,7 +565,7 @@ amiga_getnameinfo(const struct sockaddr *sa, socklen_t salen,
                 return EAI_NONAME;
         }
         if (p == NULL) {
-            p = (char *)Inet_NtoA(sin->sin_addr.s_addr);
+            p = inet_ntoa(sin->sin_addr);
             if (p == NULL)
                 return EAI_SYSTEM;
         }
@@ -607,7 +579,7 @@ amiga_getnameinfo(const struct sockaddr *sa, socklen_t salen,
         p = NULL;
         if (!(flags & NI_NUMERICSERV)) {
             proto = (flags & NI_DGRAM) ? "udp" : "tcp";
-            se = getservbyport((LONG)sin->sin_port, (char *)proto);
+            se = getservbyport((int)sin->sin_port, (char *)proto);
             if (se != NULL && se->s_name != NULL)
                 p = se->s_name;
         }
@@ -652,13 +624,6 @@ amiga_gai_strerror(int err)
 #define getnameinfo amiga_getnameinfo
 #define gai_strerror amiga_gai_strerror
 
-/* Roadshow exports inet_pton/inet_ntop; avoid stock fallback prototypes
- * which get eaten by AmiTCP's inet_pton(...) function-like macros. */
-#ifndef HAVE_INET_PTON
-#define HAVE_INET_PTON 1
-#endif
-
-#define ioctlsocket IoctlSocket
 #undef AF_UNIX
 #ifndef INET_ADDRSTRLEN
 #define INET_ADDRSTRLEN 16
@@ -686,7 +651,7 @@ amiga_gai_strerror(int err)
    * EAI_* constants are defined in (the already included) ws2tcpip.h.
    */
 #elif defined(_AMIGA)
-  /* Roadshow/AmiTCP netdb.h already defines struct addrinfo and EAI_*. */
+  /* addrinfo / EAI_* already included above for PosixLib netdb gap. */
 #else
 #  include "addrinfo.h"
 #endif
@@ -1018,7 +983,19 @@ internal_setblocking(PySocketSockObject *s, int block)
 #elif defined(__VMS)
     block = !block;
     ioctl(s->sock_fd, FIONBIO, (unsigned int *)&block);
-#else  /* !PYOS_OS2 && !__VMS */
+#elif defined(_AMIGA)
+    /*
+     * PosixLib fcntl(F_SETFL) only tweaks open_flags; it does not call
+     * IoctlSocket(FIONBIO). Use ioctl so settimeout() actually makes the
+     * AmiTCP socket non-blocking and select-based timeouts can work.
+     */
+    {
+        int nonblock;
+
+        nonblock = !block;
+        ioctl(s->sock_fd, FIONBIO, (char *)&nonblock);
+    }
+#else  /* !PYOS_OS2 && !__VMS && !_AMIGA */
     delay_flag = fcntl(s->sock_fd, F_GETFL, 0);
     if (block)
         delay_flag &= (~O_NONBLOCK);
@@ -1138,7 +1115,8 @@ internal_select(PySocketSockObject *s, int writing)
 
 #define END_SELECT_LOOP(s) \
             if (!has_timeout || \
-                (!CHECK_ERRNO(EWOULDBLOCK) && !CHECK_ERRNO(EAGAIN))) \
+                (!CHECK_ERRNO(EWOULDBLOCK) && !CHECK_ERRNO(EAGAIN) \
+                 && !CHECK_ERRNO(EINTR))) \
                 break; \
             interval = deadline - _PyTime_FloatTime(); \
         } \

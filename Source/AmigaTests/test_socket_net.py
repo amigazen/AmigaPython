@@ -122,15 +122,32 @@ def test_03_http_get():
         if hasattr(sock, "settimeout"):
             sock.settimeout(timeout)
         t0 = time.time()
-        sock.connect((ip, 80))
-        check("tcp connect :80", True)
+        try:
+            sock.connect((ip, 80))
+        except socket.timeout:
+            check("http GET", False,
+                  "connect timed out after %.1fs (host=%s ip=%s)" % (
+                      timeout, host, ip))
+            return
+        check("tcp connect :80", True,
+              "elapsed=%.2fs" % (time.time() - t0))
         sock.sendall(req)
         chunks = []
         total = 0
         while total < 8192:
             try:
                 data = sock.recv(1024)
+            except socket.timeout:
+                if chunks:
+                    break
+                check("http GET", False,
+                      "recv timed out after %.1fs (connected ok)" % timeout)
+                return
             except Exception, e:
+                # Retry a single EINTR; otherwise fail/skip.
+                if getattr(e, "errno", None) == 4 or "Interrupted" in str(e):
+                    if time.time() - t0 < timeout:
+                        continue
                 if chunks:
                     break
                 check("http recv", False, str(e))
@@ -148,6 +165,8 @@ def test_03_http_get():
             first = body.split("\r\n", 1)[0]
             print("    status:", first)
             print("    bytes:", len(body), "time: %.2fs" % elapsed)
+    except socket.timeout:
+        check("http GET", False, "timed out after %.1fs" % timeout)
     except Exception, e:
         check("http GET", False, str(e))
     if sock is not None:

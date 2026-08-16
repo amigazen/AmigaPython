@@ -115,8 +115,7 @@ def test_strerror_uname_ids():
             check("uname", isinstance(u, tuple) and len(u) >= 1)
         except Exception, e:
             skip("uname", str(e))
-    # getpid is local; uid/gid/pgrp go through usergroup/AmiTCP and can
-    # hard-crash when bsdsocket is absent - never call them in the default suite.
+    # getpid is local. uid/gid use PosixLib stubs (safe without usergroup).
     if hasattr(amiga, "getpid"):
         try:
             check("getpid", isinstance(amiga.getpid(), (int, long)))
@@ -124,11 +123,22 @@ def test_strerror_uname_ids():
             skip("getpid", str(e))
     else:
         skip("getpid", "not exported")
-    for name in ("getuid", "getgid", "geteuid", "getegid", "getpgrp"):
-        if hasattr(amiga, name):
-            skip(name + " call", "AmiTCP/usergroup (optional netmods group)")
-        else:
+    for name in ("getuid", "getgid", "geteuid", "getegid"):
+        if not hasattr(amiga, name):
             skip(name, "not exported")
+            continue
+        try:
+            v = getattr(amiga, name)()
+            check(name, isinstance(v, (int, long)))
+        except Exception, e:
+            skip(name + " call", str(e))
+    if hasattr(amiga, "getpgrp"):
+        try:
+            check("getpgrp", isinstance(amiga.getpgrp(), (int, long)))
+        except Exception, e:
+            skip("getpgrp call", str(e))
+    else:
+        skip("getpgrp", "not exported")
 
 
 def test_classic_amiga_apis():

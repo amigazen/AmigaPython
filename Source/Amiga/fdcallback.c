@@ -35,12 +35,12 @@ long ASM fdCallback(REG(d0) int fd, REG(d1) int action);
  */
 long _install_AmiTCP_callback(void)
 {
-    /* First check if bsdsocket.library is available */
-    if(checksocketlib())
+    /* First check if bsdsocket.library is already open (do not OpenLibrary). */
+    if(have_socketlib())
     {
         /* Install the callback */
         if (SocketBaseTags(SBTM_SETVAL(SBTC_FDCALLBACK), &fdCallback, TAG_END)) {
-            syslog(LOG_ERR, "Cannot install fdCallback!");
+            /* Avoid syslog LVO here — may also need a live SocketBase. */
             return 1;
         }
         

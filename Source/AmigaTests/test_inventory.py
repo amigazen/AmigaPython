@@ -96,15 +96,15 @@ def test_import_all_builtins():
 
 
 def test_import_amitcp_modules():
-    # Presence only. Importing pwd/grp/crypt/syslog opens usergroup/bsdsocket
-    # and can hard-crash; runtime smoke is optional group "netmods".
+    # Import is safe (no LVO through a dummy base). crypt/syslog *calls*
+    # need live usergroup/bsdsocket — optional group "netmods".
     names = sys.builtin_module_names
     for name in AMITCP_BUILTIN:
         if name not in names:
             skip("builtin " + name, "not built")
-        else:
-            check("builtin listed " + name, True)
-            skip("import " + name, "AmiTCP (optional netmods group)")
+            continue
+        mod = try_import(name)
+        check("import " + name, mod is not None)
 
 
 def test_socket_not_builtin():

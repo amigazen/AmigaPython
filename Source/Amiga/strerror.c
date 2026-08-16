@@ -91,10 +91,10 @@ strerror(int error)
 {
   ULONG taglist[3];
 
-  if(!checksocketlib())
+  /* Only use AmiTCP errno strings when SocketBase is already live.
+   * Do not OpenLibrary here (can hang without a stack). */
+  if(!have_socketlib())
   {
-    /* cannot use bsdsocket.lib's error strings, use those from SAS */
-    PyErr_Clear();
     if(error>=0 && error<=34) return __sys_errlist[error];
     if(error==ELOOP) return "Too many levels of links"; /* link loop */
     else return __sys_errlist[0];

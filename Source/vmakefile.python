@@ -6,7 +6,8 @@ CC=vc
 VLINK=vlink
 MKDIR=MakeDir ALL
 CONFIG=+aos68k_posix
-CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -IInclude -cpu=68020 -fpu=soft
+# Include order for PosixLib #include_next — see vmakefile.amiga.
+CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -Ivbcc:PosixLib/include -IInclude -Ivincludeos3: -Iinclude: -cpu=68020 -fpu=soft
 
 # Source directory
 SRCDIR=Python
