@@ -1,0 +1,895 @@
+@DATABASE "DIP05.guide"
+@$VER: DIP05.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "5. Objects and Object-Orientation"
+@TITLE "5. Objects and Object-Orientation"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}5. Objects and Object-Orientation@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}OOP examples are portable. Opens go through AmigaDOS/PosixLib; see AmigaPython.guide Workbench notes about project locks.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 5.1. Diving In " LINK "S1"}
+@{" 5.2. Importing Modules Using from module import " LINK "S2"}
+@{" 5.3. Defining Classes " LINK "S3"}
+@{" 5.4. Instantiating Classes " LINK "S4"}
+@{" 5.5. Exploring UserDict: A Wrapper Class " LINK "S5"}
+@{" 5.6. Special Class Methods " LINK "S6"}
+@{" 5.7. Advanced Special Class Methods " LINK "S7"}
+@{" 5.8. Introducing Class Attributes " LINK "S8"}
+@{" 5.9. Private Functions " LINK "S9"}
+@{" 5.10. Summary " LINK "S10"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 5. Objects and Object-Orientation
+
+This chapter, and pretty much every chapter after this, deals with object-oriented Python programming.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "5.1. Diving In"
+@TITLE "5.1. Diving In"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}5.1. Diving In @{ub}
+
+Here is a complete, working Python program. Read the @{code}doc string@{body} s of the module, the classes, and the functions to get an overview of what this program does and how it works. As usual, don't worry about the stuff you don't understand; that's what the rest of the chapter is for.
+
+@{b}Example 5.1. @{code}fileinfo.py@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+"""Framework for getting filetype-specific metadata.
+
+Instantiate appropriate class with filename. Returned object acts like a
+dictionary, with key-value pairs for each piece of metadata.
+import fileinfo
+info = fileinfo.MP3FileInfo("/music/ap/mahadeva.mp3")
+print "\\\\n".join(["%s=%s" % (k, v) for k, v in info.items()])
+
+Or use listDirectory function to get info on all files in a directory.
+for info in fileinfo.listDirectory("/music/ap/", [".mp3"]):
+...
+
+Framework can be extended by adding classes for particular file types, e.g.
+HTMLFileInfo, MPGFileInfo, DOCFileInfo. Each class is completely responsible for
+parsing its files appropriately; see MP3FileInfo for example.
+"""
+import os
+import sys
+from UserDict import UserDict
+
+def stripnulls(data):
+"strip whitespace and nulls"
+return data.replace("\\00", "").strip()
+
+class FileInfo(UserDict):
+"store file metadata"
+def __init__(self, filename=None):
+UserDict.__init__(self)
+self["name"] = filename
+
+class MP3FileInfo(FileInfo):
+"store ID3v1.0 MP3 tags"
+tagDataMap = {"title" : ( 3, 33, stripnulls),
+"artist" : ( 33, 63, stripnulls),
+"album" : ( 63, 93, stripnulls),
+"year" : ( 93, 97, stripnulls),
+"comment" : ( 97, 126, stripnulls),
+"genre" : (127, 128, ord)}
+
+def __parse(self, filename):
+"parse ID3v1.0 tags from MP3 file"
+self.clear()
+try:
+fsock = open(filename, "rb", 0)
+try:
+fsock.seek(-128, 2)
+tagdata = fsock.read(128)
+finally:
+fsock.close()
+if tagdata[:3] == "TAG":
+for tag, (start, end, parseFunc) in self.tagDataMap.items():
+self[tag] = parseFunc(tagdata[start:end])
+except IOError:
+pass
+
+def __setitem__(self, key, item):
+if key == "name" and item:
+self.__parse(item)
+FileInfo.__setitem__(self, key, item)
+
+def listDirectory(directory, fileExtList):
+"get list of file info objects for files of particular extensions"
+fileList = [os.path.normcase(f)
+for f in os.listdir(directory)]
+fileList = [os.path.join(directory, f)
+for f in fileList
+if os.path.splitext(f)[1] in fileExtList]
+def getFileInfoClass(filename, module=sys.modules[FileInfo.__module__]):
+"get file info class from filename extension"
+subclass = "%sFileInfo" % os.path.splitext(filename)[1].upper()[1:]
+return hasattr(module, subclass) and getattr(module, subclass) or FileInfo
+return [getFileInfoClass(f)(f) for f in fileList]
+
+if __name__ == "__main__":
+for info in listDirectory("/music/_singles/", [".mp3"]):
+print "\\n".join(["%s=%s" % (k, v) for k, v in info.items()])
+print
+@{body}
+
+This program's output depends on the files on your hard drive. To get meaningful output, you'll need to change the directory path to point to a directory of MP3 files on your own machine.
+
+This is the output I got on my machine. Your output will be different, unless, by some startling coincidence, you share my exact taste in music.
+
+@{code}
+album=
+artist=Ghost in the Machine
+title=A Time Long Forgotten (Concept
+genre=31
+name=/music/_singles/a_time_long_forgotten_con.mp3
+year=1999
+comment=http://mp3.com/ghostmachine
+
+album=Rave Mix
+artist=***DJ MARY-JANE***
+title=HELLRAISER****Trance from Hell
+genre=31
+name=/music/_singles/hellraiser.mp3
+year=2000
+comment=http://mp3.com/DJMARYJANE
+
+album=Rave Mix
+artist=***DJ MARY-JANE***
+title=KAIRO****THE BEST GOA
+genre=31
+name=/music/_singles/kairo.mp3
+year=2000
+comment=http://mp3.com/DJMARYJANE
+
+album=Journeys
+artist=Masters of Balance
+title=Long Way Home
+genre=31
+name=/music/_singles/long_way_home1.mp3
+year=2000
+comment=http://mp3.com/MastersofBalan
+
+album=
+artist=The Cynic Project
+title=Sidewinder
+genre=18
+name=/music/_singles/sidewinder.mp3
+year=2000
+comment=http://mp3.com/cynicproject
+
+album=Digitosis\@128k
+artist=VXpanded
+title=Spinning
+genre=255
+name=/music/_singles/spinning.mp3
+year=2000
+comment=http://mp3.com/artists/95/vxp
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "5.2. Importing Modules Using from module import"
+@TITLE "5.2. Importing Modules Using from module import"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}5.2. Importing Modules Using @{code}from @{i}module@{ui} import@{body}@{ub}
+
+Python has two ways of importing modules. Both are useful, and you should know when to use each. One way, @{code}import @{i}module@{ui}@{body}, you've already seen in Section 2.4, "Everything Is an Object". The other way accomplishes the same thing, but it has subtle and important differences.
+
+Here is the basic @{code}from @{i}module@{ui} import@{body} syntax:
+
+@{code}
+
+from UserDict import UserDict
+
+@{body}
+
+This is similar to the @{code}import @{i}module@{ui}@{body} syntax that you know and love, but with an important difference: the attributes and methods of the imported module @{code}types@{body} are imported directly into the local namespace, so they are available directly, without qualification by module name. You can import individual items or use @{code}from @{i}module@{ui} import *@{body} to import everything.
+
+@{code}from @{i}module@{ui} import *@{body} in Python is like @{code}use @{i}module@{ui}@{body} in Perl; @{code}import @{i}module@{ui}@{body} in Python is like @{code}require @{i}module@{ui}@{body} in Perl.
+
+@{code}from @{i}module@{ui} import *@{body} in Python is like @{code}import @{i}module@{ui}.*@{body} in Java; @{code}import @{i}module@{ui}@{body} in Python is like @{code}import @{i}module@{ui}@{body} in Java.
+
+@{b}Example 5.2. @{code}import @{i}module@{ui}@{body} @{i}vs.@{ui} @{code}from @{i}module@{ui} import@{body}@{ub}
+
+@{code}
+>>> import types
+>>> types.FunctionType
+
+>>> FunctionType
+Traceback (innermost last):
+File "", line 1, in ?
+NameError: There is no variable named 'FunctionType'
+>>> from types import FunctionType
+>>> FunctionType
+
+@{body}
+
+The @{code}types@{body} module contains no methods; it just has attributes for each Python object type. Note that the attribute, @{code}FunctionType@{body}, must be qualified by the module name, @{code}types@{body}.
+
+@{code}FunctionType@{body} by itself has not been defined in this namespace; it exists only in the context of @{code}types@{body}.
+
+This syntax imports the attribute @{code}FunctionType@{body} from the @{code}types@{body} module directly into the local namespace.
+
+Now @{code}FunctionType@{body} can be accessed directly, without reference to @{code}types@{body}.
+
+When should you use @{code}from @{i}module@{ui} import@{body}?
+
+* If you will be accessing attributes and methods often and don't want to type the module name over and over, use @{code}from @{i}module@{ui} import@{body}.
+
+* If you want to selectively import some attributes and methods but not others, use @{code}from @{i}module@{ui} import@{body}.
+
+* If the module contains attributes or functions with the same name as ones in your module, you must use @{code}import @{i}module@{ui}@{body} to avoid name conflicts.
+
+Other than that, it's just a matter of style, and you will see Python code written both ways.
+
+Use @{code}from module import *@{body} sparingly, because it makes it difficult to determine where a particular function or attribute came from, and that makes debugging and refactoring more difficult.
+
+@{b}Further Reading on Module Importing Techniques@{ub}
+
+* eff-bot has more to say on @{code}import @{i}module@{ui}@{body} @{i}vs.@{ui} @{code}from @{i}module@{ui} import@{body}.
+
+* @{i}Python Tutorial@{ui} discusses advanced import techniques, including @{code}from @{i}module@{ui} import *@{body}.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "5.3. Defining Classes"
+@TITLE "5.3. Defining Classes"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}5.3. Defining Classes @{ub}
+
+Python is fully object-oriented: you can define your own classes, inherit from your own or built-in classes, and instantiate the classes you've defined.
+
+Defining a class in Python is simple. As with functions, there is no separate interface definition. Just define the class and start coding. A Python class starts with the reserved word @{code}class@{body}, followed by the class name. Technically, that's all that's required, since a class doesn't need to inherit from any other class.
+
+@{b}Example 5.3. The Simplest Python Class @{ub}
+
+@{code}
+
+class Loaf:
+pass
+@{body}
+
+The name of this class is @{code}Loaf@{body}, and it doesn't inherit from any other class. Class names are usually capitalized, @{code}EachWordLikeThis@{body}, but this is only a convention, not a requirement.
+
+This class doesn't define any methods or attributes, but syntactically, there needs to be something in the definition, so you use @{code}pass@{body}. This is a Python reserved word that just means "move along, nothing to see here". It's a statement that does nothing, and it's a good placeholder when you're stubbing out functions or classes.
+
+You probably guessed this, but everything in a class is indented, just like the code within a function, @{code}if@{body} statement, @{code}for@{body} loop, and so forth. The first thing not indented is not in the class.
+
+The @{code}pass@{body} statement in Python is like an empty set of braces (@{code}{}@{body}) in Java or C.
+
+Of course, realistically, most classes will be inherited from other classes, and they will define their own class methods and attributes. But as you've just seen, there is nothing that a class absolutely must have, other than a name. In particular, C++ programmers may find it odd that Python classes don't have explicit constructors and destructors. Python classes do have something similar to a constructor: the @{code}__init__@{body} method.
+
+@{b}Example 5.4. Defining the @{code}FileInfo@{body} Class @{ub}
+
+@{code}
+
+from UserDict import UserDict
+
+class FileInfo(UserDict):
+@{body}
+
+In Python, the ancestor of a class is simply listed in parentheses immediately after the class name. So the @{code}FileInfo@{body} class is inherited from the @{code}UserDict@{body} class (which was imported from the @{code}UserDict@{body} module). @{code}UserDict@{body} is a class that acts like a dictionary, allowing you to essentially subclass the dictionary datatype and add your own behavior. (There are similar classes @{code}UserList@{body} and @{code}UserString@{body} which allow you to subclass lists and strings.) There is a bit of black magic behind this, which you will demystify later in this chapter when you explore the @{code}UserDict@{body} class in more depth.
+
+In Python, the ancestor of a class is simply listed in parentheses immediately after the class name. There is no special keyword like @{code}extends@{body} in Java.
+
+Python supports multiple inheritance. In the parentheses following the class name, you can list as many ancestor classes as you like, separated by commas.
+
+@{b}5.3.1. Initializing and Coding Classes @{ub}
+
+This example shows the initialization of the @{code}FileInfo@{body} class using the @{code}__init__@{body} method.
+
+@{b}Example 5.5. Initializing the @{code}FileInfo@{body} Class @{ub}
+
+@{code}
+
+class FileInfo(UserDict):
+"store file metadata"
+def __init__(self, filename=None):
+@{body}
+
+Classes can (and should) have @{code}doc string@{body} s too, just like modules and functions.
+
+@{code}__init__@{body} is called immediately after an instance of the class is created. It would be tempting but incorrect to call this the constructor of the class. It's tempting, because it looks like a constructor (by convention, @{code}__init__@{body} is the first method defined for the class), acts like one (it's the first piece of code executed in a newly created instance of the class), and even sounds like one ("init" certainly suggests a constructor-ish nature). Incorrect, because the object has already been constructed by the time @{code}__init__@{body} is called, and you already have a valid reference to the new instance of the class. But @{code}__init__@{body} is the closest thing you're going to get to a constructor in Python, and it fills much the same role.
+
+The first argument of every class method, including @{code}__init__@{body}, is always a reference to the current instance of the class. By convention, this argument is always named @{code}self@{body}. In the @{code}__init__@{body} method, @{code}self@{body} refers to the newly created object; in other class methods, it refers to the instance whose method was called. Although you need to specify @{code}self@{body} explicitly when defining the method, you do @{i}not@{ui} specify it when calling the method; Python will add it for you automatically.
+
+@{code}__init__@{body} methods can take any number of arguments, and just like functions, the arguments can be defined with default values, making them optional to the caller. In this case, @{code}filename@{body} has a default value of @{code}None@{body}, which is the Python null value.
+
+By convention, the first argument of any Python class method (the reference to the current instance) is called @{code}self@{body}. This argument fills the role of the reserved word @{code}this@{body} in C++ or Java, but @{code}self@{body} is not a reserved word in Python, merely a naming convention. Nonetheless, please don't call it anything but @{code}self@{body}; this is a very strong convention.
+
+@{b}Example 5.6. Coding the @{code}FileInfo@{body} Class @{ub}
+
+@{code}
+
+class FileInfo(UserDict):
+"store file metadata"
+def __init__(self, filename=None):
+UserDict.__init__(self)
+self["name"] = filename
+
+@{body}
+
+Some pseudo-object-oriented languages like Powerbuilder have a concept of "extending" constructors and other events, where the ancestor's method is called automatically before the descendant's method is executed. Python does not do this; you must always explicitly call the appropriate method in the ancestor class.
+
+I told you that this class acts like a dictionary, and here is the first sign of it. You're assigning the argument @{code}filename@{body} as the value of this object's @{code}name@{body} key.
+
+Note that the @{code}__init__@{body} method never returns a value.
+
+@{b}5.3.2. Knowing When to Use @{code}self@{body} and @{code}__init__@{body}@{ub}
+
+When defining your class methods, you @{i}must@{ui} explicitly list @{code}self@{body} as the first argument for each method, including @{code}__init__@{body}. When you call a method of an ancestor class from within your class, you @{i}must@{ui} include the @{code}self@{body} argument. But when you call your class method from outside, you do not specify anything for the @{code}self@{body} argument; you skip it entirely, and Python automatically adds the instance reference for you. I am aware that this is confusing at first; it's not really inconsistent, but it may appear inconsistent because it relies on a distinction (between bound and unbound methods) that you don't know about yet.
+
+Whew. I realize that's a lot to absorb, but you'll get the hang of it. All Python classes work the same way, so once you learn one, you've learned them all. If you forget everything else, remember this one thing, because I promise it will trip you up:
+
+@{code}__init__@{body} methods are optional, but when you define one, you must remember to explicitly call the ancestor's @{code}__init__@{body} method (if it defines one). This is more generally true: whenever a descendant wants to extend the behavior of the ancestor, the descendant method must explicitly call the ancestor method at the proper time, with the proper arguments.
+
+@{b}Further Reading on Python Classes @{ub}
+
+* @{i}Learning to Program@{ui} has a gentler introduction to classes.
+
+* @{i}How to Think Like a Computer Scientist@{ui} shows how to use classes to model compound datatypes.
+
+* @{i}Python Tutorial@{ui} has an in-depth look at classes, namespaces, and inheritance.
+
+* Python Knowledge Base answers common questions about classes.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "5.4. Instantiating Classes"
+@TITLE "5.4. Instantiating Classes"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}5.4. Instantiating Classes @{ub}
+
+Instantiating classes in Python is straightforward. To instantiate a class, simply call the class as if it were a function, passing the arguments that the @{code}__init__@{body} method defines. The return value will be the newly created object.
+
+@{b}Example 5.7. Creating a @{code}FileInfo@{body} Instance @{ub}
+
+@{code}
+>>> import fileinfo
+>>> f = fileinfo.FileInfo("/music/_singles/kairo.mp3")
+>>> f.__class__
+
+>>> f.__doc__
+'store file metadata'
+>>> f
+{'name': '/music/_singles/kairo.mp3'}
+@{body}
+
+You are creating an instance of the @{code}FileInfo@{body} class (defined in the @{code}fileinfo@{body} module) and assigning the newly created instance to the variable @{code}f@{body}. You are passing one parameter, @{code}/music/_singles/kairo.mp3@{body}, which will end up as the @{code}filename@{body} argument in @{code}FileInfo@{body} 's @{code}__init__@{body} method.
+
+Every class instance has a built-in attribute, @{code}__class__@{body}, which is the object's class. (Note that the representation of this includes the physical address of the instance on my machine; your representation will be different.) Java programmers may be familiar with the @{code}Class@{body} class, which contains methods like @{code}getName@{body} and @{code}getSuperclass@{body} to get metadata information about an object. In Python, this kind of metadata is available directly on the object itself through attributes like @{code}__class__@{body}, @{code}__name__@{body}, and @{code}__bases__@{body}.
+
+You can access the instance's @{code}doc string@{body} just as with a function or a module. All instances of a class share the same @{code}doc string@{body}.
+
+Remember when the @{code}__init__@{body} method assigned its @{code}filename@{body} argument to @{code}self["name"]@{body}? Well, here's the result. The arguments you pass when you create the class instance get sent right along to the @{code}__init__@{body} method (along with the object reference, @{code}self@{body}, which Python adds for free).
+
+In Python, simply call a class as if it were a function to create a new instance of the class. There is no explicit @{code}new@{body} operator like C++ or Java.
+
+@{b}5.4.1. Garbage Collection @{ub}
+
+If creating new instances is easy, destroying them is even easier. In general, there is no need to explicitly free instances, because they are freed automatically when the variables assigned to them go out of scope. Memory leaks are rare in Python.
+
+@{b}Example 5.8. Trying to Implement a Memory Leak@{ub}
+
+@{code}
+>>> def leakmem():
+... f = fileinfo.FileInfo('/music/_singles/kairo.mp3')
+...
+>>> for i in range(100):
+... leakmem()
+@{body}
+
+Every time the @{code}leakmem@{body} function is called, you are creating an instance of @{code}FileInfo@{body} and assigning it to the variable @{code}f@{body}, which is a local variable within the function. Then the function ends without ever freeing @{code}f@{body}, so you would expect a memory leak, but you would be wrong. When the function ends, the local variable @{code}f@{body} goes out of scope. At this point, there are no longer any references to the newly created instance of @{code}FileInfo@{body} (since you never assigned it to anything other than @{code}f@{body}), so Python destroys the instance for us.
+
+No matter how many times you call the @{code}leakmem@{body} function, it will never leak memory, because every time, Python will destroy the newly created @{code}FileInfo@{body} class before returning from @{code}leakmem@{body}.
+
+The technical term for this form of garbage collection is "reference counting". Python keeps a list of references to every instance created. In the above example, there was only one reference to the @{code}FileInfo@{body} instance: the local variable @{code}f@{body}. When the function ends, the variable @{code}f@{body} goes out of scope, so the reference count drops to @{code}0@{body}, and Python destroys the instance automatically.
+
+In previous versions of Python, there were situations where reference counting failed, and Python couldn't clean up after you. If you created two instances that referenced each other (for instance, a doubly-linked list, where each node has a pointer to the previous and next node in the list), neither instance would ever be destroyed automatically because Python (correctly) believed that there is always a reference to each instance. Python 2.0 has an additional form of garbage collection called "mark-and-sweep" which is smart enough to notice this virtual gridlock and clean up circular references correctly.
+
+As a former philosophy major, it disturbs me to think that things disappear when no one is looking at them, but that's exactly what happens in Python. In general, you can simply forget about memory management and let Python clean up after you.
+
+@{b}Further Reading on Garbage Collection@{ub}
+
+* @{i}Python Library Reference@{ui} summarizes built-in attributes like @{code}__class__@{body}.
+
+* @{i}Python Library Reference@{ui} documents the @{code}gc@{body} module, which gives you low-level control over Python's garbage collection.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "5.5. Exploring UserDict: A Wrapper Class"
+@TITLE "5.5. Exploring UserDict: A Wrapper Class"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}5.5. Exploring @{code}UserDict@{body}: A Wrapper Class @{ub}
+
+As you've seen, @{code}FileInfo@{body} is a class that acts like a dictionary. To explore this further, let's look at the @{code}UserDict@{body} class in the @{code}UserDict@{body} module, which is the ancestor of the @{code}FileInfo@{body} class. This is nothing special; the class is written in Python and stored in a @{code}.py@{body} file, just like any other Python code. In particular, it's stored in the @{code}lib@{body} directory in your Python installation.
+
+In the ActivePython IDE on Windows, you can quickly open any module in your library path by selecting File->Locate... (@{b}@{b}Ctrl@{ub} -L@{ub}).
+
+@{b}Example 5.9. Defining the @{code}UserDict@{body} Class @{ub}
+
+@{code}
+
+class UserDict:
+def __init__(self, dict=None):
+self.data = {}
+if dict is not None: self.update(dict)
+
+@{body}
+
+Note that @{code}UserDict@{body} is a base class, not inherited from any other class.
+
+This is the @{code}__init__@{body} method that you overrode in the @{code}FileInfo@{body} class. Note that the argument list in this ancestor class is different than the descendant. That's okay; each subclass can have its own set of arguments, as long as it calls the ancestor with the correct arguments. Here the ancestor class has a way to define initial values (by passing a dictionary in the @{code}dict@{body} argument) which the @{code}FileInfo@{body} does not use.
+
+Python supports data attributes (called "instance variables" in Java and Powerbuilder, and "member variables" in C++). Data attributes are pieces of data held by a specific instance of a class. In this case, each instance of @{code}UserDict@{body} will have a data attribute @{code}data@{body}. To reference this attribute from code outside the class, you qualify it with the instance name, @{code}@{i}instance@{ui}.data@{body}, in the same way that you qualify a function with its module name. To reference a data attribute from within the class, you use @{code}self@{body} as the qualifier. By convention, all data attributes are initialized to reasonable values in the @{code}__init__@{body} method. However, this is not required, since data attributes, like local variables, spring into existence when they are first assigned a value.
+
+The @{code}update@{body} method is a dictionary duplicator: it copies all the keys and values from one dictionary to another. This does @{i}not@{ui} clear the target dictionary first; if the target dictionary already has some keys, the ones from the source dictionary will be overwritten, but others will be left untouched. Think of @{code}update@{body} as a merge function, not a copy function.
+
+This is a syntax you may not have seen before (I haven't used it in the examples in this book). It's an @{code}if@{body} statement, but instead of having an indented block starting on the next line, there is just a single statement on the same line, after the colon. This is perfectly legal syntax, which is just a shortcut you can use when you have only one statement in a block. (It's like specifying a single statement without braces in C++.) You can use this syntax, or you can have indented code on subsequent lines, but you can't do both for the same block.
+
+Java and Powerbuilder support function overloading by argument list, @{i}i.e.@{ui} one class can have multiple methods with the same name but a different number of arguments, or arguments of different types. Other languages (most notably PL/SQL) even support function overloading by argument name; @{i}i.e.@{ui} one class can have multiple methods with the same name and the same number of arguments of the same type but different argument names. Python supports neither of these; it has no form of function overloading whatsoever. Methods are defined solely by their name, and there can be only one method per class with a given name. So if a descendant class has an @{code}__init__@{body} method, it @{i}always@{ui} overrides the ancestor @{code}__init__@{body} method, even if the descendant defines it with a different argument list. And the same rule applies to any other method.
+
+Guido, the original author of Python, explains method overriding this way: "Derived classes may override methods of their base classes. Because methods have no special privileges when calling other methods of the same object, a method of a base class that calls another method defined in the same base class, may in fact end up calling a method of a derived class that overrides it. (For C++ programmers: all methods in Python are effectively virtual.)" If that doesn't make sense to you (it confuses the hell out of me), feel free to ignore it. I just thought I'd pass it along.
+
+Always assign an initial value to all of an instance's data attributes in the @{code}__init__@{body} method. It will save you hours of debugging later, tracking down @{code}AttributeError@{body} exceptions because you're referencing uninitialized (and therefore non-existent) attributes.
+
+@{b}Example 5.10. @{code}UserDict@{body} Normal Methods @{ub}
+
+@{code}
+
+def clear(self): self.data.clear()
+def copy(self):
+if self.__class__ is UserDict:
+return UserDict(self.data)
+import copy
+return copy.copy(self)
+def keys(self): return self.data.keys()
+def items(self): return self.data.items()
+def values(self): return self.data.values()
+
+@{body}
+
+@{code}clear@{body} is a normal class method; it is publicly available to be called by anyone at any time. Notice that @{code}clear@{body}, like all class methods, has @{code}self@{body} as its first argument. (Remember that you don't include @{code}self@{body} when you call the method; it's something that Python adds for you.) Also note the basic technique of this wrapper class: store a real dictionary (@{code}data@{body}) as a data attribute, define all the methods that a real dictionary has, and have each class method redirect to the corresponding method on the real dictionary. (In case you'd forgotten, a dictionary's @{code}clear@{body} method deletes all of its keys and their associated values.)
+
+The @{code}copy@{body} method of a real dictionary returns a new dictionary that is an exact duplicate of the original (all the same key-value pairs). But @{code}UserDict@{body} can't simply redirect to @{code}self.data.copy@{body}, because that method returns a real dictionary, and what you want is to return a new instance that is the same class as @{code}self@{body}.
+
+You use the @{code}__class__@{body} attribute to see if @{code}self@{body} is a @{code}UserDict@{body}; if so, you're golden, because you know how to copy a @{code}UserDict@{body}: just create a new @{code}UserDict@{body} and give it the real dictionary that you've squirreled away in @{code}self.data@{body}. Then you immediately return the new @{code}UserDict@{body} you don't even get to the @{code}import copy@{body} on the next line.
+
+If @{code}self.__class__@{body} is not @{code}UserDict@{body}, then @{code}self@{body} must be some subclass of @{code}UserDict@{body} (like maybe @{code}FileInfo@{body}), in which case life gets trickier. @{code}UserDict@{body} doesn't know how to make an exact copy of one of its descendants; there could, for instance, be other data attributes defined in the subclass, so you would need to iterate through them and make sure to copy all of them. Luckily, Python comes with a module to do exactly this, and it's called @{code}copy@{body}. I won't go into the details here (though it's a wicked cool module, if you're ever inclined to dive into it on your own). Suffice it to say that @{code}copy@{body} can copy arbitrary Python objects, and that's how you're using it here.
+
+The rest of the methods are straightforward, redirecting the calls to the built-in methods on @{code}self.data@{body}.
+
+In versions of Python prior to 2.2, you could not directly subclass built-in datatypes like strings, lists, and dictionaries. To compensate for this, Python comes with wrapper classes that mimic the behavior of these built-in datatypes: @{code}UserString@{body}, @{code}UserList@{body}, and @{code}UserDict@{body}. Using a combination of normal and special methods, the @{code}UserDict@{body} class does an excellent imitation of a dictionary. In Python 2.2 and later, you can inherit classes directly from built-in datatypes like @{code}dict@{body}. An example of this is given in the examples that come with this book, in @{code}fileinfo_fromdict.py@{body}.
+
+In Python, you can inherit directly from the @{code}dict@{body} built-in datatype, as shown in this example. There are three differences here compared to the @{code}UserDict@{body} version.
+
+@{b}Example 5.11. Inheriting Directly from Built-In Datatype @{code}dict@{body}@{ub}
+
+@{code}
+
+class FileInfo(dict):
+"store file metadata"
+def __init__(self, filename=None):
+self["name"] = filename
+
+@{body}
+
+The first difference is that you don't need to import the @{code}UserDict@{body} module, since @{code}dict@{body} is a built-in datatype and is always available. The second is that you are inheriting from @{code}dict@{body} directly, instead of from @{code}UserDict.UserDict@{body}.
+
+The third difference is subtle but important. Because of the way @{code}UserDict@{body} works internally, it requires you to manually call its @{code}__init__@{body} method to properly initialize its internal data structures. @{code}dict@{body} does not work like this; it is not a wrapper, and it requires no explicit initialization.
+
+@{b}Further Reading on @{code}UserDict@{body}@{ub}
+
+* @{i}Python Library Reference@{ui} documents the @{code}UserDict@{body} module and the @{code}copy@{body} module.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "5.6. Special Class Methods"
+@TITLE "5.6. Special Class Methods"
+@NEXT "S7"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}5.6. Special Class Methods @{ub}
+
+In addition to normal class methods, there are a number of special methods that Python classes can define. Instead of being called directly by your code (like normal methods), special methods are called for you by Python in particular circumstances or when specific syntax is used.
+
+As you saw in the previous section, normal methods go a long way towards wrapping a dictionary in a class. But normal methods alone are not enough, because there are a lot of things you can do with dictionaries besides call methods on them. For starters, you can get and set items with a syntax that doesn't include explicitly invoking methods. This is where special class methods come in: they provide a way to map non-method-calling syntax into method calls.
+
+@{b}5.6.1. Getting and Setting Items @{ub}
+
+@{b}Example 5.12. The @{code}__getitem__@{body} Special Method @{ub}
+
+@{code}
+
+def __getitem__(self, key): return self.data[key]
+@{body}
+
+@{code}
+>>> f = fileinfo.FileInfo("/music/_singles/kairo.mp3")
+>>> f
+{'name':'/music/_singles/kairo.mp3'}
+>>> f.__getitem__("name")
+'/music/_singles/kairo.mp3'
+>>> f["name"]
+'/music/_singles/kairo.mp3'
+@{body}
+
+The @{code}__getitem__@{body} special method looks simple enough. Like the normal methods @{code}clear@{body}, @{code}keys@{body}, and @{code}values@{body}, it just redirects to the dictionary to return its value. But how does it get called? Well, you can call @{code}__getitem__@{body} directly, but in practice you wouldn't actually do that; I'm just doing it here to show you how it works. The right way to use @{code}__getitem__@{body} is to get Python to call it for you.
+
+This looks just like the syntax you would use to get a dictionary value, and in fact it returns the value you would expect. But here's the missing link: under the covers, Python has converted this syntax to the method call @{code}f.__getitem__("name")@{body}. That's why @{code}__getitem__@{body} is a special class method; not only can you call it yourself, you can get Python to call it for you by using the right syntax.
+
+Of course, Python has a @{code}__setitem__@{body} special method to go along with @{code}__getitem__@{body}, as shown in the next example.
+
+@{b}Example 5.13. The @{code}__setitem__@{body} Special Method @{ub}
+
+@{code}
+
+def __setitem__(self, key, item): self.data[key] = item
+@{body}
+
+@{code}
+>>> f
+{'name':'/music/_singles/kairo.mp3'}
+>>> f.__setitem__("genre", 31)
+>>> f
+{'name':'/music/_singles/kairo.mp3', 'genre':31}
+>>> f["genre"] = 32
+>>> f
+{'name':'/music/_singles/kairo.mp3', 'genre':32}
+@{body}
+
+Like the @{code}__getitem__@{body} method, @{code}__setitem__@{body} simply redirects to the real dictionary @{code}self.data@{body} to do its work. And like @{code}__getitem__@{body}, you wouldn't ordinarily call it directly like this; Python calls @{code}__setitem__@{body} for you when you use the right syntax.
+
+This looks like regular dictionary syntax, except of course that @{code}f@{body} is really a class that's trying very hard to masquerade as a dictionary, and @{code}__setitem__@{body} is an essential part of that masquerade. This line of code actually calls @{code}f.__setitem__("genre", 32)@{body} under the covers.
+
+@{code}__setitem__@{body} is a special class method because it gets called for you, but it's still a class method. Just as easily as the @{code}__setitem__@{body} method was defined in @{code}UserDict@{body}, you can redefine it in the descendant class to override the ancestor method. This allows you to define classes that act like dictionaries in some ways but define their own behavior above and beyond the built-in dictionary.
+
+This concept is the basis of the entire framework you're studying in this chapter. Each file type can have a handler class that knows how to get metadata from a particular type of file. Once some attributes (like the file's name and location) are known, the handler class knows how to derive other attributes automatically. This is done by overriding the @{code}__setitem__@{body} method, checking for particular keys, and adding additional processing when they are found.
+
+For example, @{code}MP3FileInfo@{body} is a descendant of @{code}FileInfo@{body}. When an @{code}MP3FileInfo@{body} 's @{code}name@{body} is set, it doesn't just set the @{code}name@{body} key (like the ancestor @{code}FileInfo@{body} does); it also looks in the file itself for MP3 tags and populates a whole set of keys. The next example shows how this works.
+
+@{b}Example 5.14. Overriding @{code}__setitem__@{body} in @{code}MP3FileInfo@{body}@{ub}
+
+@{code}
+
+def __setitem__(self, key, item):
+if key == "name" and item:
+self.__parse(item)
+FileInfo.__setitem__(self, key, item)
+@{body}
+
+Notice that this @{code}__setitem__@{body} method is defined exactly the same way as the ancestor method. This is important, since Python will be calling the method for you, and it expects it to be defined with a certain number of arguments. (Technically speaking, the names of the arguments don't matter; only the number of arguments is important.)
+
+Here's the crux of the entire @{code}MP3FileInfo@{body} class: if you're assigning a value to the @{code}name@{body} key, you want to do something extra.
+
+The extra processing you do for @{code}name@{body} s is encapsulated in the @{code}__parse@{body} method. This is another class method defined in @{code}MP3FileInfo@{body}, and when you call it, you qualify it with @{code}self@{body}. Just calling @{code}__parse@{body} would look for a normal function defined outside the class, which is not what you want. Calling @{code}self.__parse@{body} will look for a class method defined within the class. This isn't anything new; you reference data attributes the same way.
+
+After doing this extra processing, you want to call the ancestor method. Remember that this is never done for you in Python; you must do it manually. Note that you're calling the immediate ancestor, @{code}FileInfo@{body}, even though it doesn't have a @{code}__setitem__@{body} method. That's okay, because Python will walk up the ancestor tree until it finds a class with the method you're calling, so this line of code will eventually find and call the @{code}__setitem__@{body} defined in @{code}UserDict@{body}.
+
+When accessing data attributes within a class, you need to qualify the attribute name: @{code}self.@{i}attribute@{ui}@{body}. When calling other methods within a class, you need to qualify the method name: @{code}self.@{i}method@{ui}@{body}.
+
+@{b}Example 5.15. Setting an @{code}MP3FileInfo@{body} 's @{code}name@{body}@{ub}
+
+@{code}
+>>> import fileinfo
+>>> mp3file = fileinfo.MP3FileInfo()
+>>> mp3file
+{'name':None}
+>>> mp3file["name"] = "/music/_singles/kairo.mp3"
+>>> mp3file
+{'album': 'Rave Mix', 'artist': '***DJ MARY-JANE***', 'genre': 31,
+'title': 'KAIRO****THE BEST GOA', 'name': '/music/_singles/kairo.mp3',
+'year': '2000', 'comment': 'http://mp3.com/DJMARYJANE'}
+>>> mp3file["name"] = "/music/_singles/sidewinder.mp3"
+>>> mp3file
+{'album': '', 'artist': 'The Cynic Project', 'genre': 18, 'title': 'Sidewinder',
+'name': '/music/_singles/sidewinder.mp3', 'year': '2000',
+'comment': 'http://mp3.com/cynicproject'}
+@{body}
+
+First, you create an instance of @{code}MP3FileInfo@{body}, without passing it a filename. (You can get away with this because the @{code}filename@{body} argument of the @{code}__init__@{body} method is optional.) Since @{code}MP3FileInfo@{body} has no @{code}__init__@{body} method of its own, Python walks up the ancestor tree and finds the @{code}__init__@{body} method of @{code}FileInfo@{body}. This @{code}__init__@{body} method manually calls the @{code}__init__@{body} method of @{code}UserDict@{body} and then sets the @{code}name@{body} key to @{code}filename@{body}, which is @{code}None@{body}, since you didn't pass a filename. Thus, @{code}mp3file@{body} initially looks like a dictionary with one key, @{code}name@{body}, whose value is @{code}None@{body}.
+
+Now the real fun begins. Setting the @{code}name@{body} key of @{code}mp3file@{body} triggers the @{code}__setitem__@{body} method on @{code}MP3FileInfo@{body} (not @{code}UserDict@{body}), which notices that you're setting the @{code}name@{body} key with a real value and calls @{code}self.__parse@{body}. Although you haven't traced through the @{code}__parse@{body} method yet, you can see from the output that it sets several other keys: @{code}album@{body}, @{code}artist@{body}, @{code}genre@{body}, @{code}title@{body}, @{code}year@{body}, and @{code}comment@{body}.
+
+Modifying the @{code}name@{body} key will go through the same process again: Python calls @{code}__setitem__@{body}, which calls @{code}self.__parse@{body}, which sets all the other keys.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S7 "5.7. Advanced Special Class Methods"
+@TITLE "5.7. Advanced Special Class Methods"
+@NEXT "S8"
+@PREV "S6"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}5.7. Advanced Special Class Methods @{ub}
+
+Python has more special methods than just @{code}__getitem__@{body} and @{code}__setitem__@{body}. Some of them let you emulate functionality that you may not even know about.
+
+This example shows some of the other special methods in @{code}UserDict@{body}.
+
+@{b}Example 5.16. More Special Methods in @{code}UserDict@{body}@{ub}
+
+@{code}
+
+def __repr__(self): return repr(self.data)
+def __cmp__(self, dict):
+if isinstance(dict, UserDict):
+return cmp(self.data, dict.data)
+else:
+return cmp(self.data, dict)
+def __len__(self): return len(self.data)
+def __delitem__(self, key): del self.data[key]
+@{body}
+
+@{code}__repr__@{body} is a special method that is called when you call @{code}repr(@{i}instance@{ui})@{body}. The @{code}repr@{body} function is a built-in function that returns a string representation of an object. It works on any object, not just class instances. You're already intimately familiar with @{code}repr@{body} and you don't even know it. In the interactive window, when you type just a variable name and press the @{b}ENTER@{ub} key, Python uses @{code}repr@{body} to display the variable's value. Go create a dictionary @{code}d@{body} with some data and then @{code}print repr(d)@{body} to see for yourself.
+
+@{code}__cmp__@{body} is called when you compare class instances. In general, you can compare any two Python objects, not just class instances, by using @{code}==@{body}. There are rules that define when built-in datatypes are considered equal; for instance, dictionaries are equal when they have all the same keys and values, and strings are equal when they are the same length and contain the same sequence of characters. For class instances, you can define the @{code}__cmp__@{body} method and code the comparison logic yourself, and then you can use @{code}==@{body} to compare instances of your class and Python will call your @{code}__cmp__@{body} special method for you.
+
+@{code}__len__@{body} is called when you call @{code}len(@{i}instance@{ui})@{body}. The @{code}len@{body} function is a built-in function that returns the length of an object. It works on any object that could reasonably be thought of as having a length. The @{code}len@{body} of a string is its number of characters; the @{code}len@{body} of a dictionary is its number of keys; the @{code}len@{body} of a list or tuple is its number of elements. For class instances, define the @{code}__len__@{body} method and code the length calculation yourself, and then call @{code}len(@{i}instance@{ui})@{body} and Python will call your @{code}__len__@{body} special method for you.
+
+@{code}__delitem__@{body} is called when you call @{code}del @{i}instance@{ui} [@{i}key@{ui} ]@{body}, which you may remember as the way to delete individual items from a dictionary. When you use @{code}del@{body} on a class instance, Python calls the @{code}__delitem__@{body} special method for you.
+
+In Java, you determine whether two string variables reference the same physical memory location by using @{code}str1 == str2@{body}. This is called @{i}object identity@{ui}, and it is written in Python as @{code}str1 is str2@{body}. To compare string values in Java, you would use @{code}str1.equals(str2)@{body}; in Python, you would use @{code}str1 == str2@{body}. Java programmers who have been taught to believe that the world is a better place because @{code}==@{body} in Java compares by identity instead of by value may have a difficult time adjusting to Python's lack of such "gotchas".
+
+At this point, you may be thinking, "All this work just to do something in a class that I can do with a built-in datatype." And it's true that life would be easier (and the entire @{code}UserDict@{body} class would be unnecessary) if you could inherit from built-in datatypes like a dictionary. But even if you could, special methods would still be useful, because they can be used in any class, not just wrapper classes like @{code}UserDict@{body}.
+
+Special methods mean that @{i}any class@{ui} can store key/value pairs like a dictionary, just by defining the @{code}__setitem__@{body} method. @{i}Any class@{ui} can act like a sequence, just by defining the @{code}__getitem__@{body} method. Any class that defines the @{code}__cmp__@{body} method can be compared with @{code}==@{body}. And if your class represents something that has a length, don't define a @{code}GetLength@{body} method; define the @{code}__len__@{body} method and use @{code}len(@{i}instance@{ui})@{body}.
+
+While other object-oriented languages only let you define the physical model of an object ("this object has a @{code}GetLength@{body} method"), Python's special class methods like @{code}__len__@{body} allow you to define the logical model of an object ("this object has a length").
+
+Python has a lot of other special methods. There's a whole set of them that let classes act like numbers, allowing you to add, subtract, and do other arithmetic operations on class instances. (The canonical example of this is a class that represents complex numbers, numbers with both real and imaginary components.) The @{code}__call__@{body} method lets a class act like a function, allowing you to call a class instance directly. And there are other special methods that allow classes to have read-only and write-only data attributes; you'll talk more about those in later chapters.
+
+@{b}Further Reading on Special Class Methods@{ub}
+
+* @{i}Python Reference Manual@{ui} documents all the special class methods.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S8 "5.8. Introducing Class Attributes"
+@TITLE "5.8. Introducing Class Attributes"
+@NEXT "S9"
+@PREV "S7"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}5.8. Introducing Class Attributes @{ub}
+
+You already know about data attributes, which are variables owned by a specific instance of a class. Python also supports class attributes, which are variables owned by the class itself.
+
+@{b}Example 5.17. Introducing Class Attributes@{ub}
+
+@{code}
+
+class MP3FileInfo(FileInfo):
+"store ID3v1.0 MP3 tags"
+tagDataMap = {"title" : ( 3, 33, stripnulls),
+"artist" : ( 33, 63, stripnulls),
+"album" : ( 63, 93, stripnulls),
+"year" : ( 93, 97, stripnulls),
+"comment" : ( 97, 126, stripnulls),
+"genre" : (127, 128, ord)}
+@{body}
+
+@{code}
+>>> import fileinfo
+>>> fileinfo.MP3FileInfo
+
+>>> fileinfo.MP3FileInfo.tagDataMap
+{'title': (3, 33, ),
+'genre': (127, 128, ),
+'artist': (33, 63, ),
+'year': (93, 97, ),
+'comment': (97, 126, ),
+'album': (63, 93, )}
+>>> m = fileinfo.MP3FileInfo()
+>>> m.tagDataMap
+{'title': (3, 33, ),
+'genre': (127, 128, ),
+'artist': (33, 63, ),
+'year': (93, 97, ),
+'comment': (97, 126, ),
+'album': (63, 93, )}
+@{body}
+
+@{code}MP3FileInfo@{body} is the class itself, not any particular instance of the class.
+
+@{code}tagDataMap@{body} is a class attribute: literally, an attribute of the class. It is available before creating any instances of the class.
+
+Class attributes are available both through direct reference to the class and through any instance of the class.
+
+In Java, both static variables (called class attributes in Python) and instance variables (called data attributes in Python) are defined immediately after the class definition (one with the @{code}static@{body} keyword, one without). In Python, only class attributes can be defined here; data attributes are defined in the @{code}__init__@{body} method.
+
+Class attributes can be used as class-level constants (which is how you use them in @{code}MP3FileInfo@{body}), but they are not really constants. You can also change them.
+
+There are no constants in Python. Everything can be changed if you try hard enough. This fits with one of the core principles of Python: bad behavior should be discouraged but not banned. If you really want to change the value of @{code}None@{body}, you can do it, but don't come running to me when your code is impossible to debug.
+
+@{b}Example 5.18. Modifying Class Attributes@{ub}
+
+@{code}
+>>> class counter:
+... count = 0
+... def __init__(self):
+... self.__class__.count += 1
+...
+>>> counter
+
+>>> counter.count
+0
+>>> c = counter()
+>>> c.count
+1
+>>> counter.count
+1
+>>> d = counter()
+>>> d.count
+2
+>>> c.count
+2
+>>> counter.count
+2
+@{body}
+
+@{code}count@{body} is a class attribute of the @{code}counter@{body} class.
+
+@{code}__class__@{body} is a built-in attribute of every class instance (of every class). It is a reference to the class that @{code}self@{body} is an instance of (in this case, the @{code}counter@{body} class).
+
+Because @{code}count@{body} is a class attribute, it is available through direct reference to the class, before you have created any instances of the class.
+
+Creating an instance of the class calls the @{code}__init__@{body} method, which increments the class attribute @{code}count@{body} by @{code}1@{body}. This affects the class itself, not just the newly created instance.
+
+Creating a second instance will increment the class attribute @{code}count@{body} again. Notice how the class attribute is shared by the class and all instances of the class.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S9 "5.9. Private Functions"
+@TITLE "5.9. Private Functions"
+@NEXT "S10"
+@PREV "S8"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}5.9. Private Functions @{ub}
+
+Like most languages, Python has the concept of private elements:
+
+* Private functions, which can't be called from outside their module
+
+* Private class methods, which can't be called from outside their class
+
+* Private attributes, which can't be accessed from outside their class.
+
+Unlike in most languages, whether a Python function, method, or attribute is private or public is determined entirely by its name.
+
+If the name of a Python function, class method, or attribute starts with (but doesn't end with) two underscores, it's private; everything else is public. Python has no concept of @{i}protected@{ui} class methods (accessible only in their own class and descendant classes). Class methods are either private (accessible only in their own class) or public (accessible from anywhere).
+
+In @{code}MP3FileInfo@{body}, there are two methods: @{code}__parse@{body} and @{code}__setitem__@{body}. As you have already discussed, @{code}__setitem__@{body} is a special method; normally, you would call it indirectly by using the dictionary syntax on a class instance, but it is public, and you could call it directly (even from outside the @{code}fileinfo@{body} module) if you had a really good reason. However, @{code}__parse@{body} is private, because it has two underscores at the beginning of its name.
+
+In Python, all special methods (like @{code}__setitem__@{body}) and built-in attributes (like @{code}__doc__@{body}) follow a standard naming convention: they both start with and end with two underscores. Don't name your own methods and attributes this way, because it will only confuse you (and others) later.
+
+@{b}Example 5.19. Trying to Call a Private Method@{ub}
+
+@{code}
+>>> import fileinfo
+>>> m = fileinfo.MP3FileInfo()
+>>> m.__parse("/music/_singles/kairo.mp3")
+Traceback (innermost last):
+File "", line 1, in ?
+AttributeError: 'MP3FileInfo' instance has no attribute '__parse'
+@{body}
+
+If you try to call a private method, Python will raise a slightly misleading exception, saying that the method does not exist. Of course it does exist, but it's private, so it's not accessible outside the class.Strictly speaking, private methods are accessible outside their class, just not @{i}easily@{ui} accessible. Nothing in Python is truly private; internally, the names of private methods and attributes are mangled and unmangled on the fly to make them seem inaccessible by their given names. You can access the @{code}__parse@{body} method of the @{code}MP3FileInfo@{body} class by the name @{code}_MP3FileInfo__parse@{body}. Acknowledge that this is interesting, but promise to never, ever do it in real code. Private methods are private for a reason, but like many other things in Python, their privateness is ultimately a matter of convention, not force.
+
+@{b}Further Reading on Private Functions@{ub}
+
+* @{i}Python Tutorial@{ui} discusses the inner workings of private variables.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S10 "5.10. Summary"
+@TITLE "5.10. Summary"
+@NEXT "MAIN"
+@PREV "S9"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}5.10. Summary @{ub}
+
+That's it for the hard-core object trickery. You'll see a real-world application of special class methods in Chapter 12, which uses @{code}getattr@{body} to create a proxy to a remote web service.
+
+The next chapter will continue using this code sample to explore other Python concepts, such as exceptions, file objects, and @{code}for@{body} loops.
+
+Before diving into the next chapter, make sure you're comfortable doing all of these things:
+
+* Importing modules using either @{code}import @{i}module@{ui}@{body} or @{code}from @{i}module@{ui} import@{body}
+
+* Defining and instantiating classes
+
+* Defining @{code}__init__@{body} methods and other special class methods, and understanding when they are called
+
+* Subclassing @{code}UserDict@{body} to define classes that act like dictionaries
+
+* Defining data attributes and class attributes, and understanding the differences between them
+
+* Defining private attributes and methods
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

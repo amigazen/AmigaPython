@@ -1,0 +1,912 @@
+@DATABASE "DIP06.guide"
+@$VER: DIP06.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "6. Exceptions and File Handling"
+@TITLE "6. Exceptions and File Handling"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}6. Exceptions and File Handling@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}Exceptions are standard. Paths use volume:drawer/file, not Unix /home/... Parent navigation differs from Unix '../'.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 6.1. Handling Exceptions " LINK "S1"}
+@{" 6.2. Working with File Objects " LINK "S2"}
+@{" 6.3. Iterating with for Loops " LINK "S3"}
+@{" 6.4. Using sys.modules " LINK "S4"}
+@{" 6.5. Working with Directories " LINK "S5"}
+@{" 6.6. Putting It All Together " LINK "S6"}
+@{" 6.7. Summary " LINK "S7"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 6. Exceptions and File Handling
+
+In this chapter, you will dive into exceptions, file objects, @{code}for@{body} loops, and the @{code}os@{body} and @{code}sys@{body} modules. If you've used exceptions in another programming language, you can skim the first section to get a sense of Python's syntax. Be sure to tune in again for file handling.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "6.1. Handling Exceptions"
+@TITLE "6.1. Handling Exceptions"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}6.1. Handling Exceptions @{ub}
+
+Like many other programming languages, Python has exception handling via @{code}try...except@{body} blocks.
+
+Python uses @{code}try...except@{body} to handle exceptions and @{code}raise@{body} to generate them. Java and C++ use @{code}try...catch@{body} to handle exceptions, and @{code}throw@{body} to generate them.
+
+Exceptions are everywhere in Python. Virtually every module in the standard Python library uses them, and Python itself will raise them in a lot of different circumstances. You've already seen them repeatedly throughout this book.
+
+* Accessing a non-existent dictionary key will raise a @{code}KeyError@{body} exception.
+
+* Searching a list for a non-existent value will raise a @{code}ValueError@{body} exception.
+
+* Calling a non-existent method will raise an @{code}AttributeError@{body} exception.
+
+* Referencing a non-existent variable will raise a @{code}NameError@{body} exception.
+
+* Mixing datatypes without coercion will raise a @{code}TypeError@{body} exception.
+
+In each of these cases, you were simply playing around in the Python IDE: an error occurred, the exception was printed (depending on your IDE, perhaps in an intentionally jarring shade of red), and that was that. This is called an @{i}unhandled@{ui} exception. When the exception was raised, there was no code to explicitly notice it and deal with it, so it bubbled its way back to the default behavior built in to Python, which is to spit out some debugging information and give up. In the IDE, that's no big deal, but if that happened while your actual Python program was running, the entire program would come to a screeching halt.
+
+An exception doesn't need result in a complete program crash, though. Exceptions, when raised, can be @{i}handled@{ui}. Sometimes an exception is really because you have a bug in your code (like accessing a variable that doesn't exist), but many times, an exception is something you can anticipate. If you're opening a file, it might not exist. If you're connecting to a database, it might be unavailable, or you might not have the correct security credentials to access it. If you know a line of code may raise an exception, you should handle the exception using a @{code}try...except@{body} block.
+
+@{b}Example 6.1. Opening a Non-Existent File@{ub}
+
+@{code}
+>>> fsock = open("/notthere", "r")
+Traceback (innermost last):
+File "", line 1, in ?
+IOError: [Errno 2] No such file or directory: '/notthere'
+>>> try:
+... fsock = open("/notthere")
+... except IOError:
+... print "The file does not exist, exiting gracefully"
+... print "This line will always print"
+The file does not exist, exiting gracefully
+This line will always print
+@{body}
+
+Using the built-in @{code}open@{body} function, you can try to open a file for reading (more on @{code}open@{body} in the next section). But the file doesn't exist, so this raises the @{code}IOError@{body} exception. Since you haven't provided any explicit check for an @{code}IOError@{body} exception, Python just prints out some debugging information about what happened and then gives up.
+
+You're trying to open the same non-existent file, but this time you're doing it within a @{code}try...except@{body} block.
+
+When the @{code}open@{body} method raises an @{code}IOError@{body} exception, you're ready for it. The @{code}except IOError:@{body} line catches the exception and executes your own block of code, which in this case just prints a more pleasant error message.
+
+Once an exception has been handled, processing continues normally on the first line after the @{code}try...except@{body} block. Note that this line will always print, whether or not an exception occurs. If you really did have a file called @{code}notthere@{body} in your root directory, the call to @{code}open@{body} would succeed, the @{code}except@{body} clause would be ignored, and this line would still be executed.
+
+Exceptions may seem unfriendly (after all, if you don't catch the exception, your entire program will crash), but consider the alternative. Would you rather get back an unusable file object to a non-existent file? You'd need to check its validity somehow anyway, and if you forgot, somewhere down the line, your program would give you strange errors somewhere down the line that you would need to trace back to the source. I'm sure you've experienced this, and you know it's not fun. With exceptions, errors occur immediately, and you can handle them in a standard way at the source of the problem.
+
+@{b}6.1.1. Using Exceptions For Other Purposes @{ub}
+
+There are a lot of other uses for exceptions besides handling actual error conditions. A common use in the standard Python library is to try to import a module, and then check whether it worked. Importing a module that does not exist will raise an @{code}ImportError@{body} exception. You can use this to define multiple levels of functionality based on which modules are available at run-time, or to support multiple platforms (where platform-specific code is separated into different modules).
+
+You can also define your own exceptions by creating a class that inherits from the built-in @{code}Exception@{body} class, and then raise your exceptions with the @{code}raise@{body} command. See the further reading section if you're interested in doing this.
+
+The next example demonstrates how to use an exception to support platform-specific functionality. This code comes from the @{code}getpass@{body} module, a wrapper module for getting a password from the user. Getting a password is accomplished differently on UNIX, Windows, and Mac OS platforms, but this code encapsulates all of those differences.
+
+@{b}Example 6.2. Supporting Platform-Specific Functionality@{ub}
+
+@{code}
+
+# Bind the name getpass to the appropriate function
+try:
+import termios, TERMIOS
+except ImportError:
+try:
+import msvcrt
+except ImportError:
+try:
+from EasyDialogs import AskPassword
+except ImportError:
+getpass = default_getpass
+else:
+getpass = AskPassword
+else:
+getpass = win_getpass
+else:
+getpass = unix_getpass
+@{body}
+
+@{code}termios@{body} is a UNIX-specific module that provides low-level control over the input terminal. If this module is not available (because it's not on your system, or your system doesn't support it), the import fails and Python raises an @{code}ImportError@{body}, which you catch.
+
+OK, you didn't have @{code}termios@{body}, so let's try @{code}msvcrt@{body}, which is a Windows-specific module that provides an API to many useful functions in the Microsoft Visual C++ runtime services. If this import fails, Python will raise an @{code}ImportError@{body}, which you catch.
+
+If the first two didn't work, you try to import a function from @{code}EasyDialogs@{body}, which is a Mac OS-specific module that provides functions to pop up dialog boxes of various types. Once again, if this import fails, Python will raise an @{code}ImportError@{body}, which you catch.
+
+None of these platform-specific modules is available (which is possible, since Python has been ported to a lot of different platforms), so you need to fall back on a default password input function (which is defined elsewhere in the @{code}getpass@{body} module). Notice what you're doing here: assigning the function @{code}default_getpass@{body} to the variable @{code}getpass@{body}. If you read the official @{code}getpass@{body} documentation, it tells you that the @{code}getpass@{body} module defines a @{code}getpass@{body} function. It does this by binding @{code}getpass@{body} to the correct function for your platform. Then when you call the @{code}getpass@{body} function, you're really calling a platform-specific function that this code has set up for you. You don't need to know or care which platform your code is running on -- just call @{code}getpass@{body}, and it will always do the right thing.
+
+A @{code}try...except@{body} block can have an @{code}else@{body} clause, like an @{code}if@{body} statement. If no exception is raised during the @{code}try@{body} block, the @{code}else@{body} clause is executed afterwards. In this case, that means that the @{code}from EasyDialogs import AskPassword@{body} import worked, so you should bind @{code}getpass@{body} to the @{code}AskPassword@{body} function. Each of the other @{code}try...except@{body} blocks has similar @{code}else@{body} clauses to bind @{code}getpass@{body} to the appropriate function when you find an @{code}import@{body} that works.
+
+@{b}Further Reading on Exception Handling@{ub}
+
+* @{i}Python Tutorial@{ui} discusses defining and raising your own exceptions, and handling multiple exceptions at once.
+
+* @{i}Python Library Reference@{ui} summarizes all the built-in exceptions.
+
+* @{i}Python Library Reference@{ui} documents the getpass module.
+
+* @{i}Python Library Reference@{ui} documents the @{code}traceback@{body} module, which provides low-level access to exception attributes after an exception is raised.
+
+* @{i}Python Reference Manual@{ui} discusses the inner workings of the @{code}try...except@{body} block.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "6.2. Working with File Objects"
+@TITLE "6.2. Working with File Objects"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}6.2. Working with File Objects @{ub}
+
+Python has a built-in function, @{code}open@{body}, for opening a file on disk. @{code}open@{body} returns a file object, which has methods and attributes for getting information about and manipulating the opened file.
+
+@{b}Example 6.3. Opening a File@{ub}
+
+@{code}
+>>> f = open("/music/_singles/kairo.mp3", "rb")
+>>> f
+
+>>> f.mode
+'rb'
+>>> f.name
+'/music/_singles/kairo.mp3'
+@{body}
+
+The @{code}open@{body} method can take up to three parameters: a filename, a mode, and a buffering parameter. Only the first one, the filename, is required; the other two are optional. If not specified, the file is opened for reading in text mode. Here you are opening the file for reading in binary mode. (@{code}print open.__doc__@{body} displays a great explanation of all the possible modes.)
+
+The @{code}open@{body} function returns an object (by now, this should not surprise you). A file object has several useful attributes.
+
+The @{code}mode@{body} attribute of a file object tells you in which mode the file was opened.
+
+The @{code}name@{body} attribute of a file object tells you the name of the file that the file object has open.
+
+@{b}6.2.1. Reading Files @{ub}
+
+After you open a file, the first thing you'll want to do is read from it, as shown in the next example.
+
+@{b}Example 6.4. Reading a File@{ub}
+
+@{code}
+
+>>> f
+
+>>> f.tell()
+0
+>>> f.seek(-128, 2)
+>>> f.tell()
+7542909
+>>> tagData = f.read(128)
+>>> tagData
+'TAGKAIRO****THE BEST GOA ***DJ MARY-JANE***
+Rave Mix 2000http://mp3.com/DJMARYJANE \\037'
+>>> f.tell()
+7543037
+@{body}
+
+A file object maintains state about the file it has open. The @{code}tell@{body} method of a file object tells you your current position in the open file. Since you haven't done anything with this file yet, the current position is @{code}0@{body}, which is the beginning of the file.
+
+The @{code}seek@{body} method of a file object moves to another position in the open file. The second parameter specifies what the first one means; @{code}0@{body} means move to an absolute position (counting from the start of the file), @{code}1@{body} means move to a relative position (counting from the current position), and @{code}2@{body} means move to a position relative to the end of the file. Since the MP3 tags you're looking for are stored at the end of the file, you use @{code}2@{body} and tell the file object to move to a position @{code}128@{body} bytes from the end of the file.
+
+The @{code}tell@{body} method confirms that the current file position has moved.
+
+The @{code}read@{body} method reads a specified number of bytes from the open file and returns a string with the data that was read. The optional parameter specifies the maximum number of bytes to read. If no parameter is specified, @{code}read@{body} will read until the end of the file. (You could have simply said @{code}read()@{body} here, since you know exactly where you are in the file and you are, in fact, reading the last 128 bytes.) The read data is assigned to the @{code}tagData@{body} variable, and the current position is updated based on how many bytes were read.
+
+The @{code}tell@{body} method confirms that the current position has moved. If you do the math, you'll see that after reading 128 bytes, the position has been incremented by 128.
+
+@{b}6.2.2. Closing Files @{ub}
+
+Open files consume system resources, and depending on the file mode, other programs may not be able to access them. It's important to close files as soon as you're finished with them.
+
+@{b}Example 6.5. Closing a File@{ub}
+
+@{code}
+
+>>> f
+
+>>> f.closed
+False
+>>> f.close()
+>>> f
+
+>>> f.closed
+True
+>>> f.seek(0)
+Traceback (innermost last):
+File "", line 1, in ?
+ValueError: I/O operation on closed file
+>>> f.tell()
+Traceback (innermost last):
+File "", line 1, in ?
+ValueError: I/O operation on closed file
+>>> f.read()
+Traceback (innermost last):
+File "", line 1, in ?
+ValueError: I/O operation on closed file
+>>> f.close()
+@{body}
+
+The @{code}closed@{body} attribute of a file object indicates whether the object has a file open or not. In this case, the file is still open (@{code}closed@{body} is @{code}False@{body}).
+
+To close a file, call the @{code}close@{body} method of the file object. This frees the lock (if any) that you were holding on the file, flushes buffered writes (if any) that the system hadn't gotten around to actually writing yet, and releases the system resources.
+
+The @{code}closed@{body} attribute confirms that the file is closed.
+
+Just because a file is closed doesn't mean that the file object ceases to exist. The variable @{code}f@{body} will continue to exist until it goes out of scope or gets manually deleted. However, none of the methods that manipulate an open file will work once the file has been closed; they all raise an exception.
+
+Calling @{code}close@{body} on a file object whose file is already closed does @{i}not@{ui} raise an exception; it fails silently.
+
+@{b}6.2.3. Handling I/O Errors @{ub}
+
+Now you've seen enough to understand the file handling code in the @{code}fileinfo.py@{body} sample code from teh previous chapter. This example shows how to safely open and read from a file and gracefully handle errors.
+
+@{b}Example 6.6. File Objects in @{code}MP3FileInfo@{body}@{ub}
+
+@{code}
+
+try:
+fsock = open(filename, "rb", 0)
+try:
+fsock.seek(-128, 2)
+tagdata = fsock.read(128)
+finally:
+fsock.close()
+.
+.
+.
+except IOError:
+pass
+@{body}
+
+Because opening and reading files is risky and may raise an exception, all of this code is wrapped in a @{code}try...except@{body} block. (Hey, isn't standardized indentation great? This is where you start to appreciate it.)
+
+The @{code}open@{body} function may raise an @{code}IOError@{body}. (Maybe the file doesn't exist.)
+
+The @{code}seek@{body} method may raise an @{code}IOError@{body}. (Maybe the file is smaller than 128 bytes.)
+
+The @{code}read@{body} method may raise an @{code}IOError@{body}. (Maybe the disk has a bad sector, or it's on a network drive and the network just went down.)
+
+This is new: a @{code}try...finally@{body} block. Once the file has been opened successfully by the @{code}open@{body} function, you want to make absolutely sure that you close it, even if an exception is raised by the @{code}seek@{body} or @{code}read@{body} methods. That's what a @{code}try...finally@{body} block is for: code in the @{code}finally@{body} block will @{i}always@{ui} be executed, even if something in the @{code}try@{body} block raises an exception. Think of it as code that gets executed on the way out, regardless of what happened before.
+
+At last, you handle your @{code}IOError@{body} exception. This could be the @{code}IOError@{body} exception raised by the call to @{code}open@{body}, @{code}seek@{body}, or @{code}read@{body}. Here, you really don't care, because all you're going to do is ignore it silently and continue. (Remember, @{code}pass@{body} is a Python statement that does nothing.) That's perfectly legal; "handling" an exception can mean explicitly doing nothing. It still counts as handled, and processing will continue normally on the next line of code after the @{code}try...except@{body} block.
+
+@{b}6.2.4. Writing to Files @{ub}
+
+As you would expect, you can also write to files in much the same way that you read from them. There are two basic file modes:
+
+* "Append" mode will add data to the end of the file.
+
+* "write" mode will overwrite the file.
+
+Either mode will create the file automatically if it doesn't already exist, so there's never a need for any sort of fiddly "if the log file doesn't exist yet, create a new empty file just so you can open it for the first time" logic. Just open it and start writing.
+
+@{b}Example 6.7. Writing to Files@{ub}
+
+@{code}
+
+>>> logfile = open('test.log', 'w')
+>>> logfile.write('test succeeded')
+>>> logfile.close()
+>>> print file('test.log').read()
+test succeeded
+>>> logfile = open('test.log', 'a')
+>>> logfile.write('line 2')
+>>> logfile.close()
+>>> print file('test.log').read()
+test succeededline 2
+
+@{body}
+
+You start boldly by creating either the new file @{code}test.log@{body} or overwrites the existing file, and opening the file for writing. (The second parameter @{code}"w"@{body} means open the file for writing.) Yes, that's all as dangerous as it sounds. I hope you didn't care about the previous contents of that file, because it's gone now.
+
+You can add data to the newly opened file with the @{code}write@{body} method of the file object returned by @{code}open@{body}.
+
+@{code}file@{body} is a synonym for @{code}open@{body}. This one-liner opens the file, reads its contents, and prints them.
+
+You happen to know that @{code}test.log@{body} exists (since you just finished writing to it), so you can open it and append to it. (The @{code}"a"@{body} parameter means open the file for appending.) Actually you could do this even if the file didn't exist, because opening the file for appending will create the file if necessary. But appending will @{i}never@{ui} harm the existing contents of the file.
+
+As you can see, both the original line you wrote and the second line you appended are now in @{code}test.log@{body}. Also note that carriage returns are not included. Since you didn't write them explicitly to the file either time, the file doesn't include them. You can write a carriage return with the @{code}"\\n"@{body} character. Since you didn't do this, everything you wrote to the file ended up smooshed together on the same line.
+
+@{b}Further Reading on File Handling@{ub}
+
+* @{i}Python Tutorial@{ui} discusses reading and writing files, including how to read a file one line at a time into a list.
+
+* eff-bot discusses efficiency and performance of various ways of reading a file.
+
+* Python Knowledge Base answers common questions about files.
+
+* @{i}Python Library Reference@{ui} summarizes all the file object methods.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "6.3. Iterating with for Loops"
+@TITLE "6.3. Iterating with for Loops"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}6.3. Iterating with @{code}for@{body} Loops @{ub}
+
+Like most other languages, Python has @{code}for@{body} loops. The only reason you haven't seen them until now is that Python is good at so many other things that you don't need them as often.
+
+Most other languages don't have a powerful list datatype like Python, so you end up doing a lot of manual work, specifying a start, end, and step to define a range of integers or characters or other iteratable entities. But in Python, a @{code}for@{body} loop simply iterates over a list, the same way list comprehensions work.
+
+@{b}Example 6.8. Introducing the @{code}for@{body} Loop @{ub}
+
+@{code}
+>>> li = ['a', 'b', 'e']
+>>> for s in li:
+... print s
+a
+b
+e
+>>> print "\\n".join(li)
+a
+b
+e
+@{body}
+
+The syntax for a @{code}for@{body} loop is similar to list comprehensions. @{code}li@{body} is a list, and @{code}s@{body} will take the value of each element in turn, starting from the first element.
+
+Like an @{code}if@{body} statement or any other indented block, a @{code}for@{body} loop can have any number of lines of code in it.
+
+This is the reason you haven't seen the @{code}for@{body} loop yet: you haven't needed it yet. It's amazing how often you use @{code}for@{body} loops in other languages when all you really want is a @{code}join@{body} or a list comprehension.
+
+Doing a "normal" (by Visual Basic standards) counter @{code}for@{body} loop is also simple.
+
+@{b}Example 6.9. Simple Counters@{ub}
+
+@{code}
+
+>>> for i in range(5):
+... print i
+0
+1
+2
+3
+4
+>>> li = ['a', 'b', 'c', 'd', 'e']
+>>> for i in range(len(li)):
+... print li[i]
+a
+b
+c
+d
+e
+
+@{body}
+
+As you saw in Example 3.20, "Assigning Consecutive Values", @{code}range@{body} produces a list of integers, which you then loop through. I know it looks a bit odd, but it is occasionally (and I stress @{i}occasionally@{ui}) useful to have a counter loop.
+
+Don't ever do this. This is Visual Basic-style thinking. Break out of it. Just iterate through the list, as shown in the previous example.
+
+@{code}for@{body} loops are not just for simple counters. They can iterate through all kinds of things. Here is an example of using a @{code}for@{body} loop to iterate through a dictionary.
+
+@{b}Example 6.10. Iterating Through a Dictionary@{ub}
+
+@{code}
+
+>>> import os
+>>> for k, v in os.environ.items():
+... print "%s=%s" % (k, v)
+USERPROFILE=C:\\Documents and Settings\\mpilgrim
+OS=Windows_NT
+COMPUTERNAME=MPILGRIM
+USERNAME=mpilgrim
+
+[...snip...]
+>>> print "\\n".join(["%s=%s" % (k, v)
+... for k, v in os.environ.items()])
+USERPROFILE=C:\\Documents and Settings\\mpilgrim
+OS=Windows_NT
+COMPUTERNAME=MPILGRIM
+USERNAME=mpilgrim
+
+[...snip...]
+@{body}
+
+@{code}os.environ@{body} is a dictionary of the environment variables defined on your system. In Windows, these are your user and system variables accessible from MS-DOS. In UNIX, they are the variables exported in your shell's startup scripts. In Mac OS, there is no concept of environment variables, so this dictionary is empty.
+
+@{code}os.environ.items()@{body} returns a list of tuples: @{code}[(@{i}key1@{ui}, @{i}value1@{ui}), (@{i}key2@{ui}, @{i}value2@{ui}), ...]@{body}. The @{code}for@{body} loop iterates through this list. The first round, it assigns @{code}@{i}key1@{ui}@{body} to @{code}k@{body} and @{code}@{i}value1@{ui}@{body} to @{code}v@{body}, so @{code}k@{body} = @{code}USERPROFILE@{body} and @{code}v@{body} = @{code}C:\\Documents and Settings\\mpilgrim@{body}. In the second round, @{code}k@{body} gets the second key, @{code}OS@{body}, and @{code}v@{body} gets the corresponding value, @{code}Windows_NT@{body}.
+
+With multi-variable assignment and list comprehensions, you can replace the entire @{code}for@{body} loop with a single statement. Whether you actually do this in real code is a matter of personal coding style. I like it because it makes it clear that what I'm doing is mapping a dictionary into a list, then joining the list into a single string. Other programmers prefer to write this out as a @{code}for@{body} loop. The output is the same in either case, although this version is slightly faster, because there is only one @{code}print@{body} statement instead of many.
+
+Now we can look at the @{code}for@{body} loop in @{code}MP3FileInfo@{body}, from the sample @{code}fileinfo.py@{body} program introduced in Chapter 5.
+
+@{b}Example 6.11. @{code}for@{body} Loop in @{code}MP3FileInfo@{body}@{ub}
+
+@{code}
+
+tagDataMap = {"title" : ( 3, 33, stripnulls),
+"artist" : ( 33, 63, stripnulls),
+"album" : ( 63, 93, stripnulls),
+"year" : ( 93, 97, stripnulls),
+"comment" : ( 97, 126, stripnulls),
+"genre" : (127, 128, ord)}
+.
+.
+.
+if tagdata[:3] == "TAG":
+for tag, (start, end, parseFunc) in self.tagDataMap.items():
+self[tag] = parseFunc(tagdata[start:end])
+@{body}
+
+@{code}tagDataMap@{body} is a class attribute that defines the tags you're looking for in an MP3 file. Tags are stored in fixed-length fields. Once you read the last 128 bytes of the file, bytes 3 through 32 of those are always the song title, 33 through 62 are always the artist name, 63 through 92 are the album name, and so forth. Note that @{code}tagDataMap@{body} is a dictionary of tuples, and each tuple contains two integers and a function reference.
+
+This looks complicated, but it's not. The structure of the @{code}for@{body} variables matches the structure of the elements of the list returned by @{code}items@{body}. Remember that @{code}items@{body} returns a list of tuples of the form @{code}(@{i}key@{ui}, @{i}value@{ui})@{body}. The first element of that list is @{code}("title", (3, 33, ))@{body}, so the first time around the loop, @{code}tag@{body} gets @{code}"title"@{body}, @{code}start@{body} gets @{code}3@{body}, @{code}end@{body} gets @{code}33@{body}, and @{code}parseFunc@{body} gets the function @{code}stripnulls@{body}.
+
+Now that you've extracted all the parameters for a single MP3 tag, saving the tag data is easy. You slice @{code}tagdata@{body} from @{code}start@{body} to @{code}end@{body} to get the actual data for this tag, call @{code}parseFunc@{body} to post-process the data, and assign this as the value for the key @{code}tag@{body} in the pseudo-dictionary @{code}self@{body}. After iterating through all the elements in @{code}tagDataMap@{body}, @{code}self@{body} has the values for all the tags, and you know what that looks like.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "6.4. Using sys.modules"
+@TITLE "6.4. Using sys.modules"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}6.4. Using @{code}@{code}sys@{body}.modules@{body}@{ub}
+
+Modules, like everything else in Python, are objects. Once imported, you can always get a reference to a module through the global dictionary @{code}@{code}sys@{body}.modules@{body}.
+
+@{b}Example 6.12. Introducing @{code}@{code}sys@{body}.modules@{body}@{ub}
+
+@{code}
+>>> import sys
+>>> print '\\n'.join(sys.modules.keys())
+win32api
+os.path
+os
+exceptions
+__main__
+ntpath
+nt
+sys
+__builtin__
+site
+signal
+UserDict
+stat
+@{body}
+
+The @{code}sys@{body} module contains system-level information, such as the version of Python you're running (@{code}@{code}sys@{body}.version@{body} or @{code}@{code}sys@{body}.version_info@{body}), and system-level options such as the maximum allowed recursion depth (@{code}@{code}sys@{body}.getrecursionlimit()@{body} and @{code}@{code}sys@{body}.setrecursionlimit()@{body}).
+
+@{code}@{code}sys@{body}.modules@{body} is a dictionary containing all the modules that have ever been imported since Python was started; the key is the module name, the value is the module object. Note that this is more than just the modules @{i}your@{ui} program has imported. Python preloads some modules on startup, and if you're using a Python IDE, @{code}@{code}sys@{body}.modules@{body} contains all the modules imported by all the programs you've run within the IDE.
+
+This example demonstrates how to use @{code}@{code}sys@{body}.modules@{body}.
+
+@{b}Example 6.13. Using @{code}@{code}sys@{body}.modules@{body}@{ub}
+
+@{code}
+>>> import fileinfo
+>>> print '\\n'.join(sys.modules.keys())
+win32api
+os.path
+os
+fileinfo
+exceptions
+__main__
+ntpath
+nt
+sys
+__builtin__
+site
+signal
+UserDict
+stat
+>>> fileinfo
+
+>>> sys.modules["fileinfo"]
+
+@{body}
+
+As new modules are imported, they are added to @{code}@{code}sys@{body}.modules@{body}. This explains why importing the same module twice is very fast: Python has already loaded and cached the module in @{code}@{code}sys@{body}.modules@{body}, so importing the second time is simply a dictionary lookup.
+
+Given the name (as a string) of any previously-imported module, you can get a reference to the module itself through the @{code}@{code}sys@{body}.modules@{body} dictionary.
+
+The next example shows how to use the @{code}__module__@{body} class attribute with the @{code}@{code}sys@{body}.modules@{body} dictionary to get a reference to the module in which a class is defined.
+
+@{b}Example 6.14. The @{code}__module__@{body} Class Attribute @{ub}
+
+@{code}
+>>> from fileinfo import MP3FileInfo
+>>> MP3FileInfo.__module__
+'fileinfo'
+>>> sys.modules[MP3FileInfo.__module__]
+
+@{body}
+
+Every Python class has a built-in class attribute @{code}__module__@{body}, which is the name of the module in which the class is defined.
+
+Combining this with the @{code}@{code}sys@{body}.modules@{body} dictionary, you can get a reference to the module in which a class is defined.
+
+Now you're ready to see how @{code}@{code}sys@{body}.modules@{body} is used in @{code}fileinfo.py@{body}, the sample program introduced in Chapter 5. This example shows that portion of the code.
+
+@{b}Example 6.15. @{code}@{code}sys@{body}.modules@{body} in @{code}fileinfo.py@{body}@{ub}
+
+@{code}
+
+def getFileInfoClass(filename, module=sys.modules[FileInfo.__module__]):
+"get file info class from filename extension"
+subclass = "%sFileInfo" % os.path.splitext(filename)[1].upper()[1:]
+return hasattr(module, subclass) and getattr(module, subclass) or FileInfo
+@{body}
+
+This is a function with two arguments; @{code}filename@{body} is required, but @{code}module@{body} is optional and defaults to the module that contains the @{code}FileInfo@{body} class. This looks inefficient, because you might expect Python to evaluate the @{code}@{code}sys@{body}.modules@{body} expression every time the function is called. In fact, Python evaluates default expressions only once, the first time the module is imported. As you'll see later, you never call this function with a @{code}module@{body} argument, so @{code}module@{body} serves as a function-level constant.
+
+You'll plow through this line later, after you dive into the @{code}os@{body} module. For now, take it on faith that @{code}subclass@{body} ends up as the name of a class, like @{code}MP3FileInfo@{body}.
+
+You already know about @{code}getattr@{body}, which gets a reference to an object by name. @{code}hasattr@{body} is a complementary function that checks whether an object has a particular attribute; in this case, whether a module has a particular class (although it works for any object and any attribute, just like @{code}getattr@{body}). In English, this line of code says, "If this module has the class named by @{code}subclass@{body} then return it, otherwise return the base class @{code}FileInfo@{body}."
+
+@{b}Further Reading on Modules@{ub}
+
+* @{i}Python Tutorial@{ui} discusses exactly when and how default arguments are evaluated.
+
+* @{i}Python Library Reference@{ui} documents the @{code}sys@{body} module.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "6.5. Working with Directories"
+@TITLE "6.5. Working with Directories"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}6.5. Working with Directories @{ub}
+
+The @{code}os.path@{body} module has several functions for manipulating files and directories. Here, we're looking at handling pathnames and listing the contents of a directory.
+
+@{b}Example 6.16. Constructing Pathnames@{ub}
+
+@{code}
+
+>>> import os
+>>> os.path.join("c:\\\\music\\\\ap\\\\", "mahadeva.mp3")
+'c:\\\\music\\\\ap\\\\mahadeva.mp3'
+>>> os.path.join("c:\\\\music\\\\ap", "mahadeva.mp3")
+'c:\\\\music\\\\ap\\\\mahadeva.mp3'
+>>> os.path.expanduser("~")
+'c:\\\\Documents and Settings\\\\mpilgrim\\\\My Documents'
+>>> os.path.join(os.path.expanduser("~"), "Python")
+'c:\\\\Documents and Settings\\\\mpilgrim\\\\My Documents\\\\Python'
+@{body}
+
+@{code}os.path@{body} is a reference to a module -- which module depends on your platform. Just as @{code}getpass@{body} encapsulates differences between platforms by setting @{code}getpass@{body} to a platform-specific function, @{code}os@{body} encapsulates differences between platforms by setting @{code}path@{body} to a platform-specific module.
+
+The @{code}join@{body} function of @{code}os.path@{body} constructs a pathname out of one or more partial pathnames. In this case, it simply concatenates strings. (Note that dealing with pathnames on Windows is annoying because the backslash character must be escaped.)
+
+In this slightly less trivial case, @{code}join@{body} will add an extra backslash to the pathname before joining it to the filename. I was overjoyed when I discovered this, since @{code}addSlashIfNecessary@{body} is one of the stupid little functions I always need to write when building up my toolbox in a new language. @{i}Do not@{ui} write this stupid little function in Python; smart people have already taken care of it for you.
+
+@{code}expanduser@{body} will expand a pathname that uses @{code}~@{body} to represent the current user's home directory. This works on any platform where users have a home directory, like Windows, UNIX, and Mac OS X; it has no effect on Mac OS.
+
+Combining these techniques, you can easily construct pathnames for directories and files under the user's home directory.
+
+@{b}Example 6.17. Splitting Pathnames@{ub}
+
+@{code}
+>>> os.path.split("c:\\\\music\\\\ap\\\\mahadeva.mp3")
+('c:\\\\music\\\\ap', 'mahadeva.mp3')
+>>> (filepath, filename) = os.path.split("c:\\\\music\\\\ap\\\\mahadeva.mp3")
+>>> filepath
+'c:\\\\music\\\\ap'
+>>> filename
+'mahadeva.mp3'
+>>> (shortname, extension) = os.path.splitext(filename)
+>>> shortname
+'mahadeva'
+>>> extension
+'.mp3'
+@{body}
+
+The @{code}split@{body} function splits a full pathname and returns a tuple containing the path and filename. Remember when I said you could use multi-variable assignment to return multiple values from a function? Well, @{code}split@{body} is such a function.
+
+You assign the return value of the @{code}split@{body} function into a tuple of two variables. Each variable receives the value of the corresponding element of the returned tuple.
+
+The first variable, @{code}filepath@{body}, receives the value of the first element of the tuple returned from @{code}split@{body}, the file path.
+
+The second variable, @{code}filename@{body}, receives the value of the second element of the tuple returned from @{code}split@{body}, the filename.
+
+@{code}os.path@{body} also contains a function @{code}splitext@{body}, which splits a filename and returns a tuple containing the filename and the file extension. You use the same technique to assign each of them to separate variables.
+
+@{b}Example 6.18. Listing Directories@{ub}
+
+@{code}
+>>> os.listdir("c:\\\\music\\\\_singles\\\\")
+['a_time_long_forgotten_con.mp3', 'hellraiser.mp3',
+'kairo.mp3', 'long_way_home1.mp3', 'sidewinder.mp3',
+'spinning.mp3']
+>>> dirname = "c:\\\\"
+>>> os.listdir(dirname)
+['AUTOEXEC.BAT', 'boot.ini', 'CONFIG.SYS', 'cygwin',
+'docbook', 'Documents and Settings', 'Incoming', 'Inetpub', 'IO.SYS',
+'MSDOS.SYS', 'Music', 'NTDETECT.COM', 'ntldr', 'pagefile.sys',
+'Program Files', 'Python20', 'RECYCLER',
+'System Volume Information', 'TEMP', 'WINNT']
+>>> [f for f in os.listdir(dirname)
+... if os.path.isfile(os.path.join(dirname, f))]
+['AUTOEXEC.BAT', 'boot.ini', 'CONFIG.SYS', 'IO.SYS', 'MSDOS.SYS',
+'NTDETECT.COM', 'ntldr', 'pagefile.sys']
+>>> [f for f in os.listdir(dirname)
+... if os.path.isdir(os.path.join(dirname, f))]
+['cygwin', 'docbook', 'Documents and Settings', 'Incoming',
+'Inetpub', 'Music', 'Program Files', 'Python20', 'RECYCLER',
+'System Volume Information', 'TEMP', 'WINNT']
+@{body}
+
+The @{code}listdir@{body} function takes a pathname and returns a list of the contents of the directory.
+
+@{code}listdir@{body} returns both files and folders, with no indication of which is which.
+
+You can use list filtering and the @{code}isfile@{body} function of the @{code}os.path@{body} module to separate the files from the folders. @{code}isfile@{body} takes a pathname and returns 1 if the path represents a file, and 0 otherwise. Here you're using @{code}@{code}os.path@{body}.@{code}join@{body}@{body} to ensure a full pathname, but @{code}isfile@{body} also works with a partial path, relative to the current working directory. You can use @{code}os.getcwd()@{body} to get the current working directory.
+
+@{code}os.path@{body} also has a @{code}isdir@{body} function which returns 1 if the path represents a directory, and 0 otherwise. You can use this to get a list of the subdirectories within a directory.
+
+@{b}Example 6.19. Listing Directories in @{code}fileinfo.py@{body}@{ub}
+
+@{code}
+
+def listDirectory(directory, fileExtList):
+"get list of file info objects for files of particular extensions"
+fileList = [os.path.normcase(f)
+for f in os.listdir(directory)]
+fileList = [os.path.join(directory, f)
+for f in fileList
+if os.path.splitext(f)[1] in fileExtList]
+@{body}
+
+@{code}os.listdir(directory)@{body} returns a list of all the files and folders in @{code}directory@{body}.
+
+Iterating through the list with @{code}f@{body}, you use @{code}os.path.normcase(f)@{body} to normalize the case according to operating system defaults. @{code}normcase@{body} is a useful little function that compensates for case-insensitive operating systems that think that @{code}mahadeva.mp3@{body} and @{code}mahadeva.MP3@{body} are the same file. For instance, on Windows and Mac OS, @{code}normcase@{body} will convert the entire filename to lowercase; on UNIX-compatible systems, it will return the filename unchanged.
+
+Iterating through the normalized list with @{code}f@{body} again, you use @{code}os.path.splitext(f)@{body} to split each filename into name and extension.
+
+For each file, you see if the extension is in the list of file extensions you care about (@{code}fileExtList@{body}, which was passed to the @{code}listDirectory@{body} function).
+
+For each file you care about, you use @{code}os.path.join(directory, f)@{body} to construct the full pathname of the file, and return a list of the full pathnames.
+
+Whenever possible, you should use the functions in @{code}os@{body} and @{code}os.path@{body} for file, directory, and path manipulations. These modules are wrappers for platform-specific modules, so functions like @{code}os.path.split@{body} work on UNIX, Windows, Mac OS, and any other platform supported by Python.
+
+There is one other way to get the contents of a directory. It's very powerful, and it uses the sort of wildcards that you may already be familiar with from working on the command line.
+
+@{b}Example 6.20. Listing Directories with @{code}glob@{body}@{ub}
+
+@{code}
+
+>>> os.listdir("c:\\\\music\\\\_singles\\\\")
+['a_time_long_forgotten_con.mp3', 'hellraiser.mp3',
+'kairo.mp3', 'long_way_home1.mp3', 'sidewinder.mp3',
+'spinning.mp3']
+>>> import glob
+>>> glob.glob('c:\\\\music\\\\_singles\\\\*.mp3')
+['c:\\\\music\\\\_singles\\\\a_time_long_forgotten_con.mp3',
+'c:\\\\music\\\\_singles\\\\hellraiser.mp3',
+'c:\\\\music\\\\_singles\\\\kairo.mp3',
+'c:\\\\music\\\\_singles\\\\long_way_home1.mp3',
+'c:\\\\music\\\\_singles\\\\sidewinder.mp3',
+'c:\\\\music\\\\_singles\\\\spinning.mp3']
+>>> glob.glob('c:\\\\music\\\\_singles\\\\s*.mp3')
+['c:\\\\music\\\\_singles\\\\sidewinder.mp3',
+'c:\\\\music\\\\_singles\\\\spinning.mp3']
+>>> glob.glob('c:\\\\music\\\\*\\\\*.mp3')
+
+@{body}
+
+As you saw earlier, @{code}os.listdir@{body} simply takes a directory path and lists all files and directories in that directory.
+
+The @{code}glob@{body} module, on the other hand, takes a wildcard and returns the full path of all files and directories matching the wildcard. Here the wildcard is a directory path plus "*.mp3", which will match all @{code}.mp3@{body} files. Note that each element of the returned list already includes the full path of the file.
+
+If you want to find all the files in a specific directory that start with "s" and end with ".mp3", you can do that too.
+
+Now consider this scenario: you have a @{code}music@{body} directory, with several subdirectories within it, with @{code}.mp3@{body} files within each subdirectory. You can get a list of all of those with a single call to @{code}glob@{body}, by using two wildcards at once. One wildcard is the @{code}"*.mp3"@{body} (to match @{code}.mp3@{body} files), and one wildcard is @{i}within the directory path itself@{ui}, to match any subdirectory within @{code}c:\\music@{body}. That's a crazy amount of power packed into one deceptively simple-looking function!
+
+@{b}Further Reading on the @{code}os@{body} Module @{ub}
+
+* Python Knowledge Base answers questions about the @{code}os@{body} module.
+
+* @{i}Python Library Reference@{ui} documents the @{code}os@{body} module and the @{code}os.path@{body} module.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "6.6. Putting It All Together"
+@TITLE "6.6. Putting It All Together"
+@NEXT "S7"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}6.6. Putting It All Together @{ub}
+
+Once again, all the dominoes are in place. You've seen how each line of code works. Now let's step back and see how it all fits together.
+
+@{b}Example 6.21. @{code}listDirectory@{body}@{ub}
+
+@{code}
+
+def listDirectory(directory, fileExtList):
+"get list of file info objects for files of particular extensions"
+fileList = [os.path.normcase(f)
+for f in os.listdir(directory)]
+fileList = [os.path.join(directory, f)
+for f in fileList
+if os.path.splitext(f)[1] in fileExtList]
+def getFileInfoClass(filename, module=sys.modules[FileInfo.__module__]):
+"get file info class from filename extension"
+subclass = "%sFileInfo" % os.path.splitext(filename)[1].upper()[1:]
+return hasattr(module, subclass) and getattr(module, subclass) or FileInfo
+return [getFileInfoClass(f)(f) for f in fileList]
+@{body}
+
+@{code}listDirectory@{body} is the main attraction of this entire module. It takes a directory (like @{code}c:\\music\\_singles\\@{body} in my case) and a list of interesting file extensions (like @{code}['.mp3']@{body}), and it returns a list of class instances that act like dictionaries that contain metadata about each interesting file in that directory. And it does it in just a few straightforward lines of code.
+
+As you saw in the previous section, this line of code gets a list of the full pathnames of all the files in @{code}directory@{body} that have an interesting file extension (as specified by @{code}fileExtList@{body}).
+
+Old-school Pascal programmers may be familiar with them, but most people give me a blank stare when I tell them that Python supports @{i}nested functions@{ui} -- literally, a function within a function. The nested function @{code}getFileInfoClass@{body} can be called only from the function in which it is defined, @{code}listDirectory@{body}. As with any other function, you don't need an interface declaration or anything fancy; just define the function and code it.
+
+Now that you've seen the @{code}os@{body} module, this line should make more sense. It gets the extension of the file (@{code}os.path.splitext(filename)[1]@{body}), forces it to uppercase (@{code}.upper()@{body}), slices off the dot (@{code}[1:]@{body}), and constructs a class name out of it with string formatting. So @{code}c:\\music\\ap\\mahadeva.mp3@{body} becomes @{code}.mp3@{body} becomes @{code}.MP3@{body} becomes @{code}MP3@{body} becomes @{code}MP3FileInfo@{body}.
+
+Having constructed the name of the handler class that would handle this file, you check to see if that handler class actually exists in this module. If it does, you return the class, otherwise you return the base class @{code}FileInfo@{body}. This is a very important point: @{i}this function returns a class@{ui}. Not an instance of a class, but the class itself.
+
+For each file in the "interesting files" list (@{code}fileList@{body}), you call @{code}getFileInfoClass@{body} with the filename (@{code}f@{body}). Calling @{code}getFileInfoClass(f)@{body} returns a class; you don't know exactly which class, but you don't care. You then create an instance of this class (whatever it is) and pass the filename (@{code}f@{body} again), to the @{code}__init__@{body} method. As you saw earlier in this chapter, the @{code}__init__@{body} method of @{code}FileInfo@{body} sets @{code}self["name"]@{body}, which triggers @{code}__setitem__@{body}, which is overridden in the descendant (@{code}MP3FileInfo@{body}) to parse the file appropriately to pull out the file's metadata. You do all that for each interesting file and return a list of the resulting instances.
+
+Note that @{code}listDirectory@{body} is completely generic. It doesn't know ahead of time which types of files it will be getting, or which classes are defined that could potentially handle those files. It inspects the directory for the files to process, and then introspects its own module to see what special handler classes (like @{code}MP3FileInfo@{body}) are defined. You can extend this program to handle other types of files simply by defining an appropriately-named class: @{code}HTMLFileInfo@{body} for HTML files, @{code}DOCFileInfo@{body} for Word @{code}.doc@{body} files, and so forth. @{code}listDirectory@{body} will handle them all, without modification, by handing off the real work to the appropriate classes and collating the results.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S7 "6.7. Summary"
+@TITLE "6.7. Summary"
+@NEXT "MAIN"
+@PREV "S6"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}6.7. Summary @{ub}
+
+The @{code}fileinfo.py@{body} program introduced in Chapter 5 should now make perfect sense.
+
+@{code}
+
+"""Framework for getting filetype-specific metadata.
+
+Instantiate appropriate class with filename. Returned object acts like a
+dictionary, with key-value pairs for each piece of metadata.
+import fileinfo
+info = fileinfo.MP3FileInfo("/music/ap/mahadeva.mp3")
+print "\\\\n".join(["%s=%s" % (k, v) for k, v in info.items()])
+
+Or use listDirectory function to get info on all files in a directory.
+for info in fileinfo.listDirectory("/music/ap/", [".mp3"]):
+...
+
+Framework can be extended by adding classes for particular file types, e.g.
+HTMLFileInfo, MPGFileInfo, DOCFileInfo. Each class is completely responsible for
+parsing its files appropriately; see MP3FileInfo for example.
+"""
+import os
+import sys
+from UserDict import UserDict
+
+def stripnulls(data):
+"strip whitespace and nulls"
+return data.replace("\\00", "").strip()
+
+class FileInfo(UserDict):
+"store file metadata"
+def __init__(self, filename=None):
+UserDict.__init__(self)
+self["name"] = filename
+
+class MP3FileInfo(FileInfo):
+"store ID3v1.0 MP3 tags"
+tagDataMap = {"title" : ( 3, 33, stripnulls),
+"artist" : ( 33, 63, stripnulls),
+"album" : ( 63, 93, stripnulls),
+"year" : ( 93, 97, stripnulls),
+"comment" : ( 97, 126, stripnulls),
+"genre" : (127, 128, ord)}
+
+def __parse(self, filename):
+"parse ID3v1.0 tags from MP3 file"
+self.clear()
+try:
+fsock = open(filename, "rb", 0)
+try:
+fsock.seek(-128, 2)
+tagdata = fsock.read(128)
+finally:
+fsock.close()
+if tagdata[:3] == "TAG":
+for tag, (start, end, parseFunc) in self.tagDataMap.items():
+self[tag] = parseFunc(tagdata[start:end])
+except IOError:
+pass
+
+def __setitem__(self, key, item):
+if key == "name" and item:
+self.__parse(item)
+FileInfo.__setitem__(self, key, item)
+
+def listDirectory(directory, fileExtList):
+"get list of file info objects for files of particular extensions"
+fileList = [os.path.normcase(f)
+for f in os.listdir(directory)]
+fileList = [os.path.join(directory, f)
+for f in fileList
+if os.path.splitext(f)[1] in fileExtList]
+def getFileInfoClass(filename, module=sys.modules[FileInfo.__module__]):
+"get file info class from filename extension"
+subclass = "%sFileInfo" % os.path.splitext(filename)[1].upper()[1:]
+return hasattr(module, subclass) and getattr(module, subclass) or FileInfo
+return [getFileInfoClass(f)(f) for f in fileList]
+
+if __name__ == "__main__":
+for info in listDirectory("/music/_singles/", [".mp3"]):
+print "\\n".join(["%s=%s" % (k, v) for k, v in info.items()])
+print
+@{body}
+
+Before diving into the next chapter, make sure you're comfortable doing the following things:
+
+* Catching exceptions with @{code}try...except@{body}
+
+* Protecting external resources with @{code}try...finally@{body}
+
+* Reading from files
+
+* Assigning multiple values at once in a @{code}for@{body} loop
+
+* Using the @{code}os@{body} module for all your cross-platform file manipulation needs
+
+* Dynamically instantiating classes of unknown type by treating classes as objects and passing them around
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

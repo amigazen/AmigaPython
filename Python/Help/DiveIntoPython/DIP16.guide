@@ -1,0 +1,705 @@
+@DATABASE "DIP16.guide"
+@$VER: DIP16.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "16. Functional Programming"
+@TITLE "16. Functional Programming"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}16. Functional Programming@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}Functional examples are fine. Generators and itertools exist in 2.7; watch memory on large sequences.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 16.1. Diving in " LINK "S1"}
+@{" 16.2. Finding the path " LINK "S2"}
+@{" 16.3. Filtering lists revisited " LINK "S3"}
+@{" 16.4. Mapping lists revisited " LINK "S4"}
+@{" 16.5. Data-centric programming " LINK "S5"}
+@{" 16.6. Dynamically importing modules " LINK "S6"}
+@{" 16.7. Putting it all together " LINK "S7"}
+@{" 16.8. Summary " LINK "S8"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 16. Functional Programming
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "16.1. Diving in"
+@TITLE "16.1. Diving in"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}16.1. Diving in @{ub}
+
+In Chapter 13, @{i}Unit Testing@{ui}, you learned about the philosophy of unit testing. In Chapter 14, @{i}Test-First Programming@{ui}, you stepped through the implementation of basic unit tests in Python. In Chapter 15, @{i}Refactoring@{ui}, you saw how unit testing makes large-scale refactoring easier. This chapter will build on those sample programs, but here we will focus more on advanced Python-specific techniques, rather than on unit testing itself.
+
+The following is a complete Python program that acts as a cheap and simple regression testing framework. It takes unit tests that you've written for individual modules, collects them all into one big test suite, and runs them all at once. I actually use this script as part of the build process for this book; I have unit tests for several of the example programs (not just the @{code}roman.py@{body} module featured in Chapter 13, @{i}Unit Testing@{ui}), and the first thing my automated build script does is run this program to make sure all my examples still work. If this regression test fails, the build immediately stops. I don't want to release non-working examples any more than you want to download them and sit around scratching your head and yelling at your monitor and wondering why they don't work.
+
+@{b}Example 16.1. @{code}regression.py@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+"""Regression testing framework
+
+This module will search for scripts in the same directory named
+XYZtest.py. Each such script should be a test suite that tests a
+module through PyUnit. (As of Python 2.1, PyUnit is included in
+the standard library as "unittest".) This script will aggregate all
+found test suites into one big test suite and run them all at once.
+"""
+
+import sys, os, re, unittest
+
+def regressionTest():
+path = os.path.abspath(os.path.dirname(sys.argv[0]))
+files = os.listdir(path)
+test = re.compile("test\\.py$", re.IGNORECASE)
+files = filter(test.search, files)
+filenameToModuleName = lambda f: os.path.splitext(f)[0]
+moduleNames = map(filenameToModuleName, files)
+modules = map(__import__, moduleNames)
+load = unittest.defaultTestLoader.loadTestsFromModule
+return unittest.TestSuite(map(load, modules))
+
+if __name__ == "__main__":
+unittest.main(defaultTest="regressionTest")
+
+@{body}
+
+Running this script in the same directory as the rest of the example scripts that come with this book will find all the unit tests, named @{code}@{i}@{code}module@{body}@{ui} test.py@{body}, run them as a single test, and pass or fail them all at once.
+
+@{b}Example 16.2. Sample output of @{code}regression.py@{body}@{ub}
+
+@{code}
+
+[you\@localhost py]$ python regression.py -v
+help should fail with no object ... ok
+help should return known result for apihelper ... ok
+help should honor collapse argument ... ok
+help should honor spacing argument ... ok
+buildConnectionString should fail with list input ... ok
+buildConnectionString should fail with string input ... ok
+buildConnectionString should fail with tuple input ... ok
+buildConnectionString handles empty dictionary ... ok
+buildConnectionString returns known result with known input ... ok
+fromRoman should only accept uppercase input ... ok
+toRoman should always return uppercase ... ok
+fromRoman should fail with blank string ... ok
+fromRoman should fail with malformed antecedents ... ok
+fromRoman should fail with repeated pairs of numerals ... ok
+fromRoman should fail with too many repeated numerals ... ok
+fromRoman should give known result with known input ... ok
+toRoman should give known result with known input ... ok
+fromRoman(toRoman(n))==n for all n ... ok
+toRoman should fail with non-integer input ... ok
+toRoman should fail with negative input ... ok
+toRoman should fail with large input ... ok
+toRoman should fail with 0 input ... ok
+kgp a ref test ... ok
+kgp b ref test ... ok
+kgp c ref test ... ok
+kgp d ref test ... ok
+kgp e ref test ... ok
+kgp f ref test ... ok
+kgp g ref test ... ok
+
+----------------------------------------------------------------------
+Ran 29 tests in 2.799s
+
+OK
+@{body}
+
+The first 5 tests are from @{code}apihelpertest.py@{body}, which tests the example script from Chapter 4, @{i}The Power Of Introspection@{ui}.
+
+The next 5 tests are from @{code}odbchelpertest.py@{body}, which tests the example script from Chapter 2, @{i}Your First Python Program@{ui}.
+
+The rest are from @{code}romantest.py@{body}, which you studied in depth in Chapter 13, @{i}Unit Testing@{ui}.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "16.2. Finding the path"
+@TITLE "16.2. Finding the path"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}16.2. Finding the path @{ub}
+
+When running Python scripts from the command line, it is sometimes useful to know where the currently running script is located on disk.
+
+This is one of those obscure little tricks that is virtually impossible to figure out on your own, but simple to remember once you see it. The key to it is @{code}sys.argv@{body}. As you saw in Chapter 9, @{i}XML Processing@{ui}, this is a list that holds the list of command-line arguments. However, it also holds the name of the running script, exactly as it was called from the command line, and this is enough information to determine its location.
+
+@{b}Example 16.3. @{code}fullpath.py@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+import sys, os
+
+print 'sys.argv[0] =', sys.argv[0]
+pathname = os.path.dirname(sys.argv[0])
+print 'path =', pathname
+print 'full path =', os.path.abspath(pathname)
+@{body}
+
+Regardless of how you run a script, @{code}sys.argv[0]@{body} will always contain the name of the script, exactly as it appears on the command line. This may or may not include any path information, as you'll see shortly.
+
+@{code}os.path.dirname@{body} takes a filename as a string and returns the directory path portion. If the given filename does not include any path information, @{code}os.path.dirname@{body} returns an empty string.
+
+@{code}os.path.abspath@{body} is the key here. It takes a pathname, which can be partial or even blank, and returns a fully qualified pathname.
+
+@{code}os.path.abspath@{body} deserves further explanation. It is very flexible; it can take any kind of pathname.
+
+@{b}Example 16.4. Further explanation of @{code}os.path.abspath@{body}@{ub}
+
+@{code}
+
+>>> import os
+>>> os.getcwd()
+/home/you
+>>> os.path.abspath('')
+/home/you
+>>> os.path.abspath('.ssh')
+/home/you/.ssh
+>>> os.path.abspath('/home/you/.ssh')
+/home/you/.ssh
+>>> os.path.abspath('.ssh/../foo/')
+/home/you/foo
+@{body}
+
+@{code}os.getcwd()@{body} returns the current working directory.
+
+Calling @{code}os.path.abspath@{body} with an empty string returns the current working directory, same as @{code}os.getcwd()@{body}.
+
+Calling @{code}os.path.abspath@{body} with a partial pathname constructs a fully qualified pathname out of it, based on the current working directory.
+
+Calling @{code}os.path.abspath@{body} with a full pathname simply returns it.
+
+@{code}os.path.abspath@{body} also @{i}normalizes@{ui} the pathname it returns. Note that this example worked even though I don't actually have a 'foo' directory. @{code}os.path.abspath@{body} never checks your actual disk; this is all just string manipulation.
+
+The pathnames and filenames you pass to @{code}os.path.abspath@{body} do not need to exist.
+
+@{code}os.path.abspath@{body} not only constructs full path names, it also normalizes them. That means that if you are in the @{code}/usr/@{body} directory, @{code}os.path.abspath('bin/../local/bin')@{body} will return @{code}/usr/local/bin@{body}. It normalizes the path by making it as simple as possible. If you just want to normalize a pathname like this without turning it into a full pathname, use @{code}os.path.normpath@{body} instead.
+
+@{b}Example 16.5. Sample output from @{code}fullpath.py@{body}@{ub}
+
+@{code}
+
+[you\@localhost py]$ python /home/you/diveintopython/common/py/fullpath.py
+sys.argv[0] = /home/you/diveintopython/common/py/fullpath.py
+path = /home/you/diveintopython/common/py
+full path = /home/you/diveintopython/common/py
+[you\@localhost diveintopython]$ python common/py/fullpath.py
+sys.argv[0] = common/py/fullpath.py
+path = common/py
+full path = /home/you/diveintopython/common/py
+[you\@localhost diveintopython]$ cd common/py
+[you\@localhost py]$ python fullpath.py
+sys.argv[0] = fullpath.py
+path =
+full path = /home/you/diveintopython/common/py
+@{body}
+
+In the first case, @{code}sys.argv[0]@{body} includes the full path of the script. You can then use the @{code}os.path.dirname@{body} function to strip off the script name and return the full directory name, and @{code}os.path.abspath@{body} simply returns what you give it.
+
+If the script is run by using a partial pathname, @{code}sys.argv[0]@{body} will still contain exactly what appears on the command line. @{code}os.path.dirname@{body} will then give you a partial pathname (relative to the current directory), and @{code}os.path.abspath@{body} will construct a full pathname from the partial pathname.
+
+If the script is run from the current directory without giving any path, @{code}os.path.dirname@{body} will simply return an empty string. Given an empty string, @{code}os.path.abspath@{body} returns the current directory, which is what you want, since the script was run from the current directory.
+
+Like the other functions in the @{code}os@{body} and @{code}os.path@{body} modules, @{code}os.path.abspath@{body} is cross-platform. Your results will look slightly different than my examples if you're running on Windows (which uses backslash as a path separator) or Mac OS (which uses colons), but they'll still work. That's the whole point of the @{code}os@{body} module.
+
+@{b}Addendum. @{ub} One reader was dissatisfied with this solution, and wanted to be able to run all the unit tests in the current directory, not the directory where @{code}regression.py@{body} is located. He suggests this approach instead:
+
+@{b}Example 16.6. Running scripts in the current directory@{ub}
+
+@{code}
+import sys, os, re, unittest
+
+def regressionTest():
+path = os.getcwd()
+sys.path.append(path)
+files = os.listdir(path)
+
+@{body}
+
+Instead of setting @{code}path@{body} to the directory where the currently running script is located, you set it to the current working directory instead. This will be whatever directory you were in before you ran the script, which is not necessarily the same as the directory the script is in. (Read that sentence a few times until you get it.)
+
+Append this directory to the Python library search path, so that when you dynamically import the unit test modules later, Python can find them. You didn't need to do this when @{code}path@{body} was the directory of the currently running script, because Python always looks in that directory.
+
+The rest of the function is the same.
+
+This technique will allow you to re-use this @{code}regression.py@{body} script on multiple projects. Just put the script in a common directory, then change to the project's directory before running it. All of that project's unit tests will be found and tested, instead of the unit tests in the common directory where @{code}regression.py@{body} is located.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "16.3. Filtering lists revisited"
+@TITLE "16.3. Filtering lists revisited"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}16.3. Filtering lists revisited @{ub}
+
+You're already familiar with using list comprehensions to filter lists. There is another way to accomplish this same thing, which some people feel is more expressive.
+
+Python has a built-in @{code}filter@{body} function which takes two arguments, a function and a list, and returns a list.[7] The function passed as the first argument to @{code}filter@{body} must itself take one argument, and the list that @{code}filter@{body} returns will contain all the elements from the list passed to @{code}filter@{body} for which the function passed to @{code}filter@{body} returns true.
+
+Got all that? It's not as difficult as it sounds.
+
+@{b}Example 16.7. Introducing @{code}filter@{body}@{ub}
+
+@{code}
+
+>>> def odd(n):
+... return n % 2
+...
+>>> li = [1, 2, 3, 5, 9, 10, 256, -3]
+>>> filter(odd, li)
+[1, 3, 5, 9, -3]
+>>> [e for e in li if odd(e)]
+>>> filteredList = []
+>>> for n in li:
+... if odd(n):
+... filteredList.append(n)
+...
+>>> filteredList
+[1, 3, 5, 9, -3]
+@{body}
+
+@{code}odd@{body} uses the built-in mod function "@{code}%@{body} " to return @{code}True@{body} if @{code}n@{body} is odd and @{code}False@{body} if @{code}n@{body} is even.
+
+@{code}filter@{body} takes two arguments, a function (@{code}odd@{body}) and a list (@{code}li@{body}). It loops through the list and calls @{code}odd@{body} with each element. If @{code}odd@{body} returns a true value (remember, any non-zero value is true in Python), then the element is included in the returned list, otherwise it is filtered out. The result is a list of only the odd numbers from the original list, in the same order as they appeared in the original.
+
+You could accomplish the same thing using list comprehensions, as you saw in Section 4.5, "Filtering Lists".
+
+You could also accomplish the same thing with a @{code}for@{body} loop. Depending on your programming background, this may seem more "straightforward", but functions like @{code}filter@{body} are much more expressive. Not only is it easier to write, it's easier to read, too. Reading the @{code}for@{body} loop is like standing too close to a painting; you see all the details, but it may take a few seconds to be able to step back and see the bigger picture: "Oh, you're just filtering the list!"
+
+@{b}Example 16.8. @{code}filter@{body} in @{code}regression.py@{body}@{ub}
+
+@{code}
+
+files = os.listdir(path)
+test = re.compile("test\\.py$", re.IGNORECASE)
+files = filter(test.search, files)
+@{body}
+
+As you saw in Section 16.2, "Finding the path", @{code}path@{body} may contain the full or partial pathname of the directory of the currently running script, or it may contain an empty string if the script is being run from the current directory. Either way, @{code}files@{body} will end up with the names of the files in the same directory as this script you're running.
+
+This is a compiled regular expression. As you saw in Section 15.3, "Refactoring", if you're going to use the same regular expression over and over, you should compile it for faster performance. The compiled object has a @{code}search@{body} method which takes a single argument, the string to search. If the regular expression matches the string, the @{code}search@{body} method returns a @{code}Match@{body} object containing information about the regular expression match; otherwise it returns @{code}None@{body}, the Python null value.
+
+For each element in the @{code}files@{body} list, you're going to call the @{code}search@{body} method of the compiled regular expression object, @{code}test@{body}. If the regular expression matches, the method will return a @{code}Match@{body} object, which Python considers to be true, so the element will be included in the list returned by @{code}filter@{body}. If the regular expression does not match, the @{code}search@{body} method will return @{code}None@{body}, which Python considers to be false, so the element will not be included.
+
+@{b}Historical note. @{ub} Versions of Python prior to 2.0 did not have list comprehensions, so you couldn't filter using list comprehensions; the @{code}filter@{body} function was the only game in town. Even with the introduction of list comprehensions in 2.0, some people still prefer the old-style @{code}filter@{body} (and its companion function, @{code}map@{body}, which you'll see later in this chapter). Both techniques work at the moment, so which one you use is a matter of style. There is discussion that @{code}map@{body} and @{code}filter@{body} might be deprecated in a future version of Python, but no decision has been made.
+
+@{b}Example 16.9. Filtering using list comprehensions instead@{ub}
+
+@{code}
+
+files = os.listdir(path)
+test = re.compile("test\\.py$", re.IGNORECASE)
+files = [f for f in files if test.search(f)]
+@{body}
+
+This will accomplish exactly the same result as using the @{code}filter@{body} function. Which way is more expressive? That's up to you.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "16.4. Mapping lists revisited"
+@TITLE "16.4. Mapping lists revisited"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}16.4. Mapping lists revisited @{ub}
+
+You're already familiar with using list comprehensions to map one list into another. There is another way to accomplish the same thing, using the built-in @{code}map@{body} function. It works much the same way as the @{code}filter@{body} function.
+
+@{b}Example 16.10. Introducing @{code}map@{body}@{ub}
+
+@{code}
+
+>>> def double(n):
+... return n*2
+...
+>>> li = [1, 2, 3, 5, 9, 10, 256, -3]
+>>> map(double, li)
+[2, 4, 6, 10, 18, 20, 512, -6]
+>>> [double(n) for n in li]
+[2, 4, 6, 10, 18, 20, 512, -6]
+>>> newlist = []
+>>> for n in li:
+... newlist.append(double(n))
+...
+>>> newlist
+[2, 4, 6, 10, 18, 20, 512, -6]
+@{body}
+
+@{code}map@{body} takes a function and a list[8] and returns a new list by calling the function with each element of the list in order. In this case, the function simply multiplies each element by 2.
+
+You could accomplish the same thing with a list comprehension. List comprehensions were first introduced in Python 2.0; @{code}map@{body} has been around forever.
+
+You could, if you insist on thinking like a Visual Basic programmer, use a @{code}for@{body} loop to accomplish the same thing.
+
+@{b}Example 16.11. @{code}map@{body} with lists of mixed datatypes @{ub}
+
+@{code}
+
+>>> li = [5, 'a', (2, 'b')]
+>>> map(double, li)
+[10, 'aa', (2, 'b', 2, 'b')]
+@{body}
+
+As a side note, I'd like to point out that @{code}map@{body} works just as well with lists of mixed datatypes, as long as the function you're using correctly handles each type. In this case, the @{code}double@{body} function simply multiplies the given argument by 2, and Python Does The Right Thing depending on the datatype of the argument. For integers, this means actually multiplying it by 2; for strings, it means concatenating the string with itself; for tuples, it means making a new tuple that has all of the elements of the original, then all of the elements of the original again.
+
+All right, enough play time. Let's look at some real code.
+
+@{b}Example 16.12. @{code}map@{body} in @{code}regression.py@{body}@{ub}
+
+@{code}
+
+filenameToModuleName = lambda f: os.path.splitext(f)[0]
+moduleNames = map(filenameToModuleName, files)
+@{body}
+
+As you saw in Section 4.7, "Using lambda Functions", @{code}lambda@{body} defines an inline function. And as you saw in Example 6.17, "Splitting Pathnames", @{code}os.path.splitext@{body} takes a filename and returns a tuple @{code}(@{i}name@{ui}, @{i}extension@{ui})@{body}. So @{code}filenameToModuleName@{body} is a function which will take a filename and strip off the file extension, and return just the name.
+
+Calling @{code}map@{body} takes each filename listed in @{code}files@{body}, passes it to the function @{code}filenameToModuleName@{body}, and returns a list of the return values of each of those function calls. In other words, you strip the file extension off of each filename, and store the list of all those stripped filenames in @{code}moduleNames@{body}.
+
+As you'll see in the rest of the chapter, you can extend this type of data-centric thinking all the way to the final goal, which is to define and execute a single test suite that contains the tests from all of those individual test suites.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "16.5. Data-centric programming"
+@TITLE "16.5. Data-centric programming"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}16.5. Data-centric programming @{ub}
+
+By now you're probably scratching your head wondering why this is better than using @{code}for@{body} loops and straight function calls. And that's a perfectly valid question. Mostly, it's a matter of perspective. Using @{code}map@{body} and @{code}filter@{body} forces you to center your thinking around your data.
+
+In this case, you started with no data at all; the first thing you did was get the directory path of the current script, and got a list of files in that directory. That was the bootstrap, and it gave you real data to work with: a list of filenames.
+
+However, you knew you didn't care about all of those files, only the ones that were actually test suites. You had @{i}too much data@{ui}, so you needed to @{code}filter@{body} it. How did you know which data to keep? You needed a test to decide, so you defined one and passed it to the @{code}filter@{body} function. In this case you used a regular expression to decide, but the concept would be the same regardless of how you constructed the test.
+
+Now you had the filenames of each of the test suites (and only the test suites, since everything else had been filtered out), but you really wanted module names instead. You had the right amount of data, but it was @{i}in the wrong format@{ui}. So you defined a function that would transform a single filename into a module name, and you mapped that function onto the entire list. From one filename, you can get a module name; from a list of filenames, you can get a list of module names.
+
+Instead of @{code}filter@{body}, you could have used a @{code}for@{body} loop with an @{code}if@{body} statement. Instead of @{code}map@{body}, you could have used a @{code}for@{body} loop with a function call. But using @{code}for@{body} loops like that is busywork. At best, it simply wastes time; at worst, it introduces obscure bugs. For instance, you need to figure out how to test for the condition "is this file a test suite?" anyway; that's the application-specific logic, and no language can write that for us. But once you've figured that out, do you really want go to all the trouble of defining a new empty list and writing a @{code}for@{body} loop and an @{code}if@{body} statement and manually calling @{code}append@{body} to add each element to the new list if it passes the condition and then keeping track of which variable holds the new filtered data and which one holds the old unfiltered data? Why not just define the test condition, then let Python do the rest of that work for us?
+
+Oh sure, you could try to be fancy and delete elements in place without creating a new list. But you've been burned by that before. Trying to modify a data structure that you're looping through can be tricky. You delete an element, then loop to the next element, and suddenly you've skipped one. Is Python one of the languages that works that way? How long would it take you to figure it out? Would you remember for certain whether it was safe the next time you tried? Programmers spend so much time and make so many mistakes dealing with purely technical issues like this, and it's all pointless. It doesn't advance your program at all; it's just busywork.
+
+I resisted list comprehensions when I first learned Python, and I resisted @{code}filter@{body} and @{code}map@{body} even longer. I insisted on making my life more difficult, sticking to the familiar way of @{code}for@{body} loops and @{code}if@{body} statements and step-by-step code-centric programming. And my Python programs looked a lot like Visual Basic programs, detailing every step of every operation in every function. And they had all the same types of little problems and obscure bugs. And it was all pointless.
+
+Let it all go. Busywork code is not important. Data is important. And data is not difficult. It's only data. If you have too much, filter it. If it's not what you want, map it. Focus on the data; leave the busywork behind.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "16.6. Dynamically importing modules"
+@TITLE "16.6. Dynamically importing modules"
+@NEXT "S7"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}16.6. Dynamically importing modules @{ub}
+
+OK, enough philosophizing. Let's talk about dynamically importing modules.
+
+First, let's look at how you normally import modules. The @{code}import @{i}module@{ui}@{body} syntax looks in the search path for the named module and imports it by name. You can even import multiple modules at once this way, with a comma-separated list. You did this on the very first line of this chapter's script.
+
+@{b}Example 16.13. Importing multiple modules at once@{ub}
+
+@{code}
+
+import sys, os, re, unittest
+
+@{body}
+
+This imports four modules at once: @{code}sys@{body} (for system functions and access to the command line parameters), @{code}os@{body} (for operating system functions like directory listings), @{code}re@{body} (for regular expressions), and @{code}unittest@{body} (for unit testing).
+
+Now let's do the same thing, but with dynamic imports.
+
+@{b}Example 16.14. Importing modules dynamically@{ub}
+
+@{code}
+
+>>> sys = __import__('sys')
+>>> os = __import__('os')
+>>> re = __import__('re')
+>>> unittest = __import__('unittest')
+>>> sys
+>>>
+>>> os
+>>>
+
+@{body}
+
+The built-in @{code}__import__@{body} function accomplishes the same goal as using the @{code}import@{body} statement, but it's an actual function, and it takes a string as an argument.
+
+The variable @{code}sys@{body} is now the @{code}sys@{body} module, just as if you had said @{code}import sys@{body}. The variable @{code}os@{body} is now the @{code}os@{body} module, and so forth.
+
+So @{code}__import__@{body} imports a module, but takes a string argument to do it. In this case the module you imported was just a hard-coded string, but it could just as easily be a variable, or the result of a function call. And the variable that you assign the module to doesn't need to match the module name, either. You could import a series of modules and assign them to a list.
+
+@{b}Example 16.15. Importing a list of modules dynamically@{ub}
+
+@{code}
+
+>>> moduleNames = ['sys', 'os', 're', 'unittest']
+>>> moduleNames
+['sys', 'os', 're', 'unittest']
+>>> modules = map(__import__, moduleNames)
+>>> modules
+[,
+,
+,
+]
+>>> modules[0].version
+'2.2.2 (#37, Nov 26 2002, 10:24:37) [MSC 32 bit (Intel)]'
+>>> import sys
+>>> sys.version
+'2.2.2 (#37, Nov 26 2002, 10:24:37) [MSC 32 bit (Intel)]'
+
+@{body}
+
+@{code}moduleNames@{body} is just a list of strings. Nothing fancy, except that the strings happen to be names of modules that you could import, if you wanted to.
+
+Surprise, you wanted to import them, and you did, by mapping the @{code}__import__@{body} function onto the list. Remember, this takes each element of the list (@{code}moduleNames@{body}) and calls the function (@{code}__import__@{body}) over and over, once with each element of the list, builds a list of the return values, and returns the result.
+
+So now from a list of strings, you've created a list of actual modules. (Your paths may be different, depending on your operating system, where you installed Python, the phase of the moon, etc.)
+
+To drive home the point that these are real modules, let's look at some module attributes. Remember, @{code}modules[0]@{body} @{i}is@{ui} the @{code}sys@{body} module, so @{code}modules[0].version@{body} @{i}is@{ui} @{code}sys.version@{body}. All the other attributes and methods of these modules are also available. There's nothing magic about the @{code}import@{body} statement, and there's nothing magic about modules. Modules are objects. Everything is an object.
+
+Now you should be able to put this all together and figure out what most of this chapter's code sample is doing.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S7 "16.7. Putting it all together"
+@TITLE "16.7. Putting it all together"
+@NEXT "S8"
+@PREV "S6"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}16.7. Putting it all together @{ub}
+
+You've learned enough now to deconstruct the first seven lines of this chapter's code sample: reading a directory and importing selected modules within it.
+
+@{b}Example 16.16. The @{code}regressionTest@{body} function @{ub}
+
+@{code}
+
+def regressionTest():
+path = os.path.abspath(os.path.dirname(sys.argv[0]))
+files = os.listdir(path)
+test = re.compile("test\\.py$", re.IGNORECASE)
+files = filter(test.search, files)
+filenameToModuleName = lambda f: os.path.splitext(f)[0]
+moduleNames = map(filenameToModuleName, files)
+modules = map(__import__, moduleNames)
+load = unittest.defaultTestLoader.loadTestsFromModule
+return unittest.TestSuite(map(load, modules))
+
+@{body}
+
+Let's look at it line by line, interactively. Assume that the current directory is @{code}c:\\diveintopython\\py@{body}, which contains the examples that come with this book, including this chapter's script. As you saw in Section 16.2, "Finding the path", the script directory will end up in the @{code}path@{body} variable, so let's start hard-code that and go from there.
+
+@{b}Example 16.17. Step 1: Get all the files@{ub}
+
+@{code}
+
+>>> import sys, os, re, unittest
+>>> path = r'c:\\diveintopython\\py'
+>>> files = os.listdir(path)
+>>> files
+['BaseHTMLProcessor.py', 'LICENSE.txt', 'apihelper.py', 'apihelpertest.py',
+'argecho.py', 'autosize.py', 'builddialectexamples.py', 'dialect.py',
+'fileinfo.py', 'fullpath.py', 'kgptest.py', 'makerealworddoc.py',
+'odbchelper.py', 'odbchelpertest.py', 'parsephone.py', 'piglatin.py',
+'plural.py', 'pluraltest.py', 'pyfontify.py', 'regression.py', 'roman.py', 'romantest.py',
+'uncurly.py', 'unicode2koi8r.py', 'urllister.py', 'kgp', 'plural', 'roman',
+'colorize.py']
+
+@{body}
+
+@{code}files@{body} is a list of all the files and directories in the script's directory. (If you've been running some of the examples already, you may also see some @{code}.pyc@{body} files in there as well.)
+
+@{b}Example 16.18. Step 2: Filter to find the files you care about@{ub}
+
+@{code}
+
+>>> test = re.compile("test\\.py$", re.IGNORECASE)
+>>> files = filter(test.search, files)
+>>> files
+['apihelpertest.py', 'kgptest.py', 'odbchelpertest.py', 'pluraltest.py', 'romantest.py']
+
+@{body}
+
+This regular expression will match any string that ends with @{code}test.py@{body}. Note that you need to escape the period, since a period in a regular expression usually means "match any single character", but you actually want to match a literal period instead.
+
+The compiled regular expression acts like a function, so you can use it to filter the large list of files and directories, to find the ones that match the regular expression.
+
+And you're left with the list of unit testing scripts, because they were the only ones named @{code}SOMETHINGtest.py@{body}.
+
+@{b}Example 16.19. Step 3: Map filenames to module names@{ub}
+
+@{code}
+
+>>> filenameToModuleName = lambda f: os.path.splitext(f)[0]
+>>> filenameToModuleName('romantest.py')
+'romantest'
+>>> filenameToModuleName('odchelpertest.py')
+'odbchelpertest'
+>>> moduleNames = map(filenameToModuleName, files)
+>>> moduleNames
+['apihelpertest', 'kgptest', 'odbchelpertest', 'pluraltest', 'romantest']
+
+@{body}
+
+As you saw in Section 4.7, "Using lambda Functions", @{code}lambda@{body} is a quick-and-dirty way of creating an inline, one-line function. This one takes a filename with an extension and returns just the filename part, using the standard library function @{code}os.path.splitext@{body} that you saw in Example 6.17, "Splitting Pathnames".
+
+@{code}filenameToModuleName@{body} is a function. There's nothing magic about @{code}lambda@{body} functions as opposed to regular functions that you define with a @{code}def@{body} statement. You can call the @{code}filenameToModuleName@{body} function like any other, and it does just what you wanted it to do: strips the file extension off of its argument.
+
+Now you can apply this function to each file in the list of unit test files, using @{code}map@{body}.
+
+And the result is just what you wanted: a list of modules, as strings.
+
+@{b}Example 16.20. Step 4: Mapping module names to modules@{ub}
+
+@{code}
+
+>>> modules = map(__import__, moduleNames)
+>>> modules
+[,
+,
+,
+,
+]
+>>> modules[-1]
+
+@{body}
+
+As you saw in Section 16.6, "Dynamically importing modules", you can use a combination of @{code}map@{body} and @{code}__import__@{body} to map a list of module names (as strings) into actual modules (which you can call or access like any other module).
+
+@{code}modules@{body} is now a list of modules, fully accessible like any other module.
+
+The last module in the list @{i}is@{ui} the @{code}romantest@{body} module, just as if you had said @{code}import romantest@{body}.
+
+@{b}Example 16.21. Step 5: Loading the modules into a test suite@{ub}
+
+@{code}
+
+>>> load = unittest.defaultTestLoader.loadTestsFromModule
+>>> map(load, modules)
+[]>,
+]>,
+,
+]>,
+...
+]
+]
+>>> unittest.TestSuite(map(load, modules))
+
+@{body}
+
+These are real module objects. Not only can you access them like any other module, instantiate classes and call functions, you can also introspect into the module to figure out which classes and functions it has in the first place. That's what the @{code}loadTestsFromModule@{body} method does: it introspects into each module and returns a @{code}unittest.TestSuite@{body} object for each module. Each @{code}TestSuite@{body} object actually contains a list of @{code}TestSuite@{body} objects, one for each @{code}TestCase@{body} class in your module, and each of those @{code}TestSuite@{body} objects contains a list of tests, one for each test method in your module.
+
+Finally, you wrap the list of @{code}TestSuite@{body} objects into one big test suite. The @{code}unittest@{body} module has no problem traversing this tree of nested test suites within test suites; eventually it gets down to an individual test method and executes it, verifies that it passes or fails, and moves on to the next one.
+
+This introspection process is what the @{code}unittest@{body} module usually does for us. Remember that magic-looking @{code}unittest.main()@{body} function that our individual test modules called to kick the whole thing off? @{code}unittest.main()@{body} actually creates an instance of @{code}unittest.TestProgram@{body}, which in turn creates an instance of a @{code}unittest.defaultTestLoader@{body} and loads it up with the module that called it. (How does it get a reference to the module that called it if you don't give it one? By using the equally-magic @{code}__import__('__main__')@{body} command, which dynamically imports the currently-running module. I could write a book on all the tricks and techniques used in the @{code}unittest@{body} module, but then I'd never finish this one.)
+
+@{b}Example 16.22. Step 6: Telling @{code}unittest@{body} to use your test suite @{ub}
+
+@{code}
+
+if __name__ == "__main__":
+unittest.main(defaultTest="regressionTest")
+
+@{body}
+
+Instead of letting the @{code}unittest@{body} module do all its magic for us, you've done most of it yourself. You've created a function (@{code}regressionTest@{body}) that imports the modules yourself, calls @{code}unittest.defaultTestLoader@{body} yourself, and wraps it all up in a test suite. Now all you need to do is tell @{code}unittest@{body} that, instead of looking for tests and building a test suite in the usual way, it should just call the @{code}regressionTest@{body} function, which returns a ready-to-use @{code}TestSuite@{body}.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S8 "16.8. Summary"
+@TITLE "16.8. Summary"
+@NEXT "MAIN"
+@PREV "S7"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}16.8. Summary @{ub}
+
+The @{code}regression.py@{body} program and its output should now make perfect sense.
+
+You should now feel comfortable doing all of these things:
+
+* Manipulating path information from the command line.
+
+* Filtering lists using @{code}filter@{body} instead of list comprehensions.
+
+* Mapping lists using @{code}map@{body} instead of list comprehensions.
+
+* Dynamically importing modules.
+
+@{line}
+
+[7] Technically, the second argument to @{code}filter@{body} can be any sequence, including lists, tuples, and custom classes that act like lists by defining the @{code}__getitem__@{body} special method. If possible, @{code}filter@{body} will return the same datatype as you give it, so filtering a list returns a list, but filtering a tuple returns a tuple.
+
+[8] Again, I should point out that @{code}map@{body} can take a list, a tuple, or any object that acts like a sequence. See previous footnote about @{code}filter@{body}.
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

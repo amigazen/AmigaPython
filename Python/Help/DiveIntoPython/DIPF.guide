@@ -1,0 +1,50 @@
+@DATABASE "DIPF.guide"
+@$VER: DIPF.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "F. About the book"
+@TITLE "F. About the book"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}F. About the book@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}About the original book. This AmigaGuide is a modified edition for AmigaPython (amigazen project).@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "MAIN"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Appendix F. About the book
+
+This book was written in DocBook XML using Emacs, and converted to HTML using the SAXON XSLT processor from Michael Kay with a customized version of Norman Walsh's XSL stylesheets. From there, it was converted to PDF using HTMLDoc, and to plain text using w3m. Program listings and examples were colorized using an updated version of Just van Rossum's @{code}pyfontify.py@{body}, which is included in the example scripts.
+
+If you're interested in learning more about DocBook for technical writing, you can download the XML source and the build scripts, which include the customized XSL stylesheets used to create all the different formats of the book. You should also read the canonical book, @{i}DocBook: The Definitive Guide@{ui}. If you're going to do any serious writing in DocBook, I would recommend subscribing to the DocBook mailing lists.
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

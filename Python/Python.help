@@ -1,0 +1,72 @@
+   NAME
+	Python - Python 2.7.18 interpreter for classic AmigaOS.
+
+   FORMAT
+	Python [options] [-c cmd | -m mod | file | -] [arg ...]
+
+   TEMPLATE
+	-c/K,-m/K,FILE,ARGS/M,-i/S,-S/S,-E/S,-O/S,-OO/S,-B/S,-s/S,-u/S,
+	-v/S,-V/S,-W/K,-x/S,-3/S,-Q/K,-?/S
+
+   PATH
+	(this drawer)/Python
+	Optional: ASSIGN Python: (this drawer) ; PATH Python: ADD
+
+   FUNCTION
+	Python is an interpreted, interactive, object-oriented language.
+	This Amiga port is based on Python 2.7.18 (amigazen project),
+	continuing Irmen de Jong's classic AmigaPython line.
+
+	Copy this entire drawer anywhere and run Python from Shell or
+	Workbench.  No installer is required.  The standard library is
+	loaded from lib/ next to the binary:
+
+		lib/python27.zip
+		lib/lib-dynload/
+		lib/site-python/
+
+	Optional ASSIGN Python: to this drawer is only a convenience so
+	you can type "Python" from any directory and set Default Tool
+	to Python:Python on project icons.
+
+	Shell:
+
+		Python                 interactive console
+		Python script.py       run a script
+		Python -c "print 1"    run a command string
+		Python -?              short help / usage
+
+	Workbench:
+
+		Double-click Python for a CON: console.
+		Project icons: set Default Tool to this Python (or
+		Python:Python).  The project file is the script.
+		Close the console with the close gadget or Ctrl+C.
+
+	Environment (optional):
+
+		PYTHONHOME   override prefix
+		PYTHONPATH   semicolon-separated module search dirs
+		PYTHONCASEOK relax import filename case matching
+		TZ / locale  timezone (see Help/Amiga)
+
+	Documentation in this drawer:
+
+		Python.help                 this file
+		Help/AmigaPython.guide      Amiga port guide
+		Help/DiveIntoPython/        Dive Into Python tutorial
+		Help/Amiga/                 Amiga module notes (reST)
+		README                      quick start
+		Help/DISCL_and_COPYRIGHT    licenses / disclaimer
+
+	Upstream language and library reference:
+		https://docs.python.org/2.7/
+
+	amigazen project:
+		https://github.com/amigazen/amigapython/
+		http://www.amigazen.com/amigapython/
+
+	Networking needs bsdsocket.library (e.g. Roadshow).  I-Net225
+	is not supported.  pwd/grp/crypt may need usergroup.library.
+
+	See also: Help/AmigaPython.guide

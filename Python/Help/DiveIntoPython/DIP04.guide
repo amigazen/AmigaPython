@@ -1,0 +1,922 @@
+@DATABASE "DIP04.guide"
+@$VER: DIP04.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "4. The Power Of Introspection"
+@TITLE "4. The Power Of Introspection"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}4. The Power Of Introspection@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}Introspection APIs work. help() / pydoc need a console; from Workbench use the Python CON: window.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 4.1. Diving In " LINK "S1"}
+@{" 4.2. Using Optional and Named Arguments " LINK "S2"}
+@{" 4.3. Using type, str, dir, and Other Built-In Functions " LINK "S3"}
+@{" 4.4. Getting Object References With getattr " LINK "S4"}
+@{" 4.5. Filtering Lists " LINK "S5"}
+@{" 4.6. The Peculiar Nature of and and or " LINK "S6"}
+@{" 4.7. Using lambda Functions " LINK "S7"}
+@{" 4.8. Putting It All Together " LINK "S8"}
+@{" 4.9. Summary " LINK "S9"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 4. The Power Of Introspection
+
+This chapter covers one of Python's strengths: introspection. As you know, everything in Python is an object, and introspection is code looking at other modules and functions in memory as objects, getting information about them, and manipulating them. Along the way, you'll define functions with no name, call functions with arguments out of order, and reference functions whose names you don't even know ahead of time.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "4.1. Diving In"
+@TITLE "4.1. Diving In"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}4.1. Diving In @{ub}
+
+Here is a complete, working Python program. You should understand a good deal about it just by looking at it. The numbered lines illustrate concepts covered in Chapter 2, @{i}Your First Python Program@{ui}. Don't worry if the rest of the code looks intimidating; you'll learn all about it throughout this chapter.
+
+@{b}Example 4.1. @{code}apihelper.py@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+def info(object, spacing=10, collapse=1):
+"""Print methods and doc strings.
+
+Takes module, class, list, dictionary, or string."""
+methodList = [method for method in dir(object) if callable(getattr(object, method))]
+processFunc = collapse and (lambda s: " ".join(s.split())) or (lambda s: s)
+print "\\n".join(["%s %s" %
+(method.ljust(spacing),
+processFunc(str(getattr(object, method).__doc__)))
+for method in methodList])
+
+if __name__ == "__main__":
+print info.__doc__
+@{body}
+
+This module has one function, @{code}info@{body}. According to its function declaration, it takes three parameters: @{code}object@{body}, @{code}spacing@{body}, and @{code}collapse@{body}. The last two are actually optional parameters, as you'll see shortly.
+
+The @{code}info@{body} function has a multi-line @{code}doc string@{body} that succinctly describes the function's purpose. Note that no return value is mentioned; this function will be used solely for its effects, rather than its value.
+
+Code within the function is indented.
+
+The @{code}if __name__@{body} trick allows this program do something useful when run by itself, without interfering with its use as a module for other programs. In this case, the program simply prints out the @{code}doc string@{body} of the @{code}info@{body} function.
+
+@{code}if@{body} statements use @{code}==@{body} for comparison, and parentheses are not required.
+
+The @{code}info@{body} function is designed to be used by you, the programmer, while working in the Python IDE. It takes any object that has functions or methods (like a module, which has functions, or a list, which has methods) and prints out the functions and their @{code}doc string@{body} s.
+
+@{b}Example 4.2. Sample Usage of @{code}apihelper.py@{body}@{ub}
+
+@{code}
+>>> from apihelper import info
+>>> li = []
+>>> info(li)
+append L.append(object) -- append object to end
+count L.count(value) -> integer -- return number of occurrences of value
+extend L.extend(list) -- extend list by appending list elements
+index L.index(value) -> integer -- return index of first occurrence of value
+insert L.insert(index, object) -- insert object before index
+pop L.pop([index]) -> item -- remove and return item at index (default last)
+remove L.remove(value) -- remove first occurrence of value
+reverse L.reverse() -- reverse *IN PLACE*
+sort L.sort([cmpfunc]) -- sort *IN PLACE*; if given, cmpfunc(x, y) -> -1, 0, 1
+@{body}
+
+By default the output is formatted to be easy to read. Multi-line @{code}doc string@{body} s are collapsed into a single long line, but this option can be changed by specifying @{code}0@{body} for the @{i}@{code}collapse@{body}@{ui} argument. If the function names are longer than 10 characters, you can specify a larger value for the @{i}@{code}spacing@{body}@{ui} argument to make the output easier to read.
+
+@{b}Example 4.3. Advanced Usage of @{code}apihelper.py@{body}@{ub}
+
+@{code}
+>>> import odbchelper
+>>> info(odbchelper)
+buildConnectionString Build a connection string from a dictionary Returns string.
+>>> info(odbchelper, 30)
+buildConnectionString Build a connection string from a dictionary Returns string.
+>>> info(odbchelper, 30, 0)
+buildConnectionString Build a connection string from a dictionary
+
+Returns string.
+
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "4.2. Using Optional and Named Arguments"
+@TITLE "4.2. Using Optional and Named Arguments"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}4.2. Using Optional and Named Arguments @{ub}
+
+Python allows function arguments to have default values; if the function is called without the argument, the argument gets its default value. Futhermore, arguments can be specified in any order by using named arguments. Stored procedures in SQL Server Transact/SQL can do this, so if you're a SQL Server scripting guru, you can skim this part.
+
+Here is an example of @{code}info@{body}, a function with two optional arguments:
+
+@{code}
+
+def info(object, spacing=10, collapse=1):
+@{body}
+
+@{code}spacing@{body} and @{code}collapse@{body} are optional, because they have default values defined. @{code}object@{body} is required, because it has no default value. If @{code}info@{body} is called with only one argument, @{code}spacing@{body} defaults to @{code}10@{body} and @{code}collapse@{body} defaults to @{code}1@{body}. If @{code}info@{body} is called with two arguments, @{code}collapse@{body} still defaults to @{code}1@{body}.
+
+Say you want to specify a value for @{code}collapse@{body} but want to accept the default value for @{code}spacing@{body}. In most languages, you would be out of luck, because you would need to call the function with three arguments. But in Python, arguments can be specified by name, in any order.
+
+@{b}Example 4.4. Valid Calls of @{code}info@{body}@{ub}
+
+@{code}
+
+info(odbchelper)
+info(odbchelper, 12)
+info(odbchelper, collapse=0)
+info(spacing=15, object=odbchelper)
+@{body}
+
+With only one argument, @{code}spacing@{body} gets its default value of @{code}10@{body} and @{code}collapse@{body} gets its default value of @{code}1@{body}.
+
+With two arguments, @{code}collapse@{body} gets its default value of @{code}1@{body}.
+
+Here you are naming the @{code}collapse@{body} argument explicitly and specifying its value. @{code}spacing@{body} still gets its default value of @{code}10@{body}.
+
+Even required arguments (like @{code}object@{body}, which has no default value) can be named, and named arguments can appear in any order.
+
+This looks totally whacked until you realize that arguments are simply a dictionary. The "normal" method of calling functions without argument names is actually just a shorthand where Python matches up the values with the argument names in the order they're specified in the function declaration. And most of the time, you'll call functions the "normal" way, but you always have the additional flexibility if you need it.
+
+The only thing you need to do to call a function is specify a value (somehow) for each required argument; the manner and order in which you do that is up to you.
+
+@{b}Further Reading on Optional Arguments@{ub}
+
+* @{i}Python Tutorial@{ui} discusses exactly when and how default arguments are evaluated, which matters when the default value is a list or an expression with side effects.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "4.3. Using type, str, dir, and Other Built-In Functions"
+@TITLE "4.3. Using type, str, dir, and Other Built-In Functions"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}4.3. Using @{code}type@{body}, @{code}str@{body}, @{code}dir@{body}, and Other Built-In Functions @{ub}
+
+Python has a small set of extremely useful built-in functions. All other functions are partitioned off into modules. This was actually a conscious design decision, to keep the core language from getting bloated like other scripting languages (cough cough, Visual Basic).
+
+@{b}4.3.1. The @{code}type@{body} Function @{ub}
+
+The @{code}type@{body} function returns the datatype of any arbitrary object. The possible types are listed in the @{code}types@{body} module. This is useful for helper functions that can handle several types of data.
+
+@{b}Example 4.5. Introducing @{code}type@{body}@{ub}
+
+@{code}
+>>> type(1)
+
+>>> li = []
+>>> type(li)
+
+>>> import odbchelper
+>>> type(odbchelper)
+
+>>> import types
+>>> type(odbchelper) == types.ModuleType
+True
+@{body}
+
+@{code}type@{body} takes anything -- and I mean anything -- and returns its datatype. Integers, strings, lists, dictionaries, tuples, functions, classes, modules, even types are acceptable.
+
+@{code}type@{body} can take a variable and return its datatype.
+
+@{code}type@{body} also works on modules.
+
+You can use the constants in the @{code}types@{body} module to compare types of objects. This is what the @{code}info@{body} function does, as you'll see shortly.
+
+@{b}4.3.2. The @{code}str@{body} Function @{ub}
+
+The @{code}str@{body} coerces data into a string. Every datatype can be coerced into a string.
+
+@{b}Example 4.6. Introducing @{code}str@{body}@{ub}
+
+@{code}
+
+>>> str(1)
+'1'
+>>> horsemen = ['war', 'pestilence', 'famine']
+>>> horsemen
+['war', 'pestilence', 'famine']
+>>> horsemen.append('Powerbuilder')
+>>> str(horsemen)
+"['war', 'pestilence', 'famine', 'Powerbuilder']"
+>>> str(odbchelper)
+""
+>>> str(None)
+'None'
+@{body}
+
+For simple datatypes like integers, you would expect @{code}str@{body} to work, because almost every language has a function to convert an integer to a string.
+
+However, @{code}str@{body} works on any object of any type. Here it works on a list which you've constructed in bits and pieces.
+
+@{code}str@{body} also works on modules. Note that the string representation of the module includes the pathname of the module on disk, so yours will be different.
+
+A subtle but important behavior of @{code}str@{body} is that it works on @{code}None@{body}, the Python null value. It returns the string @{code}'None'@{body}. You'll use this to your advantage in the @{code}info@{body} function, as you'll see shortly.
+
+At the heart of the @{code}info@{body} function is the powerful @{code}dir@{body} function. @{code}dir@{body} returns a list of the attributes and methods of any object: modules, functions, strings, lists, dictionaries... pretty much anything.
+
+@{b}Example 4.7. Introducing @{code}dir@{body}@{ub}
+
+@{code}
+>>> li = []
+>>> dir(li)
+['append', 'count', 'extend', 'index', 'insert',
+'pop', 'remove', 'reverse', 'sort']
+>>> d = {}
+>>> dir(d)
+['clear', 'copy', 'get', 'has_key', 'items', 'keys', 'setdefault', 'update', 'values']
+>>> import odbchelper
+>>> dir(odbchelper)
+['__builtins__', '__doc__', '__file__', '__name__', 'buildConnectionString']
+@{body}
+
+@{code}li@{body} is a list, so @{code}@{code}dir@{body} (@{code}li@{body})@{body} returns a list of all the methods of a list. Note that the returned list contains the names of the methods as strings, not the methods themselves.
+
+@{code}d@{body} is a dictionary, so @{code}@{code}dir@{body} (@{code}d@{body})@{body} returns a list of the names of dictionary methods. At least one of these, @{code}keys@{body}, should look familiar.
+
+This is where it really gets interesting. @{code}odbchelper@{body} is a module, so @{code}@{code}dir@{body} (@{code}odbchelper@{body})@{body} returns a list of all kinds of stuff defined in the module, including built-in attributes, like @{code}__name__@{body}, @{code}__doc__@{body}, and whatever other attributes and methods you define. In this case, @{code}odbchelper@{body} has only one user-defined method, the @{code}buildConnectionString@{body} function described in Chapter 2.
+
+Finally, the @{code}callable@{body} function takes any object and returns @{code}True@{body} if the object can be called, or @{code}False@{body} otherwise. Callable objects include functions, class methods, even classes themselves. (More on classes in the next chapter.)
+
+@{b}Example 4.8. Introducing @{code}callable@{body}@{ub}
+
+@{code}
+
+>>> import string
+>>> string.punctuation
+'!"#$%&\\'()*+,-./:;?\@[\\\\]^_`{|}~'
+>>> string.join
+
+>>> callable(string.punctuation)
+False
+>>> callable(string.join)
+True
+>>> print string.join.__doc__
+join(list [,sep]) -> string
+
+Return a string composed of the words in list, with
+intervening occurrences of sep. The default separator is a
+single space.
+
+(joinfields and join are synonymous)
+@{body}
+
+The functions in the @{code}string@{body} module are deprecated (although many people still use the @{code}join@{body} function), but the module contains a lot of useful constants like this @{code}string.punctuation@{body}, which contains all the standard punctuation characters.
+
+@{code}string.join@{body} is a function that joins a list of strings.
+
+@{code}string.punctuation@{body} is not callable; it is a string. (A string does have callable methods, but the string itself is not callable.)
+
+@{code}string.join@{body} is callable; it's a function that takes two arguments.
+
+Any callable object may have a @{code}doc string@{body}. By using the @{code}callable@{body} function on each of an object's attributes, you can determine which attributes you care about (methods, functions, classes) and which you want to ignore (constants and so on) without knowing anything about the object ahead of time.
+
+@{b}4.3.3. Built-In Functions @{ub}
+
+@{code}type@{body}, @{code}str@{body}, @{code}dir@{body}, and all the rest of Python's built-in functions are grouped into a special module called @{code}__builtin__@{body}. (That's two underscores before and after.) If it helps, you can think of Python automatically executing @{code}from __builtin__ import *@{body} on startup, which imports all the "built-in" functions into the namespace so you can use them directly.
+
+The advantage of thinking like this is that you can access all the built-in functions and attributes as a group by getting information about the @{code}__builtin__@{body} module. And guess what, Python has a function called @{code}info@{body}. Try it yourself and skim through the list now. We'll dive into some of the more important functions later. (Some of the built-in error classes, like @{code}AttributeError@{body}, should already look familiar.)
+
+@{b}Example 4.9. Built-in Attributes and Functions@{ub}
+
+@{code}
+>>> from apihelper import info
+>>> import __builtin__
+>>> info(__builtin__, 20)
+ArithmeticError Base class for arithmetic errors.
+AssertionError Assertion failed.
+AttributeError Attribute not found.
+EOFError Read beyond end of file.
+EnvironmentError Base class for I/O related errors.
+Exception Common base class for all exceptions.
+FloatingPointError Floating point operation failed.
+IOError I/O operation failed.
+
+[...snip...]
+@{body}
+
+Python comes with excellent reference manuals, which you should peruse thoroughly to learn all the modules Python has to offer. But unlike most languages, where you would find yourself referring back to the manuals or man pages to remind yourself how to use these modules, Python is largely self-documenting.
+
+@{b}Further Reading on Built-In Functions@{ub}
+
+* @{i}Python Library Reference@{ui} documents all the built-in functions and all the built-in exceptions.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "4.4. Getting Object References With getattr"
+@TITLE "4.4. Getting Object References With getattr"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}4.4. Getting Object References With @{code}getattr@{body}@{ub}
+
+You already know that Python functions are objects. What you don't know is that you can get a reference to a function without knowing its name until run-time, by using the @{code}getattr@{body} function.
+
+@{b}Example 4.10. Introducing @{code}getattr@{body}@{ub}
+
+@{code}
+>>> li = ["Larry", "Curly"]
+>>> li.pop
+
+>>> getattr(li, "pop")
+
+>>> getattr(li, "append")("Moe")
+>>> li
+["Larry", "Curly", "Moe"]
+>>> getattr({}, "clear")
+
+>>> getattr((), "pop")
+Traceback (innermost last):
+File "", line 1, in ?
+AttributeError: 'tuple' object has no attribute 'pop'
+@{body}
+
+This gets a reference to the @{code}pop@{body} method of the list. Note that this is not calling the @{code}pop@{body} method; that would be @{code}li.pop()@{body}. This is the method itself.
+
+This also returns a reference to the @{code}pop@{body} method, but this time, the method name is specified as a string argument to the @{code}getattr@{body} function. @{code}getattr@{body} is an incredibly useful built-in function that returns any attribute of any object. In this case, the object is a list, and the attribute is the @{code}pop@{body} method.
+
+In case it hasn't sunk in just how incredibly useful this is, try this: the return value of @{code}getattr@{body} @{i}is@{ui} the method, which you can then call just as if you had said @{code}li.append("Moe")@{body} directly. But you didn't call the function directly; you specified the function name as a string instead.
+
+@{code}getattr@{body} also works on dictionaries.
+
+In theory, @{code}getattr@{body} would work on tuples, except that tuples have no methods, so @{code}getattr@{body} will raise an exception no matter what attribute name you give.
+
+@{b}4.4.1. @{code}getattr@{body} with Modules @{ub}
+
+@{code}getattr@{body} isn't just for built-in datatypes. It also works on modules.
+
+@{b}Example 4.11. The @{code}getattr@{body} Function in @{code}apihelper.py@{body}@{ub}
+
+@{code}
+>>> import odbchelper
+>>> odbchelper.buildConnectionString
+
+>>> getattr(odbchelper, "buildConnectionString")
+
+>>> object = odbchelper
+>>> method = "buildConnectionString"
+>>> getattr(object, method)
+
+>>> type(getattr(object, method))
+
+>>> import types
+>>> type(getattr(object, method)) == types.FunctionType
+True
+>>> callable(getattr(object, method))
+True
+@{body}
+
+This returns a reference to the @{code}buildConnectionString@{body} function in the @{code}odbchelper@{body} module, which you studied in Chapter 2, @{i}Your First Python Program@{ui}. (The hex address you see is specific to my machine; your output will be different.)
+
+Using @{code}getattr@{body}, you can get the same reference to the same function. In general, @{code}@{code}getattr@{body} (@{i}object@{ui}, "@{i}attribute@{ui} ")@{body} is equivalent to @{code}@{i}object@{ui}.@{i}attribute@{ui}@{body}. If @{i}@{code}object@{body}@{ui} is a module, then @{i}@{code}attribute@{body}@{ui} can be anything defined in the module: a function, class, or global variable.
+
+And this is what you actually use in the @{code}info@{body} function. @{code}object@{body} is passed into the function as an argument; @{code}method@{body} is a string which is the name of a method or function.
+
+In this case, @{code}method@{body} is the name of a function, which you can prove by getting its @{code}type@{body}.
+
+Since @{code}method@{body} is a function, it is callable.
+
+@{b}4.4.2. @{code}getattr@{body} As a Dispatcher @{ub}
+
+A common usage pattern of @{code}getattr@{body} is as a dispatcher. For example, if you had a program that could output data in a variety of different formats, you could define separate functions for each output format and use a single dispatch function to call the right one.
+
+For example, let's imagine a program that prints site statistics in HTML, XML, and plain text formats. The choice of output format could be specified on the command line, or stored in a configuration file. A @{code}statsout@{body} module defines three functions, @{code}output_html@{body}, @{code}output_xml@{body}, and @{code}output_text@{body}. Then the main program defines a single output function, like this:
+
+@{b}Example 4.12. Creating a Dispatcher with @{code}getattr@{body}@{ub}
+
+@{code}
+
+import statsout
+
+def output(data, format="text"):
+output_function = getattr(statsout, "output_%s" % format)
+return output_function(data)
+
+@{body}
+
+The @{code}output@{body} function takes one required argument, @{code}data@{body}, and one optional argument, @{code}format@{body}. If @{code}format@{body} is not specified, it defaults to @{code}text@{body}, and you will end up calling the plain text output function.
+
+You concatenate the @{code}format@{body} argument with "output_" to produce a function name, and then go get that function from the @{code}statsout@{body} module. This allows you to easily extend the program later to support other output formats, without changing this dispatch function. Just add another function to @{code}statsout@{body} named, for instance, @{code}output_pdf@{body}, and pass "pdf" as the @{code}format@{body} into the @{code}output@{body} function.
+
+Now you can simply call the output function in the same way as any other function. The @{code}output_function@{body} variable is a reference to the appropriate function from the @{code}statsout@{body} module.
+
+Did you see the bug in the previous example? This is a very loose coupling of strings and functions, and there is no error checking. What happens if the user passes in a format that doesn't have a corresponding function defined in @{code}statsout@{body}? Well, @{code}getattr@{body} will return @{code}None@{body}, which will be assigned to @{code}output_function@{body} instead of a valid function, and the next line that attempts to call that function will crash and raise an exception. That's bad.
+
+Luckily, @{code}getattr@{body} takes an optional third argument, a default value.
+
+@{b}Example 4.13. @{code}getattr@{body} Default Values @{ub}
+
+@{code}
+
+import statsout
+
+def output(data, format="text"):
+output_function = getattr(statsout, "output_%s" % format, statsout.output_text)
+return output_function(data)
+
+@{body}
+
+This function call is guaranteed to work, because you added a third argument to the call to @{code}getattr@{body}. The third argument is a default value that is returned if the attribute or method specified by the second argument wasn't found.
+
+As you can see, @{code}getattr@{body} is quite powerful. It is the heart of introspection, and you'll see even more powerful examples of it in later chapters.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "4.5. Filtering Lists"
+@TITLE "4.5. Filtering Lists"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}4.5. Filtering Lists @{ub}
+
+As you know, Python has powerful capabilities for mapping lists into other lists, via list comprehensions (Section 3.6, "Mapping Lists"). This can be combined with a filtering mechanism, where some elements in the list are mapped while others are skipped entirely.
+
+Here is the list filtering syntax:
+
+@{code}
+
+[@{i}mapping-expression@{ui} for @{i}element@{ui} in @{i}source-list@{ui} if @{i}filter-expression@{ui}]
+@{body}
+
+This is an extension of the list comprehensions that you know and love. The first two thirds are the same; the last part, starting with the @{code}if@{body}, is the filter expression. A filter expression can be any expression that evaluates true or false (which in Python can be almost anything). Any element for which the filter expression evaluates true will be included in the mapping. All other elements are ignored, so they are never put through the mapping expression and are not included in the output list.
+
+@{b}Example 4.14. Introducing List Filtering@{ub}
+
+@{code}
+>>> li = ["a", "mpilgrim", "foo", "b", "c", "b", "d", "d"]
+>>> [elem for elem in li if len(elem) > 1]
+['mpilgrim', 'foo']
+>>> [elem for elem in li if elem != "b"]
+['a', 'mpilgrim', 'foo', 'c', 'd', 'd']
+>>> [elem for elem in li if li.count(elem) == 1]
+['a', 'mpilgrim', 'foo', 'c']
+@{body}
+
+The mapping expression here is simple (it just returns the value of each element), so concentrate on the filter expression. As Python loops through the list, it runs each element through the filter expression. If the filter expression is true, the element is mapped and the result of the mapping expression is included in the returned list. Here, you are filtering out all the one-character strings, so you're left with a list of all the longer strings.
+
+Here, you are filtering out a specific value, @{code}b@{body}. Note that this filters all occurrences of @{code}b@{body}, since each time it comes up, the filter expression will be false.
+
+@{code}count@{body} is a list method that returns the number of times a value occurs in a list. You might think that this filter would eliminate duplicates from a list, returning a list containing only one copy of each value in the original list. But it doesn't, because values that appear twice in the original list (in this case, @{code}b@{body} and @{code}d@{body}) are excluded completely. There are ways of eliminating duplicates from a list, but filtering is not the solution.
+
+Let's get back to this line from @{code}apihelper.py@{body}:
+
+@{code}
+
+methodList = [method for method in dir(object) if callable(getattr(object, method))]
+@{body}
+
+This looks complicated, and it is complicated, but the basic structure is the same. The whole filter expression returns a list, which is assigned to the @{code}methodList@{body} variable. The first half of the expression is the list mapping part. The mapping expression is an identity expression, which it returns the value of each element. @{code}@{code}dir@{body} (@{code}object@{body})@{body} returns a list of @{code}object@{body} 's attributes and methods -- that's the list you're mapping. So the only new part is the filter expression after the @{code}if@{body}.
+
+The filter expression looks scary, but it's not. You already know about @{code}callable@{body}, @{code}getattr@{body}, and @{code}in@{body}. As you saw in the previous section, the expression @{code}getattr(object, method)@{body} returns a function object if @{code}object@{body} is a module and @{code}method@{body} is the name of a function in that module.
+
+So this expression takes an object (named @{code}object@{body}). Then it gets a list of the names of the object's attributes, methods, functions, and a few other things. Then it filters that list to weed out all the stuff that you don't care about. You do the weeding out by taking the name of each attribute/method/function and getting a reference to the real thing, via the @{code}getattr@{body} function. Then you check to see if that object is callable, which will be any methods and functions, both built-in (like the @{code}pop@{body} method of a list) and user-defined (like the @{code}buildConnectionString@{body} function of the @{code}odbchelper@{body} module). You don't care about other attributes, like the @{code}__name__@{body} attribute that's built in to every module.
+
+@{b}Further Reading on Filtering Lists@{ub}
+
+* @{i}Python Tutorial@{ui} discusses another way to filter lists using the built-in @{code}filter@{body} function.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "4.6. The Peculiar Nature of and and or"
+@TITLE "4.6. The Peculiar Nature of and and or"
+@NEXT "S7"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}4.6. The Peculiar Nature of @{code}and@{body} and @{code}or@{body}@{ub}
+
+In Python, @{code}and@{body} and @{code}or@{body} perform boolean logic as you would expect, but they do not return boolean values; instead, they return one of the actual values they are comparing.
+
+@{b}Example 4.15. Introducing @{code}and@{body}@{ub}
+
+@{code}
+>>> 'a' and 'b'
+'b'
+>>> '' and 'b'
+''
+>>> 'a' and 'b' and 'c'
+'c'
+@{body}
+
+When using @{code}and@{body}, values are evaluated in a boolean context from left to right. @{code}0@{body}, @{code}''@{body}, @{code}[]@{body}, @{code}()@{body}, @{code}{}@{body}, and @{code}None@{body} are false in a boolean context; everything else is true. Well, almost everything. By default, instances of classes are true in a boolean context, but you can define special methods in your class to make an instance evaluate to false. You'll learn all about classes and special methods in Chapter 5. If all values are true in a boolean context, @{code}and@{body} returns the last value. In this case, @{code}and@{body} evaluates @{code}'a'@{body}, which is true, then @{code}'b'@{body}, which is true, and returns @{code}'b'@{body}.
+
+If any value is false in a boolean context, @{code}and@{body} returns the first false value. In this case, @{code}''@{body} is the first false value.
+
+All values are true, so @{code}and@{body} returns the last value, @{code}'c'@{body}.
+
+@{b}Example 4.16. Introducing @{code}or@{body}@{ub}
+
+@{code}
+>>> 'a' or 'b'
+'a'
+>>> '' or 'b'
+'b'
+>>> '' or [] or {}
+{}
+>>> def sidefx():
+... print "in sidefx()"
+... return 1
+>>> 'a' or sidefx()
+'a'
+@{body}
+
+When using @{code}or@{body}, values are evaluated in a boolean context from left to right, just like @{code}and@{body}. If any value is true, @{code}or@{body} returns that value immediately. In this case, @{code}'a'@{body} is the first true value.
+
+@{code}or@{body} evaluates @{code}''@{body}, which is false, then @{code}'b'@{body}, which is true, and returns @{code}'b'@{body}.
+
+If all values are false, @{code}or@{body} returns the last value. @{code}or@{body} evaluates @{code}''@{body}, which is false, then @{code}[]@{body}, which is false, then @{code}{}@{body}, which is false, and returns @{code}{}@{body}.
+
+Note that @{code}or@{body} evaluates values only until it finds one that is true in a boolean context, and then it ignores the rest. This distinction is important if some values can have side effects. Here, the function @{code}sidefx@{body} is never called, because @{code}or@{body} evaluates @{code}'a'@{body}, which is true, and returns @{code}'a'@{body} immediately.
+
+If you're a C hacker, you are certainly familiar with the @{code}@{i}bool@{ui} ? @{code}a@{body} : @{code}b@{body}@{body} expression, which evaluates to @{code}a@{body} if @{i}@{code}bool@{body}@{ui} is true, and @{code}b@{body} otherwise. Because of the way @{code}and@{body} and @{code}or@{body} work in Python, you can accomplish the same thing.
+
+@{b}4.6.1. Using the @{code}and-or@{body} Trick @{ub}
+
+@{b}Example 4.17. Introducing the @{code}and-or@{body} Trick @{ub}
+
+@{code}
+>>> a = "first"
+>>> b = "second"
+>>> 1 and a or b
+'first'
+>>> 0 and a or b
+'second'
+
+@{body}
+
+This syntax looks similar to the @{code}@{i}bool@{ui} ? @{code}a@{body} : @{code}b@{body}@{body} expression in C. The entire expression is evaluated from left to right, so the @{code}and@{body} is evaluated first. @{code}1 and 'first'@{body} evalutes to @{code}'first'@{body}, then @{code}'first' or 'second'@{body} evalutes to @{code}'first'@{body}.
+
+@{code}0 and 'first'@{body} evalutes to @{code}False@{body}, and then @{code}0 or 'second'@{body} evaluates to @{code}'second'@{body}.
+
+However, since this Python expression is simply boolean logic, and not a special construct of the language, there is one extremely important difference between this @{code}and-or@{body} trick in Python and the @{code}@{i}bool@{ui} ? @{code}a@{body} : @{code}b@{body}@{body} syntax in C. If the value of @{code}a@{body} is false, the expression will not work as you would expect it to. (Can you tell I was bitten by this? More than once?)
+
+@{b}Example 4.18. When the @{code}and-or@{body} Trick Fails @{ub}
+
+@{code}
+>>> a = ""
+>>> b = "second"
+>>> 1 and a or b
+'second'
+@{body}
+
+Since @{code}a@{body} is an empty string, which Python considers false in a boolean context, @{code}1 and ''@{body} evalutes to @{code}''@{body}, and then @{code}'' or 'second'@{body} evalutes to @{code}'second'@{body}. Oops! That's not what you wanted.
+
+The @{code}and-or@{body} trick, @{code}@{i}bool@{ui} and @{code}a@{body} or @{code}b@{body}@{body}, will not work like the C expression @{code}@{i}bool@{ui} ? @{code}a@{body} : @{code}b@{body}@{body} when @{code}a@{body} is false in a boolean context.
+
+The real trick behind the @{code}and-or@{body} trick, then, is to make sure that the value of @{code}a@{body} is never false. One common way of doing this is to turn @{code}a@{body} into @{code}[@{code}a@{body} ]@{body} and @{code}b@{body} into @{code}[@{code}b@{body} ]@{body}, then taking the first element of the returned list, which will be either @{code}a@{body} or @{code}b@{body}.
+
+@{b}Example 4.19. Using the @{code}and-or@{body} Trick Safely @{ub}
+
+@{code}
+>>> a = ""
+>>> b = "second"
+>>> (1 and [a] or [b])[0]
+''
+@{body}
+
+Since @{code}[@{code}a@{body} ]@{body} is a non-empty list, it is never false. Even if @{code}a@{body} is @{code}0@{body} or @{code}''@{body} or some other false value, the list @{code}[@{code}a@{body} ]@{body} is true because it has one element.
+
+By now, this trick may seem like more trouble than it's worth. You could, after all, accomplish the same thing with an @{code}if@{body} statement, so why go through all this fuss? Well, in many cases, you are choosing between two constant values, so you can use the simpler syntax and not worry, because you know that the @{code}a@{body} value will always be true. And even if you need to use the more complicated safe form, there are good reasons to do so. For example, there are some cases in Python where @{code}if@{body} statements are not allowed, such as in @{code}lambda@{body} functions.
+
+@{b}Further Reading on the @{code}and-or@{body} Trick @{ub}
+
+* Python Cookbook discusses alternatives to the @{code}and-or@{body} trick.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S7 "4.7. Using lambda Functions"
+@TITLE "4.7. Using lambda Functions"
+@NEXT "S8"
+@PREV "S6"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}4.7. Using @{code}lambda@{body} Functions @{ub}
+
+Python supports an interesting syntax that lets you define one-line mini-functions on the fly. Borrowed from Lisp, these so-called @{code}lambda@{body} functions can be used anywhere a function is required.
+
+@{b}Example 4.20. Introducing @{code}lambda@{body} Functions @{ub}
+
+@{code}
+>>> def f(x):
+... return x*2
+...
+>>> f(3)
+6
+>>> g = lambda x: x*2
+>>> g(3)
+6
+>>> (lambda x: x*2)(3)
+6
+@{body}
+
+This is a @{code}lambda@{body} function that accomplishes the same thing as the normal function above it. Note the abbreviated syntax here: there are no parentheses around the argument list, and the @{code}return@{body} keyword is missing (it is implied, since the entire function can only be one expression). Also, the function has no name, but it can be called through the variable it is assigned to.
+
+You can use a @{code}lambda@{body} function without even assigning it to a variable. This may not be the most useful thing in the world, but it just goes to show that a lambda is just an in-line function.
+
+To generalize, a @{code}lambda@{body} function is a function that takes any number of arguments (including optional arguments) and returns the value of a single expression. @{code}lambda@{body} functions can not contain commands, and they can not contain more than one expression. Don't try to squeeze too much into a @{code}lambda@{body} function; if you need something more complex, define a normal function instead and make it as long as you want.
+
+@{code}lambda@{body} functions are a matter of style. Using them is never required; anywhere you could use them, you could define a separate normal function and use that instead. I use them in places where I want to encapsulate specific, non-reusable code without littering my code with a lot of little one-line functions.
+
+@{b}4.7.1. Real-World @{code}lambda@{body} Functions @{ub}
+
+Here are the @{code}lambda@{body} functions in @{code}apihelper.py@{body}:
+
+@{code}
+
+processFunc = collapse and (lambda s: " ".join(s.split())) or (lambda s: s)
+@{body}
+
+Notice that this uses the simple form of the @{code}and-or@{body} trick, which is okay, because a @{code}lambda@{body} function is always true in a boolean context. (That doesn't mean that a @{code}lambda@{body} function can't return a false value. The function is always true; its return value could be anything.)
+
+Also notice that you're using the @{code}split@{body} function with no arguments. You've already seen it used with one or two arguments, but without any arguments it splits on whitespace.
+
+@{b}Example 4.21. @{code}split@{body} With No Arguments @{ub}
+
+@{code}
+>>> s = "this is\\na\\ttest"
+>>> print s
+this is
+a test
+>>> print s.split()
+['this', 'is', 'a', 'test']
+>>> print " ".join(s.split())
+'this is a test'
+@{body}
+
+This is a multiline string, defined by escape characters instead of triple quotes. @{code}\\n@{body} is a carriage return, and @{code}\\t@{body} is a tab character.
+
+@{code}split@{body} without any arguments splits on whitespace. So three spaces, a carriage return, and a tab character are all the same.
+
+You can normalize whitespace by splitting a string with @{code}split@{body} and then rejoining it with @{code}join@{body}, using a single space as a delimiter. This is what the @{code}info@{body} function does to collapse multi-line @{code}doc string@{body} s into a single line.
+
+So what is the @{code}info@{body} function actually doing with these @{code}lambda@{body} functions, @{code}split@{body} s, and @{code}and-or@{body} tricks?
+
+@{code}
+
+processFunc = collapse and (lambda s: " ".join(s.split())) or (lambda s: s)
+@{body}
+
+@{code}processFunc@{body} is now a function, but which function it is depends on the value of the @{code}collapse@{body} variable. If @{code}collapse@{body} is true, @{code}@{code}processFunc@{body} (@{i}string@{ui})@{body} will collapse whitespace; otherwise, @{code}@{code}processFunc@{body} (@{i}string@{ui})@{body} will return its argument unchanged.
+
+To do this in a less robust language, like Visual Basic, you would probably create a function that took a string and a @{i}@{code}collapse@{body}@{ui} argument and used an @{code}if@{body} statement to decide whether to collapse the whitespace or not, then returned the appropriate value. This would be inefficient, because the function would need to handle every possible case. Every time you called it, it would need to decide whether to collapse whitespace before it could give you what you wanted. In Python, you can take that decision logic out of the function and define a @{code}lambda@{body} function that is custom-tailored to give you exactly (and only) what you want. This is more efficient, more elegant, and less prone to those nasty oh-I-thought-those-arguments-were-reversed kinds of errors.
+
+@{b}Further Reading on @{code}lambda@{body} Functions @{ub}
+
+* Python Knowledge Base discusses using @{code}lambda@{body} to call functions indirectly.
+
+* @{i}Python Tutorial@{ui} shows how to access outside variables from inside a @{code}lambda@{body} function. (PEP 227 explains how this will change in future versions of Python.)
+
+* @{i}The Whole Python FAQ@{ui} has examples of obfuscated one-liners using @{code}lambda@{body}.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S8 "4.8. Putting It All Together"
+@TITLE "4.8. Putting It All Together"
+@NEXT "S9"
+@PREV "S7"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}4.8. Putting It All Together @{ub}
+
+The last line of code, the only one you haven't deconstructed yet, is the one that does all the work. But by now the work is easy, because everything you need is already set up just the way you need it. All the dominoes are in place; it's time to knock them down.
+
+This is the meat of @{code}apihelper.py@{body}:
+
+@{code}
+
+print "\\n".join(["%s %s" %
+(method.ljust(spacing),
+processFunc(str(getattr(object, method).__doc__)))
+for method in methodList])
+@{body}
+
+Note that this is one command, split over multiple lines, but it doesn't use the line continuation character (@{code}\\@{body}). Remember when I said that some expressions can be split into multiple lines without using a backslash? A list comprehension is one of those expressions, since the entire expression is contained in square brackets.
+
+Now, let's take it from the end and work backwards. The
+
+@{code}
+
+for method in methodList
+@{body}
+
+shows that this is a list comprehension. As you know, @{code}methodList@{body} is a list of all the methods you care about in @{code}object@{body}. So you're looping through that list with @{code}method@{body}.
+
+@{b}Example 4.22. Getting a @{code}doc string@{body} Dynamically @{ub}
+
+@{code}
+>>> import odbchelper
+>>> object = odbchelper
+>>> method = 'buildConnectionString'
+>>> getattr(object, method)
+
+>>> print getattr(object, method).__doc__
+Build a connection string from a dictionary of parameters.
+
+Returns string.
+@{body}
+
+In the @{code}info@{body} function, @{code}object@{body} is the object you're getting help on, passed in as an argument.
+
+As you're looping through @{code}methodList@{body}, @{code}method@{body} is the name of the current method.
+
+Using the @{code}getattr@{body} function, you're getting a reference to the @{i}@{code}method@{body}@{ui} function in the @{i}@{code}object@{body}@{ui} module.
+
+Now, printing the actual @{code}doc string@{body} of the method is easy.
+
+The next piece of the puzzle is the use of @{code}str@{body} around the @{code}doc string@{body}. As you may recall, @{code}str@{body} is a built-in function that coerces data into a string. But a @{code}doc string@{body} is always a string, so why bother with the @{code}str@{body} function? The answer is that not every function has a @{code}doc string@{body}, and if it doesn't, its @{code}__doc__@{body} attribute is @{code}None@{body}.
+
+@{b}Example 4.23. Why Use @{code}str@{body} on a @{code}doc string@{body}? @{ub}
+
+@{code}
+>>> >>> def foo(): print 2
+>>> >>> foo()
+2
+>>> >>> foo.__doc__
+>>> foo.__doc__ == None
+True
+>>> str(foo.__doc__)
+'None'
+
+@{body}
+
+You can easily define a function that has no @{code}doc string@{body}, so its @{code}__doc__@{body} attribute is @{code}None@{body}. Confusingly, if you evaluate the @{code}__doc__@{body} attribute directly, the Python IDE prints nothing at all, which makes sense if you think about it, but is still unhelpful.
+
+You can verify that the value of the @{code}__doc__@{body} attribute is actually @{code}None@{body} by comparing it directly.
+
+The @{code}str@{body} function takes the null value and returns a string representation of it, @{code}'None'@{body}.
+
+In SQL, you must use @{code}IS NULL@{body} instead of @{code}= NULL@{body} to compare a null value. In Python, you can use either @{code}== None@{body} or @{code}is None@{body}, but @{code}is None@{body} is faster.
+
+Now that you are guaranteed to have a string, you can pass the string to @{code}processFunc@{body}, which you have already defined as a function that either does or doesn't collapse whitespace. Now you see why it was important to use @{code}str@{body} to convert a @{code}None@{body} value into a string representation. @{code}processFunc@{body} is assuming a string argument and calling its @{code}split@{body} method, which would crash if you passed it @{code}None@{body} because @{code}None@{body} doesn't have a @{code}split@{body} method.
+
+Stepping back even further, you see that you're using string formatting again to concatenate the return value of @{code}processFunc@{body} with the return value of @{code}method@{body} 's @{code}ljust@{body} method. This is a new string method that you haven't seen before.
+
+@{b}Example 4.24. Introducing @{code}ljust@{body}@{ub}
+
+@{code}
+>>> s = 'buildConnectionString'
+>>> s.ljust(30)
+'buildConnectionString '
+>>> s.ljust(20)
+'buildConnectionString'
+@{body}
+
+@{code}ljust@{body} pads the string with spaces to the given length. This is what the @{code}info@{body} function uses to make two columns of output and line up all the @{code}doc string@{body} s in the second column.
+
+If the given length is smaller than the length of the string, @{code}ljust@{body} will simply return the string unchanged. It never truncates the string.
+
+You're almost finished. Given the padded method name from the @{code}ljust@{body} method and the (possibly collapsed) @{code}doc string@{body} from the call to @{code}processFunc@{body}, you concatenate the two and get a single string. Since you're mapping @{code}methodList@{body}, you end up with a list of strings. Using the @{code}join@{body} method of the string @{code}"\\n"@{body}, you join this list into a single string, with each element of the list on a separate line, and print the result.
+
+@{b}Example 4.25. Printing a List@{ub}
+
+@{code}
+>>> li = ['a', 'b', 'c']
+>>> print "\\n".join(li)
+a
+b
+c
+@{body}
+
+This is also a useful debugging trick when you're working with lists. And in Python, you're always working with lists.
+
+That's the last piece of the puzzle. You should now understand this code.
+
+@{code}
+
+print "\\n".join(["%s %s" %
+(method.ljust(spacing),
+processFunc(str(getattr(object, method).__doc__)))
+for method in methodList])
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S9 "4.9. Summary"
+@TITLE "4.9. Summary"
+@NEXT "MAIN"
+@PREV "S8"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}4.9. Summary @{ub}
+
+The @{code}apihelper.py@{body} program and its output should now make perfect sense.
+
+@{code}
+
+def info(object, spacing=10, collapse=1):
+"""Print methods and doc strings.
+
+Takes module, class, list, dictionary, or string."""
+methodList = [method for method in dir(object) if callable(getattr(object, method))]
+processFunc = collapse and (lambda s: " ".join(s.split())) or (lambda s: s)
+print "\\n".join(["%s %s" %
+(method.ljust(spacing),
+processFunc(str(getattr(object, method).__doc__)))
+for method in methodList])
+
+if __name__ == "__main__":
+print info.__doc__
+@{body}
+
+Here is the output of @{code}apihelper.py@{body}:
+
+@{code}
+>>> from apihelper import info
+>>> li = []
+>>> info(li)
+append L.append(object) -- append object to end
+count L.count(value) -> integer -- return number of occurrences of value
+extend L.extend(list) -- extend list by appending list elements
+index L.index(value) -> integer -- return index of first occurrence of value
+insert L.insert(index, object) -- insert object before index
+pop L.pop([index]) -> item -- remove and return item at index (default last)
+remove L.remove(value) -- remove first occurrence of value
+reverse L.reverse() -- reverse *IN PLACE*
+sort L.sort([cmpfunc]) -- sort *IN PLACE*; if given, cmpfunc(x, y) -> -1, 0, 1
+@{body}
+
+Before diving into the next chapter, make sure you're comfortable doing all of these things:
+
+* Defining and calling functions with optional and named arguments
+
+* Using @{code}str@{body} to coerce any arbitrary value into a string representation
+
+* Using @{code}getattr@{body} to get references to functions and other attributes dynamically
+
+* Extending the list comprehension syntax to do list filtering
+
+* Recognizing the @{code}and-or@{body} trick and using it safely
+
+* Defining @{code}lambda@{body} functions
+
+* Assigning functions to variables and calling the function by referencing the variable. I can't emphasize this enough, because this mode of thought is vital to advancing your understanding of Python. You'll see more complex applications of this concept throughout this book.
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

@@ -1,0 +1,23 @@
+classes/ - class and operator examples (Python 2.7)
+=================================================
+
+These are teaching demos of user-defined classes and operators.
+They predate some 2.x builtins but remain useful illustrations.
+
+  bitvec.py     Bit-vector class
+  complex.py    Complex numbers as a class (builtin complex also exists)
+  dates.py      Date arithmetic (Tim Peters)
+  range.py      Lazy range-like sequence
+  rat.py        Rational numbers
+  rev.py        Reverse view of a sequence
+  vec.py        Simple vector
+
+  class.doc     Longer notes on the Complex demo
+
+Run:
+
+  Python complex.py
+  (most modules are importable libraries; some print a self-test)
+
+dbm.py was removed: classic dbm is not part of this Amiga build.
+Use anydbm / dumbdbm from the standard library if you need a DBM.

@@ -1,0 +1,886 @@
+@DATABASE "DIP15.guide"
+@$VER: DIP15.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "15. Refactoring"
+@TITLE "15. Refactoring"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}15. Refactoring@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}Refactoring discussion is language-level and portable.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 15.1. Handling bugs " LINK "S1"}
+@{" 15.2. Handling changing requirements " LINK "S2"}
+@{" 15.3. Refactoring " LINK "S3"}
+@{" 15.4. Postscript " LINK "S4"}
+@{" 15.5. Summary " LINK "S5"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 15. Refactoring
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "15.1. Handling bugs"
+@TITLE "15.1. Handling bugs"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}15.1. Handling bugs @{ub}
+
+Despite your best efforts to write comprehensive unit tests, bugs happen. What do I mean by "bug"? A bug is a test case you haven't written yet.
+
+@{b}Example 15.1. The bug@{ub}
+
+@{code}
+>>> import roman5
+>>> roman5.fromRoman("")
+0
+@{body}
+
+Remember in the previous section when you kept seeing that an empty string would match the regular expression you were using to check for valid Roman numerals? Well, it turns out that this is still true for the final version of the regular expression. And that's a bug; you want an empty string to raise an @{code}InvalidRomanNumeralError@{body} exception just like any other sequence of characters that don't represent a valid Roman numeral.
+
+After reproducing the bug, and before fixing it, you should write a test case that fails, thus illustrating the bug.
+
+@{b}Example 15.2. Testing for the bug (@{code}romantest61.py@{body}) @{ub}
+
+@{code}
+
+class FromRomanBadInput(unittest.TestCase):
+
+# previous test cases omitted for clarity (they haven't changed)
+
+def testBlank(self):
+"""fromRoman should fail with blank string"""
+self.assertRaises(roman.InvalidRomanNumeralError, roman.fromRoman, "")
+
+@{body}
+
+Pretty simple stuff here. Call @{code}fromRoman@{body} with an empty string and make sure it raises an @{code}InvalidRomanNumeralError@{body} exception. The hard part was finding the bug; now that you know about it, testing for it is the easy part.
+
+Since your code has a bug, and you now have a test case that tests this bug, the test case will fail:
+
+@{b}Example 15.3. Output of @{code}romantest61.py@{body} against @{code}roman61.py@{body}@{ub}
+
+@{code}
+fromRoman should only accept uppercase input ... ok
+toRoman should always return uppercase ... ok
+fromRoman should fail with blank string ... FAIL
+fromRoman should fail with malformed antecedents ... ok
+fromRoman should fail with repeated pairs of numerals ... ok
+fromRoman should fail with too many repeated numerals ... ok
+fromRoman should give known result with known input ... ok
+toRoman should give known result with known input ... ok
+fromRoman(toRoman(n))==n for all n ... ok
+toRoman should fail with non-integer input ... ok
+toRoman should fail with negative input ... ok
+toRoman should fail with large input ... ok
+toRoman should fail with 0 input ... ok
+
+======================================================================
+FAIL: fromRoman should fail with blank string
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage6\\romantest61.py", line 137, in testBlank
+self.assertRaises(roman61.InvalidRomanNumeralError, roman61.fromRoman, "")
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+----------------------------------------------------------------------
+Ran 13 tests in 2.864s
+
+FAILED (failures=1)
+@{body}
+
+@{i}Now@{ui} you can fix the bug.
+
+@{b}Example 15.4. Fixing the bug (@{code}roman62.py@{body}) @{ub}
+
+This file is available in @{code}py/roman/stage6/@{body} in the examples directory.
+
+@{code}
+
+def fromRoman(s):
+"""convert Roman numeral to integer"""
+if not s:
+raise InvalidRomanNumeralError, 'Input can not be blank'
+if not re.search(romanNumeralPattern, s):
+raise InvalidRomanNumeralError, 'Invalid Roman numeral: %s' % s
+
+result = 0
+index = 0
+for numeral, integer in romanNumeralMap:
+while s[index:index+len(numeral)] == numeral:
+result += integer
+index += len(numeral)
+return result
+
+@{body}
+
+Only two lines of code are required: an explicit check for an empty string, and a @{code}raise@{body} statement.
+
+@{b}Example 15.5. Output of @{code}romantest62.py@{body} against @{code}roman62.py@{body}@{ub}
+
+@{code}
+fromRoman should only accept uppercase input ... ok
+toRoman should always return uppercase ... ok
+fromRoman should fail with blank string ... ok
+fromRoman should fail with malformed antecedents ... ok
+fromRoman should fail with repeated pairs of numerals ... ok
+fromRoman should fail with too many repeated numerals ... ok
+fromRoman should give known result with known input ... ok
+toRoman should give known result with known input ... ok
+fromRoman(toRoman(n))==n for all n ... ok
+toRoman should fail with non-integer input ... ok
+toRoman should fail with negative input ... ok
+toRoman should fail with large input ... ok
+toRoman should fail with 0 input ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 2.834s
+
+OK
+@{body}
+
+The blank string test case now passes, so the bug is fixed.
+
+All the other test cases still pass, which means that this bug fix didn't break anything else. Stop coding.
+
+Coding this way does not make fixing bugs any easier. Simple bugs (like this one) require simple test cases; complex bugs will require complex test cases. In a testing-centric environment, it may @{i}seem@{ui} like it takes longer to fix a bug, since you need to articulate in code exactly what the bug is (to write the test case), then fix the bug itself. Then if the test case doesn't pass right away, you need to figure out whether the fix was wrong, or whether the test case itself has a bug in it. However, in the long run, this back-and-forth between test code and code tested pays for itself, because it makes it more likely that bugs are fixed correctly the first time. Also, since you can easily re-run @{i}all@{ui} the test cases along with your new one, you are much less likely to break old code when fixing new code. Today's unit test is tomorrow's regression test.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "15.2. Handling changing requirements"
+@TITLE "15.2. Handling changing requirements"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}15.2. Handling changing requirements @{ub}
+
+Despite your best efforts to pin your customers to the ground and extract exact requirements from them on pain of horrible nasty things involving scissors and hot wax, requirements will change. Most customers don't know what they want until they see it, and even if they do, they aren't that good at articulating what they want precisely enough to be useful. And even if they do, they'll want more in the next release anyway. So be prepared to update your test cases as requirements change.
+
+Suppose, for instance, that you wanted to expand the range of the Roman numeral conversion functions. Remember the rule that said that no character could be repeated more than three times? Well, the Romans were willing to make an exception to that rule by having 4 @{code}M@{body} characters in a row to represent @{code}4000@{body}. If you make this change, you'll be able to expand the range of convertible numbers from @{code}1..3999@{body} to @{code}1..4999@{body}. But first, you need to make some changes to the test cases.
+
+@{b}Example 15.6. Modifying test cases for new requirements (@{code}romantest71.py@{body}) @{ub}
+
+This file is available in @{code}py/roman/stage7/@{body} in the examples directory.
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+import roman71
+import unittest
+
+class KnownValues(unittest.TestCase):
+knownValues = ( (1, 'I'),
+(2, 'II'),
+(3, 'III'),
+(4, 'IV'),
+(5, 'V'),
+(6, 'VI'),
+(7, 'VII'),
+(8, 'VIII'),
+(9, 'IX'),
+(10, 'X'),
+(50, 'L'),
+(100, 'C'),
+(500, 'D'),
+(1000, 'M'),
+(31, 'XXXI'),
+(148, 'CXLVIII'),
+(294, 'CCXCIV'),
+(312, 'CCCXII'),
+(421, 'CDXXI'),
+(528, 'DXXVIII'),
+(621, 'DCXXI'),
+(782, 'DCCLXXXII'),
+(870, 'DCCCLXX'),
+(941, 'CMXLI'),
+(1043, 'MXLIII'),
+(1110, 'MCX'),
+(1226, 'MCCXXVI'),
+(1301, 'MCCCI'),
+(1485, 'MCDLXXXV'),
+(1509, 'MDIX'),
+(1607, 'MDCVII'),
+(1754, 'MDCCLIV'),
+(1832, 'MDCCCXXXII'),
+(1993, 'MCMXCIII'),
+(2074, 'MMLXXIV'),
+(2152, 'MMCLII'),
+(2212, 'MMCCXII'),
+(2343, 'MMCCCXLIII'),
+(2499, 'MMCDXCIX'),
+(2574, 'MMDLXXIV'),
+(2646, 'MMDCXLVI'),
+(2723, 'MMDCCXXIII'),
+(2892, 'MMDCCCXCII'),
+(2975, 'MMCMLXXV'),
+(3051, 'MMMLI'),
+(3185, 'MMMCLXXXV'),
+(3250, 'MMMCCL'),
+(3313, 'MMMCCCXIII'),
+(3408, 'MMMCDVIII'),
+(3501, 'MMMDI'),
+(3610, 'MMMDCX'),
+(3743, 'MMMDCCXLIII'),
+(3844, 'MMMDCCCXLIV'),
+(3888, 'MMMDCCCLXXXVIII'),
+(3940, 'MMMCMXL'),
+(3999, 'MMMCMXCIX'),
+(4000, 'MMMM'),
+(4500, 'MMMMD'),
+(4888, 'MMMMDCCCLXXXVIII'),
+(4999, 'MMMMCMXCIX'))
+
+def testToRomanKnownValues(self):
+"""toRoman should give known result with known input"""
+for integer, numeral in self.knownValues:
+result = roman71.toRoman(integer)
+self.assertEqual(numeral, result)
+
+def testFromRomanKnownValues(self):
+"""fromRoman should give known result with known input"""
+for integer, numeral in self.knownValues:
+result = roman71.fromRoman(numeral)
+self.assertEqual(integer, result)
+
+class ToRomanBadInput(unittest.TestCase):
+def testTooLarge(self):
+"""toRoman should fail with large input"""
+self.assertRaises(roman71.OutOfRangeError, roman71.toRoman, 5000)
+
+def testZero(self):
+"""toRoman should fail with 0 input"""
+self.assertRaises(roman71.OutOfRangeError, roman71.toRoman, 0)
+
+def testNegative(self):
+"""toRoman should fail with negative input"""
+self.assertRaises(roman71.OutOfRangeError, roman71.toRoman, -1)
+
+def testNonInteger(self):
+"""toRoman should fail with non-integer input"""
+self.assertRaises(roman71.NotIntegerError, roman71.toRoman, 0.5)
+
+class FromRomanBadInput(unittest.TestCase):
+def testTooManyRepeatedNumerals(self):
+"""fromRoman should fail with too many repeated numerals"""
+for s in ('MMMMM', 'DD', 'CCCC', 'LL', 'XXXX', 'VV', 'IIII'):
+self.assertRaises(roman71.InvalidRomanNumeralError, roman71.fromRoman, s)
+
+def testRepeatedPairs(self):
+"""fromRoman should fail with repeated pairs of numerals"""
+for s in ('CMCM', 'CDCD', 'XCXC', 'XLXL', 'IXIX', 'IVIV'):
+self.assertRaises(roman71.InvalidRomanNumeralError, roman71.fromRoman, s)
+
+def testMalformedAntecedent(self):
+"""fromRoman should fail with malformed antecedents"""
+for s in ('IIMXCC', 'VX', 'DCM', 'CMM', 'IXIV',
+'MCMC', 'XCX', 'IVI', 'LM', 'LD', 'LC'):
+self.assertRaises(roman71.InvalidRomanNumeralError, roman71.fromRoman, s)
+
+def testBlank(self):
+"""fromRoman should fail with blank string"""
+self.assertRaises(roman71.InvalidRomanNumeralError, roman71.fromRoman, "")
+
+class SanityCheck(unittest.TestCase):
+def testSanity(self):
+"""fromRoman(toRoman(n))==n for all n"""
+for integer in range(1, 5000):
+numeral = roman71.toRoman(integer)
+result = roman71.fromRoman(numeral)
+self.assertEqual(integer, result)
+
+class CaseCheck(unittest.TestCase):
+def testToRomanCase(self):
+"""toRoman should always return uppercase"""
+for integer in range(1, 5000):
+numeral = roman71.toRoman(integer)
+self.assertEqual(numeral, numeral.upper())
+
+def testFromRomanCase(self):
+"""fromRoman should only accept uppercase input"""
+for integer in range(1, 5000):
+numeral = roman71.toRoman(integer)
+roman71.fromRoman(numeral.upper())
+self.assertRaises(roman71.InvalidRomanNumeralError,
+roman71.fromRoman, numeral.lower())
+
+if __name__ == "__main__":
+unittest.main()
+
+@{body}
+
+The existing known values don't change (they're all still reasonable values to test), but you need to add a few more in the @{code}4000@{body} range. Here I've included @{code}4000@{body} (the shortest), @{code}4500@{body} (the second shortest), @{code}4888@{body} (the longest), and @{code}4999@{body} (the largest).
+
+The definition of "large input" has changed. This test used to call @{code}toRoman@{body} with @{code}4000@{body} and expect an error; now that @{code}4000-4999@{body} are good values, you need to bump this up to @{code}5000@{body}.
+
+The definition of "too many repeated numerals" has also changed. This test used to call @{code}fromRoman@{body} with @{code}'MMMM'@{body} and expect an error; now that @{code}MMMM@{body} is considered a valid Roman numeral, you need to bump this up to @{code}'MMMMM'@{body}.
+
+The sanity check and case checks loop through every number in the range, from @{code}1@{body} to @{code}3999@{body}. Since the range has now expanded, these @{code}for@{body} loops need to be updated as well to go up to @{code}4999@{body}.
+
+Now your test cases are up to date with the new requirements, but your code is not, so you expect several of the test cases to fail.
+
+@{b}Example 15.7. Output of @{code}romantest71.py@{body} against @{code}roman71.py@{body}@{ub}
+
+@{code}
+
+fromRoman should only accept uppercase input ... ERROR
+toRoman should always return uppercase ... ERROR
+fromRoman should fail with blank string ... ok
+fromRoman should fail with malformed antecedents ... ok
+fromRoman should fail with repeated pairs of numerals ... ok
+fromRoman should fail with too many repeated numerals ... ok
+fromRoman should give known result with known input ... ERROR
+toRoman should give known result with known input ... ERROR
+fromRoman(toRoman(n))==n for all n ... ERROR
+toRoman should fail with non-integer input ... ok
+toRoman should fail with negative input ... ok
+toRoman should fail with large input ... ok
+toRoman should fail with 0 input ... ok
+
+@{body}
+
+Our case checks now fail because they loop from @{code}1@{body} to @{code}4999@{body}, but @{code}toRoman@{body} only accepts numbers from @{code}1@{body} to @{code}3999@{body}, so it will fail as soon the test case hits @{code}4000@{body}.
+
+The @{code}fromRoman@{body} known values test will fail as soon as it hits @{code}'MMMM'@{body}, because @{code}fromRoman@{body} still thinks this is an invalid Roman numeral.
+
+The @{code}toRoman@{body} known values test will fail as soon as it hits @{code}4000@{body}, because @{code}toRoman@{body} still thinks this is out of range.
+
+The sanity check will also fail as soon as it hits @{code}4000@{body}, because @{code}toRoman@{body} still thinks this is out of range.
+
+@{code}
+
+======================================================================
+ERROR: fromRoman should only accept uppercase input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage7\\romantest71.py", line 161, in testFromRomanCase
+numeral = roman71.toRoman(integer)
+File "roman71.py", line 28, in toRoman
+raise OutOfRangeError, "number out of range (must be 1..3999)"
+OutOfRangeError: number out of range (must be 1..3999)
+======================================================================
+ERROR: toRoman should always return uppercase
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage7\\romantest71.py", line 155, in testToRomanCase
+numeral = roman71.toRoman(integer)
+File "roman71.py", line 28, in toRoman
+raise OutOfRangeError, "number out of range (must be 1..3999)"
+OutOfRangeError: number out of range (must be 1..3999)
+======================================================================
+ERROR: fromRoman should give known result with known input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage7\\romantest71.py", line 102, in testFromRomanKnownValues
+result = roman71.fromRoman(numeral)
+File "roman71.py", line 47, in fromRoman
+raise InvalidRomanNumeralError, 'Invalid Roman numeral: %s' % s
+InvalidRomanNumeralError: Invalid Roman numeral: MMMM
+======================================================================
+ERROR: toRoman should give known result with known input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage7\\romantest71.py", line 96, in testToRomanKnownValues
+result = roman71.toRoman(integer)
+File "roman71.py", line 28, in toRoman
+raise OutOfRangeError, "number out of range (must be 1..3999)"
+OutOfRangeError: number out of range (must be 1..3999)
+======================================================================
+ERROR: fromRoman(toRoman(n))==n for all n
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage7\\romantest71.py", line 147, in testSanity
+numeral = roman71.toRoman(integer)
+File "roman71.py", line 28, in toRoman
+raise OutOfRangeError, "number out of range (must be 1..3999)"
+OutOfRangeError: number out of range (must be 1..3999)
+----------------------------------------------------------------------
+Ran 13 tests in 2.213s
+
+FAILED (errors=5)
+@{body}
+
+Now that you have test cases that fail due to the new requirements, you can think about fixing the code to bring it in line with the test cases. (One thing that takes some getting used to when you first start coding unit tests is that the code being tested is never "ahead" of the test cases. While it's behind, you still have some work to do, and as soon as it catches up to the test cases, you stop coding.)
+
+@{b}Example 15.8. Coding the new requirements (@{code}roman72.py@{body}) @{ub}
+
+This file is available in @{code}py/roman/stage7/@{body} in the examples directory.
+
+@{code}
+
+"""Convert to and from Roman numerals"""
+import re
+
+#Define exceptions
+class RomanError(Exception): pass
+class OutOfRangeError(RomanError): pass
+class NotIntegerError(RomanError): pass
+class InvalidRomanNumeralError(RomanError): pass
+
+#Define digit mapping
+romanNumeralMap = (('M', 1000),
+('CM', 900),
+('D', 500),
+('CD', 400),
+('C', 100),
+('XC', 90),
+('L', 50),
+('XL', 40),
+('X', 10),
+('IX', 9),
+('V', 5),
+('IV', 4),
+('I', 1))
+
+def toRoman(n):
+"""convert integer to Roman numeral"""
+if not (0 n:
+raise NotIntegerError, "non-integers can not be converted"
+
+result = ""
+for numeral, integer in romanNumeralMap:
+while n >= integer:
+result += numeral
+n -= integer
+return result
+
+#Define pattern to detect valid Roman numerals
+romanNumeralPattern = '^M?M?M?M?(CM|CD|D?C?C?C?)(XC|XL|L?X?X?X?)(IX|IV|V?I?I?I?)$'
+
+def fromRoman(s):
+"""convert Roman numeral to integer"""
+if not s:
+raise InvalidRomanNumeralError, 'Input can not be blank'
+if not re.search(romanNumeralPattern, s):
+raise InvalidRomanNumeralError, 'Invalid Roman numeral: %s' % s
+
+result = 0
+index = 0
+for numeral, integer in romanNumeralMap:
+while s[index:index+len(numeral)] == numeral:
+result += integer
+index += len(numeral)
+return result
+
+@{body}
+
+@{code}toRoman@{body} only needs one small change, in the range check. Where you used to check @{code}0 < n < 4000@{body}, you now check @{code}0 < n < 5000@{body}. And you change the error message that you @{code}raise@{body} to reflect the new acceptable range (@{code}1..4999@{body} instead of @{code}1..3999@{body}). You don't need to make any changes to the rest of the function; it handles the new cases already. (It merrily adds @{code}'M'@{body} for each thousand that it finds; given @{code}4000@{body}, it will spit out @{code}'MMMM'@{body}. The only reason it didn't do this before is that you explicitly stopped it with the range check.)
+
+You don't need to make any changes to @{code}fromRoman@{body} at all. The only change is to @{code}romanNumeralPattern@{body}; if you look closely, you'll notice that you added another optional @{code}M@{body} in the first section of the regular expression. This will allow up to 4 @{code}M@{body} characters instead of 3, meaning you will allow the Roman numeral equivalents of @{code}4999@{body} instead of @{code}3999@{body}. The actual @{code}fromRoman@{body} function is completely general; it just looks for repeated Roman numeral characters and adds them up, without caring how many times they repeat. The only reason it didn't handle @{code}'MMMM'@{body} before is that you explicitly stopped it with the regular expression pattern matching.
+
+You may be skeptical that these two small changes are all that you need. Hey, don't take my word for it; see for yourself:
+
+@{b}Example 15.9. Output of @{code}romantest72.py@{body} against @{code}roman72.py@{body}@{ub}
+
+@{code}
+fromRoman should only accept uppercase input ... ok
+toRoman should always return uppercase ... ok
+fromRoman should fail with blank string ... ok
+fromRoman should fail with malformed antecedents ... ok
+fromRoman should fail with repeated pairs of numerals ... ok
+fromRoman should fail with too many repeated numerals ... ok
+fromRoman should give known result with known input ... ok
+toRoman should give known result with known input ... ok
+fromRoman(toRoman(n))==n for all n ... ok
+toRoman should fail with non-integer input ... ok
+toRoman should fail with negative input ... ok
+toRoman should fail with large input ... ok
+toRoman should fail with 0 input ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 3.685s
+
+OK
+@{body}
+
+All the test cases pass. Stop coding.
+
+Comprehensive unit testing means never having to rely on a programmer who says "Trust me."
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "15.3. Refactoring"
+@TITLE "15.3. Refactoring"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}15.3. Refactoring @{ub}
+
+The best thing about comprehensive unit testing is not the feeling you get when all your test cases finally pass, or even the feeling you get when someone else blames you for breaking their code and you can actually @{i}prove@{ui} that you didn't. The best thing about unit testing is that it gives you the freedom to refactor mercilessly.
+
+Refactoring is the process of taking working code and making it work better. Usually, "better" means "faster", although it can also mean "using less memory", or "using less disk space", or simply "more elegantly". Whatever it means to you, to your project, in your environment, refactoring is important to the long-term health of any program.
+
+Here, "better" means "faster". Specifically, the @{code}fromRoman@{body} function is slower than it needs to be, because of that big nasty regular expression that you use to validate Roman numerals. It's probably not worth trying to do away with the regular expression altogether (it would be difficult, and it might not end up any faster), but you can speed up the function by precompiling the regular expression.
+
+@{b}Example 15.10. Compiling regular expressions@{ub}
+
+@{code}
+
+>>> import re
+>>> pattern = '^M?M?M?$'
+>>> re.search(pattern, 'M')
+
+>>> compiledPattern = re.compile(pattern)
+>>> compiledPattern
+
+>>> dir(compiledPattern)
+['findall', 'match', 'scanner', 'search', 'split', 'sub', 'subn']
+>>> compiledPattern.search('M')
+
+@{body}
+
+This is the syntax you've seen before: @{code}re.search@{body} takes a regular expression as a string (@{code}pattern@{body}) and a string to match against it (@{code}'M'@{body}). If the pattern matches, the function returns a match object which can be queried to find out exactly what matched and how.
+
+This is the new syntax: @{code}re.compile@{body} takes a regular expression as a string and returns a pattern object. Note there is no string to match here. Compiling a regular expression has nothing to do with matching it against any specific strings (like @{code}'M'@{body}); it only involves the regular expression itself.
+
+The compiled pattern object returned from @{code}re.compile@{body} has several useful-looking functions, including several (like @{code}search@{body} and @{code}sub@{body}) that are available directly in the @{code}re@{body} module.
+
+Calling the compiled pattern object's @{code}search@{body} function with the string @{code}'M'@{body} accomplishes the same thing as calling @{code}re.search@{body} with both the regular expression and the string @{code}'M'@{body}. Only much, much faster. (In fact, the @{code}re.search@{body} function simply compiles the regular expression and calls the resulting pattern object's @{code}search@{body} method for you.)
+
+Whenever you are going to use a regular expression more than once, you should compile it to get a pattern object, then call the methods on the pattern object directly.
+
+@{b}Example 15.11. Compiled regular expressions in @{code}roman81.py@{body}@{ub}
+
+This file is available in @{code}py/roman/stage8/@{body} in the examples directory.
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+# toRoman and rest of module omitted for clarity
+
+romanNumeralPattern = \\
+re.compile('^M?M?M?M?(CM|CD|D?C?C?C?)(XC|XL|L?X?X?X?)(IX|IV|V?I?I?I?)$')
+
+def fromRoman(s):
+"""convert Roman numeral to integer"""
+if not s:
+raise InvalidRomanNumeralError, 'Input can not be blank'
+if not romanNumeralPattern.search(s):
+raise InvalidRomanNumeralError, 'Invalid Roman numeral: %s' % s
+
+result = 0
+index = 0
+for numeral, integer in romanNumeralMap:
+while s[index:index+len(numeral)] == numeral:
+result += integer
+index += len(numeral)
+return result
+
+@{body}
+
+This looks very similar, but in fact a lot has changed. @{code}romanNumeralPattern@{body} is no longer a string; it is a pattern object which was returned from @{code}re.compile@{body}.
+
+That means that you can call methods on @{code}romanNumeralPattern@{body} directly. This will be much, much faster than calling @{code}re.search@{body} every time. The regular expression is compiled once and stored in @{code}romanNumeralPattern@{body} when the module is first imported; then, every time you call @{code}fromRoman@{body}, you can immediately match the input string against the regular expression, without any intermediate steps occurring under the covers.
+
+So how much faster is it to compile regular expressions? See for yourself:
+
+@{b}Example 15.12. Output of @{code}romantest81.py@{body} against @{code}roman81.py@{body}@{ub}
+
+@{code}
+.............
+----------------------------------------------------------------------
+Ran 13 tests in 3.385s
+
+OK
+@{body}
+
+Just a note in passing here: this time, I ran the unit test @{i}without@{ui} the @{code}-v@{body} option, so instead of the full @{code}doc string@{body} for each test, you only get a dot for each test that passes. (If a test failed, you'd get an @{code}F@{body}, and if it had an error, you'd get an @{code}E@{body}. You'd still get complete tracebacks for each failure and error, so you could track down any problems.)
+
+You ran @{code}13@{body} tests in @{code}3.385@{body} seconds, compared to @{code}3.685@{body} seconds without precompiling the regular expressions. That's an @{code}8%@{body} improvement overall, and remember that most of the time spent during the unit test is spent doing other things. (Separately, I time-tested the regular expressions by themselves, apart from the rest of the unit tests, and found that compiling this regular expression speeds up the @{code}search@{body} by an average of @{code}54%@{body}.) Not bad for such a simple fix.
+
+Oh, and in case you were wondering, precompiling the regular expression didn't break anything, and you just proved it.
+
+There is one other performance optimization that I want to try. Given the complexity of regular expression syntax, it should come as no surprise that there is frequently more than one way to write the same expression. After some discussion about this module on comp.lang.python, someone suggested that I try using the @{code}{@{i}m@{ui},@{i}n@{ui} }@{body} syntax for the optional repeated characters.
+
+@{b}Example 15.13. @{code}roman82.py@{body}@{ub}
+
+This file is available in @{code}py/roman/stage8/@{body} in the examples directory.
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+# rest of program omitted for clarity
+
+#old version
+#romanNumeralPattern = \\
+# re.compile('^M?M?M?M?(CM|CD|D?C?C?C?)(XC|XL|L?X?X?X?)(IX|IV|V?I?I?I?)$')
+
+#new version
+romanNumeralPattern = \\
+re.compile('^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$')
+
+@{body}
+
+You have replaced @{code}M?M?M?M?@{body} with @{code}M{0,4}@{body}. Both mean the same thing: "match 0 to 4 @{code}M@{body} characters". Similarly, @{code}C?C?C?@{body} became @{code}C{0,3}@{body} ("match 0 to 3 @{code}C@{body} characters") and so forth for @{code}X@{body} and @{code}I@{body}.
+
+This form of the regular expression is a little shorter (though not any more readable). The big question is, is it any faster?
+
+@{b}Example 15.14. Output of @{code}romantest82.py@{body} against @{code}roman82.py@{body}@{ub}
+
+@{code}
+.............
+----------------------------------------------------------------------
+Ran 13 tests in 3.315s
+
+OK
+@{body}
+
+Overall, the unit tests run 2% faster with this form of regular expression. That doesn't sound exciting, but remember that the @{code}search@{body} function is a small part of the overall unit test; most of the time is spent doing other things. (Separately, I time-tested just the regular expressions, and found that the @{code}search@{body} function is @{code}11%@{body} faster with this syntax.) By precompiling the regular expression and rewriting part of it to use this new syntax, you've improved the regular expression performance by over @{code}60%@{body}, and improved the overall performance of the entire unit test by over @{code}10%@{body}.
+
+More important than any performance boost is the fact that the module still works perfectly. This is the freedom I was talking about earlier: the freedom to tweak, change, or rewrite any piece of it and verify that you haven't messed anything up in the process. This is not a license to endlessly tweak your code just for the sake of tweaking it; you had a very specific objective ("make @{code}fromRoman@{body} faster"), and you were able to accomplish that objective without any lingering doubts about whether you introduced new bugs in the process.
+
+One other tweak I would like to make, and then I promise I'll stop refactoring and put this module to bed. As you've seen repeatedly, regular expressions can get pretty hairy and unreadable pretty quickly. I wouldn't like to come back to this module in six months and try to maintain it. Sure, the test cases pass, so I know that it works, but if I can't figure out @{i}how@{ui} it works, it's still going to be difficult to add new features, fix new bugs, or otherwise maintain it. As you saw in Section 7.5, "Verbose Regular Expressions", Python provides a way to document your logic line-by-line.
+
+@{b}Example 15.15. @{code}roman83.py@{body}@{ub}
+
+This file is available in @{code}py/roman/stage8/@{body} in the examples directory.
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+# rest of program omitted for clarity
+
+#old version
+#romanNumeralPattern = \\
+# re.compile('^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$')
+
+#new version
+romanNumeralPattern = re.compile('''
+^ # beginning of string
+M{0,4} # thousands - 0 to 4 M's
+(CM|CD|D?C{0,3}) # hundreds - 900 (CM), 400 (CD), 0-300 (0 to 3 C's),
+# or 500-800 (D, followed by 0 to 3 C's)
+(XC|XL|L?X{0,3}) # tens - 90 (XC), 40 (XL), 0-30 (0 to 3 X's),
+# or 50-80 (L, followed by 0 to 3 X's)
+(IX|IV|V?I{0,3}) # ones - 9 (IX), 4 (IV), 0-3 (0 to 3 I's),
+# or 5-8 (V, followed by 0 to 3 I's)
+$ # end of string
+''', re.VERBOSE)
+
+@{body}
+
+The @{code}re.compile@{body} function can take an optional second argument, which is a set of one or more flags that control various options about the compiled regular expression. Here you're specifying the @{code}re.VERBOSE@{body} flag, which tells Python that there are in-line comments within the regular expression itself. The comments and all the whitespace around them are @{i}not@{ui} considered part of the regular expression; the @{code}re.compile@{body} function simply strips them all out when it compiles the expression. This new, "verbose" version is identical to the old version, but it is infinitely more readable.
+
+@{b}Example 15.16. Output of @{code}romantest83.py@{body} against @{code}roman83.py@{body}@{ub}
+
+@{code}
+.............
+----------------------------------------------------------------------
+Ran 13 tests in 3.315s
+
+OK
+@{body}
+
+This new, "verbose" version runs at exactly the same speed as the old version. In fact, the compiled pattern objects are the same, since the @{code}re.compile@{body} function strips out all the stuff you added.
+
+This new, "verbose" version passes all the same tests as the old version. Nothing has changed, except that the programmer who comes back to this module in six months stands a fighting chance of understanding how the function works.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "15.4. Postscript"
+@TITLE "15.4. Postscript"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}15.4. Postscript @{ub}
+
+A clever reader read the previous section and took it to the next level. The biggest headache (and performance drain) in the program as it is currently written is the regular expression, which is required because you have no other way of breaking down a Roman numeral. But there's only 5000 of them; why don't you just build a lookup table once, then simply read that? This idea gets even better when you realize that you don't need to use regular expressions at all. As you build the lookup table for converting integers to Roman numerals, you can build the reverse lookup table to convert Roman numerals to integers.
+
+And best of all, he already had a complete set of unit tests. He changed over half the code in the module, but the unit tests stayed the same, so he could prove that his code worked just as well as the original.
+
+@{b}Example 15.17. @{code}roman9.py@{body}@{ub}
+
+This file is available in @{code}py/roman/stage9/@{body} in the examples directory.
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+#Define exceptions
+class RomanError(Exception): pass
+class OutOfRangeError(RomanError): pass
+class NotIntegerError(RomanError): pass
+class InvalidRomanNumeralError(RomanError): pass
+
+#Roman numerals must be less than 5000
+MAX_ROMAN_NUMERAL = 4999
+
+#Define digit mapping
+romanNumeralMap = (('M', 1000),
+('CM', 900),
+('D', 500),
+('CD', 400),
+('C', 100),
+('XC', 90),
+('L', 50),
+('XL', 40),
+('X', 10),
+('IX', 9),
+('V', 5),
+('IV', 4),
+('I', 1))
+
+#Create tables for fast conversion of roman numerals.
+#See fillLookupTables() below.
+toRomanTable = [ None ] # Skip an index since Roman numerals have no zero
+fromRomanTable = {}
+
+def toRoman(n):
+"""convert integer to Roman numeral"""
+if not (0 n:
+raise NotIntegerError, "non-integers can not be converted"
+return toRomanTable[n]
+
+def fromRoman(s):
+"""convert Roman numeral to integer"""
+if not s:
+raise InvalidRomanNumeralError, "Input can not be blank"
+if not fromRomanTable.has_key(s):
+raise InvalidRomanNumeralError, "Invalid Roman numeral: %s" % s
+return fromRomanTable[s]
+
+def toRomanDynamic(n):
+"""convert integer to Roman numeral using dynamic programming"""
+result = ""
+for numeral, integer in romanNumeralMap:
+if n >= integer:
+result = numeral
+n -= integer
+break
+if n > 0:
+result += toRomanTable[n]
+return result
+
+def fillLookupTables():
+"""compute all the possible roman numerals"""
+#Save the values in two global tables to convert to and from integers.
+for integer in range(1, MAX_ROMAN_NUMERAL + 1):
+romanNumber = toRomanDynamic(integer)
+toRomanTable.append(romanNumber)
+fromRomanTable[romanNumber] = integer
+
+fillLookupTables()
+
+@{body}
+
+So how fast is it?
+
+@{b}Example 15.18. Output of @{code}romantest9.py@{body} against @{code}roman9.py@{body}@{ub}
+
+@{code}
+
+.............
+----------------------------------------------------------------------
+Ran 13 tests in 0.791s
+
+OK
+
+@{body}
+
+Remember, the best performance you ever got in the original version was 13 tests in 3.315 seconds. Of course, it's not entirely a fair comparison, because this version will take longer to import (when it fills the lookup tables). But since import is only done once, this is negligible in the long run.
+
+The moral of the story?
+
+* Simplicity is a virtue.
+
+* Especially when regular expressions are involved.
+
+* And unit tests can give you the confidence to do large-scale refactoring... even if you didn't write the original code.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "15.5. Summary"
+@TITLE "15.5. Summary"
+@NEXT "MAIN"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}15.5. Summary @{ub}
+
+Unit testing is a powerful concept which, if properly implemented, can both reduce maintenance costs and increase flexibility in any long-term project. It is also important to understand that unit testing is not a panacea, a Magic Problem Solver, or a silver bullet. Writing good test cases is hard, and keeping them up to date takes discipline (especially when customers are screaming for critical bug fixes). Unit testing is not a replacement for other forms of testing, including functional testing, integration testing, and user acceptance testing. But it is feasible, and it does work, and once you've seen it work, you'll wonder how you ever got along without it.
+
+This chapter covered a lot of ground, and much of it wasn't even Python-specific. There are unit testing frameworks for many languages, all of which require you to understand the same basic concepts:
+
+* Designing test cases that are specific, automated, and independent
+
+* Writing test cases @{i}before@{ui} the code they are testing
+
+* Writing tests that test good input and check for proper results
+
+* Writing tests that test bad input and check for proper failures
+
+* Writing and updating test cases to illustrate bugs or reflect new requirements
+
+* Refactoring mercilessly to improve performance, scalability, readability, maintainability, or whatever other -ility you're lacking
+
+Additionally, you should be comfortable doing all of the following Python-specific things:
+
+* Subclassing @{code}unittest.TestCase@{body} and writing methods for individual test cases
+
+* Using @{code}assertEqual@{body} to check that a function returns a known value
+
+* Using @{code}assertRaises@{body} to check that a function raises a known exception
+
+* Calling @{code}unittest.main()@{body} in your @{code}if __name__@{body} clause to run all your test cases at once
+
+* Running unit tests in verbose or regular mode
+
+@{b}Further reading@{ub}
+
+* XProgramming.com has links to download unit testing frameworks for many different languages.
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

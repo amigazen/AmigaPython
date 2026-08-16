@@ -1,0 +1,367 @@
+@DATABASE "DIP02.guide"
+@$VER: DIP02.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "2. Your First Python Program"
+@TITLE "2. Your First Python Program"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}2. Your First Python Program@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}Language examples are fine on AmigaPython 2.7. Run scripts with Python script.py (Shell) or set Default Tool on a project icon. Interactive: double-click Python for CON:.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 2.1. Diving in " LINK "S1"}
+@{" 2.2. Declaring Functions " LINK "S2"}
+@{" 2.3. Documenting Functions " LINK "S3"}
+@{" 2.4. Everything Is an Object " LINK "S4"}
+@{" 2.5. Indenting Code " LINK "S5"}
+@{" 2.6. Testing Modules " LINK "S6"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 2. Your First Python Program
+
+You know how other books go on and on about programming fundamentals and finally work up to building a complete, working program? Let's skip all that.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "2.1. Diving in"
+@TITLE "2.1. Diving in"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}2.1. Diving in @{ub}
+
+Here is a complete, working Python program.
+
+It probably makes absolutely no sense to you. Don't worry about that, because you're going to dissect it line by line. But read through it first and see what, if anything, you can make of it.
+
+@{b}Example 2.1. @{code}odbchelper.py@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+def buildConnectionString(params):
+"""Build a connection string from a dictionary of parameters.
+
+Returns string."""
+return ";".join(["%s=%s" % (k, v) for k, v in params.items()])
+
+if __name__ == "__main__":
+myParams = {"server":"mpilgrim", \\
+"database":"master", \\
+"uid":"sa", \\
+"pwd":"secret" \\
+}
+print buildConnectionString(myParams)
+@{body}
+
+Now run this program and see what happens.
+
+In the ActivePython IDE on Windows, you can run the Python program you're editing by choosing File->Run... (@{b}@{b}Ctrl@{ub} -R@{ub}). Output is displayed in the interactive window.
+
+In the Python IDE on Mac OS, you can run a Python program with Python->Run window... (@{b}@{b}Cmd@{ub} -R@{ub}), but there is an important option you must set first. Open the @{code}.py@{body} file in the IDE, pop up the options menu by clicking the black triangle in the upper-right corner of the window, and make sure the Run as __main__ option is checked. This is a per-file setting, but you'll only need to do it once per file.
+
+On UNIX-compatible systems (including Mac OS X), you can run a Python program from the command line: @{b}@{code}python @{code}odbchelper.py@{body}@{body}@{ub}
+
+The output of @{code}odbchelper.py@{body} will look like this:
+
+@{code}
+server=mpilgrim;uid=sa;database=master;pwd=secret
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "2.2. Declaring Functions"
+@TITLE "2.2. Declaring Functions"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}2.2. Declaring Functions @{ub}
+
+Python has functions like most other languages, but it does not have separate header files like C++ or @{code}interface@{body} /@{code}implementation@{body} sections like Pascal. When you need a function, just declare it, like this:
+
+@{code}
+
+def buildConnectionString(params):
+@{body}
+
+Note that the keyword @{code}def@{body} starts the function declaration, followed by the function name, followed by the arguments in parentheses. Multiple arguments (not shown here) are separated with commas.
+
+Also note that the function doesn't define a return datatype. Python functions do not specify the datatype of their return value; they don't even specify whether or not they return a value. In fact, every Python function returns a value; if the function ever executes a @{code}return@{body} statement, it will return that value, otherwise it will return @{code}None@{body}, the Python null value.
+
+In Visual Basic, functions (that return a value) start with @{code}function@{body}, and subroutines (that do not return a value) start with @{code}sub@{body}. There are no subroutines in Python. Everything is a function, all functions return a value (even if it's @{code}None@{body}), and all functions start with @{code}def@{body}.
+
+The argument, @{code}params@{body}, doesn't specify a datatype. In Python, variables are never explicitly typed. Python figures out what type a variable is and keeps track of it internally.
+
+In Java, C++, and other statically-typed languages, you must specify the datatype of the function return value and each function argument. In Python, you never explicitly specify the datatype of anything. Based on what value you assign, Python keeps track of the datatype internally.
+
+@{b}2.2.1. How Python's Datatypes Compare to Other Programming Languages @{ub}
+
+An erudite reader sent me this explanation of how Python compares to other programming languages:
+
+statically typed language A language in which types are fixed at compile time. Most statically typed languages enforce this by requiring you to declare all variables with their datatypes before using them. Java and C are statically typed languages. dynamically typed language A language in which types are discovered at execution time; the opposite of statically typed. VBScript and Python are dynamically typed, because they figure out what type a variable is when you first assign it a value. strongly typed language A language in which types are always enforced. Java and Python are strongly typed. If you have an integer, you can't treat it like a string without explicitly converting it. weakly typed language A language in which types may be ignored; the opposite of strongly typed. VBScript is weakly typed. In VBScript, you can concatenate the string @{code}'12'@{body} and the integer @{code}3@{body} to get the string @{code}'123'@{body}, then treat that as the integer @{code}123@{body}, all without any explicit conversion.
+
+So Python is both @{i}dynamically typed@{ui} (because it doesn't use explicit datatype declarations) and @{i}strongly typed@{ui} (because once a variable has a datatype, it actually matters).
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "2.3. Documenting Functions"
+@TITLE "2.3. Documenting Functions"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}2.3. Documenting Functions @{ub}
+
+You can document a Python function by giving it a @{code}doc string@{body}.
+
+@{b}Example 2.2. Defining the @{code}buildConnectionString@{body} Function's @{code}doc string@{body}@{ub}
+
+@{code}
+
+def buildConnectionString(params):
+"""Build a connection string from a dictionary of parameters.
+
+Returns string."""
+@{body}
+
+Triple quotes signify a multi-line string. Everything between the start and end quotes is part of a single string, including carriage returns and other quote characters. You can use them anywhere, but you'll see them most often used when defining a @{code}doc string@{body}.
+
+Triple quotes are also an easy way to define a string with both single and double quotes, like @{code}qq/.../@{body} in Perl.
+
+Everything between the triple quotes is the function's @{code}doc string@{body}, which documents what the function does. A @{code}doc string@{body}, if it exists, must be the first thing defined in a function (that is, the first thing after the colon). You don't technically need to give your function a @{code}doc string@{body}, but you always should. I know you've heard this in every programming class you've ever taken, but Python gives you an added incentive: the @{code}doc string@{body} is available at runtime as an attribute of the function.
+
+Many Python IDEs use the @{code}doc string@{body} to provide context-sensitive documentation, so that when you type a function name, its @{code}doc string@{body} appears as a tooltip. This can be incredibly helpful, but it's only as good as the @{code}doc string@{body} s you write.
+
+@{b}Further Reading on Documenting Functions@{ub}
+
+* PEP 257 defines @{code}doc string@{body} conventions.
+
+* @{i}Python Style Guide@{ui} discusses how to write a good @{code}doc string@{body}.
+
+* @{i}Python Tutorial@{ui} discusses conventions for spacing in @{code}doc string@{body} s.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "2.4. Everything Is an Object"
+@TITLE "2.4. Everything Is an Object"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}2.4. Everything Is an Object @{ub}
+
+In case you missed it, I just said that Python functions have attributes, and that those attributes are available at runtime.
+
+A function, like everything else in Python, is an object.
+
+Open your favorite Python IDE and follow along:
+
+@{b}Example 2.3. Accessing the @{code}buildConnectionString@{body} Function's @{code}doc string@{body}@{ub}
+
+@{code}
+>>> import odbchelper
+>>> params = {"server":"mpilgrim", "database":"master", "uid":"sa", "pwd":"secret"}
+>>> print odbchelper.buildConnectionString(params)
+server=mpilgrim;uid=sa;database=master;pwd=secret
+>>> print odbchelper.buildConnectionString.__doc__
+Build a connection string from a dictionary
+
+Returns string.
+@{body}
+
+The first line imports the @{code}odbchelper@{body} program as a module -- a chunk of code that you can use interactively, or from a larger Python program. (You'll see examples of multi-module Python programs in Chapter 4.) Once you import a module, you can reference any of its public functions, classes, or attributes. Modules can do this to access functionality in other modules, and you can do it in the IDE too. This is an important concept, and you'll talk more about it later.
+
+When you want to use functions defined in imported modules, you need to include the module name. So you can't just say @{code}buildConnectionString@{body}; it must be @{code}odbchelper.buildConnectionString@{body}. If you've used classes in Java, this should feel vaguely familiar.
+
+Instead of calling the function as you would expect to, you asked for one of the function's attributes, @{code}__doc__@{body}.
+
+@{code}import@{body} in Python is like @{code}require@{body} in Perl. Once you @{code}import@{body} a Python module, you access its functions with @{code}@{i}module@{ui}.@{i}function@{ui}@{body}; once you @{code}require@{body} a Perl module, you access its functions with @{code}@{i}module@{ui}::@{i}function@{ui}@{body}.
+
+@{b}2.4.1. The Import Search Path @{ub}
+
+Before you go any further, I want to briefly mention the library search path. Python looks in several places when you try to import a module. Specifically, it looks in all the directories defined in @{code}sys.path@{body}. This is just a list, and you can easily view it or modify it with standard list methods. (You'll learn more about lists later in this chapter.)
+
+@{b}Example 2.4. Import Search Path@{ub}
+
+@{code}
+
+>>> import sys
+>>> sys.path
+['', '/usr/local/lib/python2.2', '/usr/local/lib/python2.2/plat-linux2',
+'/usr/local/lib/python2.2/lib-dynload', '/usr/local/lib/python2.2/site-packages',
+'/usr/local/lib/python2.2/site-packages/PIL', '/usr/local/lib/python2.2/site-packages/piddle']
+>>> sys
+
+>>> sys.path.append('/my/new/path')
+@{body}
+
+Importing the @{code}sys@{body} module makes all of its functions and attributes available.
+
+@{code}sys.path@{body} is a list of directory names that constitute the current search path. (Yours will look different, depending on your operating system, what version of Python you're running, and where it was originally installed.) Python will look through these directories (in this order) for a @{code}.py@{body} file matching the module name you're trying to import.
+
+Actually, I lied; the truth is more complicated than that, because not all modules are stored as @{code}.py@{body} files. Some, like the @{code}sys@{body} module, are "built-in modules"; they are actually baked right into Python itself. Built-in modules behave just like regular modules, but their Python source code is not available, because they are not written in Python! (The @{code}sys@{body} module is written in C.)
+
+You can add a new directory to Python's search path at runtime by appending the directory name to @{code}sys.path@{body}, and then Python will look in that directory as well, whenever you try to import a module. The effect lasts as long as Python is running. (You'll talk more about @{code}append@{body} and other list methods in Chapter 3.)
+
+@{b}2.4.2. What's an Object? @{ub}
+
+Everything in Python is an object, and almost everything has attributes and methods. All functions have a built-in attribute @{code}__doc__@{body}, which returns the @{code}doc string@{body} defined in the function's source code. The @{code}sys@{body} module is an object which has (among other things) an attribute called @{code}path@{body}. And so forth.
+
+Still, this begs the question. What is an object? Different programming languages define "object" in different ways. In some, it means that @{i}all@{ui} objects @{i}must@{ui} have attributes and methods; in others, it means that all objects are subclassable. In Python, the definition is looser; some objects have neither attributes nor methods (more on this in Chapter 3), and not all objects are subclassable (more on this in Chapter 5). But everything is an object in the sense that it can be assigned to a variable or passed as an argument to a function (more in this in Chapter 4).
+
+This is so important that I'm going to repeat it in case you missed it the first few times: @{i}everything in Python is an object@{ui}. Strings are objects. Lists are objects. Functions are objects. Even modules are objects.
+
+@{b}Further Reading on Objects@{ub}
+
+* @{i}Python Reference Manual@{ui} explains exactly what it means to say that everything in Python is an object, because some people are pedantic and like to discuss this sort of thing at great length.
+
+* eff-bot summarizes Python objects.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "2.5. Indenting Code"
+@TITLE "2.5. Indenting Code"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}2.5. Indenting Code @{ub}
+
+Python functions have no explicit @{code}begin@{body} or @{code}end@{body}, and no curly braces to mark where the function code starts and stops. The only delimiter is a colon (@{code}:@{body}) and the indentation of the code itself.
+
+@{b}Example 2.5. Indenting the @{code}buildConnectionString@{body} Function @{ub}
+
+@{code}
+
+def buildConnectionString(params):
+"""Build a connection string from a dictionary of parameters.
+
+Returns string."""
+return ";".join(["%s=%s" % (k, v) for k, v in params.items()])
+@{body}
+
+Code blocks are defined by their indentation. By "code block", I mean functions, @{code}if@{body} statements, @{code}for@{body} loops, @{code}while@{body} loops, and so forth. Indenting starts a block and unindenting ends it. There are no explicit braces, brackets, or keywords. This means that whitespace is significant, and must be consistent. In this example, the function code (including the @{code}doc string@{body}) is indented four spaces. It doesn't need to be four spaces, it just needs to be consistent. The first line that is not indented is outside the function.
+
+Example 2.6, "if Statements" shows an example of code indentation with @{code}if@{body} statements.
+
+@{b}Example 2.6. @{code}if@{body} Statements @{ub}
+
+@{code}
+
+def fib(n):
+print 'n =', n
+if n > 1:
+return n * fib(n - 1)
+else:
+print 'end of the line'
+return 1
+
+@{body}
+
+This is a function named @{code}fib@{body} that takes one argument, @{code}n@{body}. All the code within the function is indented.
+
+Printing to the screen is very easy in Python, just use @{code}print@{body}. @{code}print@{body} statements can take any data type, including strings, integers, and other native types like dictionaries and lists that you'll learn about in the next chapter. You can even mix and match to print several things on one line by using a comma-separated list of values. Each value is printed on the same line, separated by spaces (the commas don't print). So when @{code}fib@{body} is called with @{code}5@{body}, this will print "n = 5".
+
+@{code}if@{body} statements are a type of code block. If the @{code}if@{body} expression evaluates to true, the indented block is executed, otherwise it falls to the @{code}else@{body} block.
+
+Of course @{code}if@{body} and @{code}else@{body} blocks can contain multiple lines, as long as they are all indented the same amount. This @{code}else@{body} block has two lines of code in it. There is no other special syntax for multi-line code blocks. Just indent and get on with your life.
+
+After some initial protests and several snide analogies to Fortran, you will make peace with this and start seeing its benefits. One major benefit is that all Python programs look similar, since indentation is a language requirement and not a matter of style. This makes it easier to read and understand other people's Python code.
+
+Python uses carriage returns to separate statements and a colon and indentation to separate code blocks. C++ and Java use semicolons to separate statements and curly braces to separate code blocks.
+
+@{b}Further Reading on Code Indentation@{ub}
+
+* @{i}Python Reference Manual@{ui} discusses cross-platform indentation issues and shows various indentation errors.
+
+* @{i}Python Style Guide@{ui} discusses good indentation style.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "2.6. Testing Modules"
+@TITLE "2.6. Testing Modules"
+@NEXT "MAIN"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}2.6. Testing Modules @{ub}
+
+Python modules are objects and have several useful attributes. You can use this to easily test your modules as you write them. Here's an example that uses the @{code}if@{body} @{code}__name__@{body} trick.
+
+@{code}
+
+if __name__ == "__main__":
+@{body}
+
+Some quick observations before you get to the good stuff. First, parentheses are not required around the @{code}if@{body} expression. Second, the @{code}if@{body} statement ends with a colon, and is followed by indented code.
+
+Like C, Python uses @{code}==@{body} for comparison and @{code}=@{body} for assignment. Unlike C, Python does not support in-line assignment, so there's no chance of accidentally assigning the value you thought you were comparing.
+
+So why is this particular @{code}if@{body} statement a trick? Modules are objects, and all modules have a built-in attribute @{code}__name__@{body}. A module's @{code}__name__@{body} depends on how you're using the module. If you @{code}import@{body} the module, then @{code}__name__@{body} is the module's filename, without a directory path or file extension. But you can also run the module directly as a standalone program, in which case @{code}__name__@{body} will be a special default value, @{code}__main__@{body}.
+
+@{code}
+>>> import odbchelper
+>>> odbchelper.__name__
+'odbchelper'
+@{body}
+
+Knowing this, you can design a test suite for your module within the module itself by putting it in this @{code}if@{body} statement. When you run the module directly, @{code}__name__@{body} is @{code}__main__@{body}, so the test suite executes. When you import the module, @{code}__name__@{body} is something else, so the test suite is ignored. This makes it easier to develop and debug new modules before integrating them into a larger program.
+
+On MacPython, there is an additional step to make the @{code}if@{body} @{code}__name__@{body} trick work. Pop up the module's options menu by clicking the black triangle in the upper-right corner of the window, and make sure Run as __main__ is checked.
+
+@{b}Further Reading on Importing Modules@{ub}
+
+* @{i}Python Reference Manual@{ui} discusses the low-level details of importing modules.
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

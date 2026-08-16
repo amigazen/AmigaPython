@@ -1,0 +1,14 @@
+xml/ - SAX / Expat demos (Python 2.7)
+====================================
+
+Need a working pyexpat (bundled in this AmigaPython build).
+
+  elem_count.py   Count elements and attributes
+  roundtrip.py    Parse and write back XML
+  rss2html.py     Convert an RSS XML file to HTML
+
+Usage:
+
+  Python elem_count.py some.xml
+  Python roundtrip.py some.xml
+  Python rss2html.py feed.xml >ram:out.html

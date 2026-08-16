@@ -1,0 +1,928 @@
+@DATABASE "DIP18.guide"
+@$VER: DIP18.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "18. Performance Tuning"
+@TITLE "18. Performance Tuning"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}18. Performance Tuning@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}Book timings are for desktop PCs. On classic Amiga prefer clarity; raise stack for recursion-heavy code.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 18.1. Diving in " LINK "S1"}
+@{" 18.2. Using the timeit Module " LINK "S2"}
+@{" 18.3. Optimizing Regular Expressions " LINK "S3"}
+@{" 18.4. Optimizing Dictionary Lookups " LINK "S4"}
+@{" 18.5. Optimizing List Operations " LINK "S5"}
+@{" 18.6. Optimizing String Manipulation " LINK "S6"}
+@{" 18.7. Summary " LINK "S7"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 18. Performance Tuning
+
+Performance tuning is a many-splendored thing. Just because Python is an interpreted language doesn't mean you shouldn't worry about code optimization. But don't worry about it @{i}too@{ui} much.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "18.1. Diving in"
+@TITLE "18.1. Diving in"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}18.1. Diving in @{ub}
+
+There are so many pitfalls involved in optimizing your code, it's hard to know where to start.
+
+Let's start here: @{i}are you sure you need to do it at all?@{ui} Is your code really so bad? Is it worth the time to tune it? Over the lifetime of your application, how much time is going to be spent running that code, compared to the time spent waiting for a remote database server, or waiting for user input?
+
+Second, @{i}are you sure you're done coding?@{ui} Premature optimization is like spreading frosting on a half-baked cake. You spend hours or days (or more) optimizing your code for performance, only to discover it doesn't do what you need it to do. That's time down the drain.
+
+This is not to say that code optimization is worthless, but you need to look at the whole system and decide whether it's the best use of your time. Every minute you spend optimizing code is a minute you're not spending adding new features, or writing documentation, or playing with your kids, or writing unit tests.
+
+Oh yes, unit tests. It should go without saying that you need a complete set of unit tests before you begin performance tuning. The last thing you need is to introduce new bugs while fiddling with your algorithms.
+
+With these caveats in place, let's look at some techniques for optimizing Python code. The code in question is an implementation of the Soundex algorithm. Soundex was a method used in the early 20th century for categorizing surnames in the United States census. It grouped similar-sounding names together, so even if a name was misspelled, researchers had a chance of finding it. Soundex is still used today for much the same reason, although of course we use computerized database servers now. Most database servers include a Soundex function.
+
+There are several subtle variations of the Soundex algorithm. This is the one used in this chapter:
+
+* Keep the first letter of the name as-is.
+
+* Convert the remaining letters to digits, according to a specific table:
+
+* B, F, P, and V become 1.
+
+* C, G, J, K, Q, S, X, and Z become 2.
+
+* D and T become 3.
+
+* L becomes 4.
+
+* M and N become 5.
+
+* R becomes 6.
+
+* All other letters become 9.
+
+* Remove consecutive duplicates.
+
+* Remove all 9s altogether.
+
+* If the result is shorter than four characters (the first letter plus three digits), pad the result with trailing zeros.
+
+* if the result is longer than four characters, discard everything after the fourth character.
+
+For example, my name, @{code}Pilgrim@{body}, becomes P942695. That has no consecutive duplicates, so nothing to do there. Then you remove the 9s, leaving P4265. That's too long, so you discard the excess character, leaving P426.
+
+Another example: @{code}Woo@{body} becomes W99, which becomes W9, which becomes W, which gets padded with zeros to become W000.
+
+Here's a first attempt at a Soundex function:
+
+@{b}Example 18.1. @{code}soundex/stage1/soundex1a.py@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+import string, re
+
+charToSoundex = {"A": "9",
+"B": "1",
+"C": "2",
+"D": "3",
+"E": "9",
+"F": "1",
+"G": "2",
+"H": "9",
+"I": "9",
+"J": "2",
+"K": "2",
+"L": "4",
+"M": "5",
+"N": "5",
+"O": "9",
+"P": "1",
+"Q": "2",
+"R": "6",
+"S": "2",
+"T": "3",
+"U": "9",
+"V": "1",
+"W": "9",
+"X": "2",
+"Y": "9",
+"Z": "2"}
+
+def soundex(source):
+"convert string to Soundex equivalent"
+
+# Soundex requirements:
+# source string must be at least 1 character
+# and must consist entirely of letters
+allChars = string.uppercase + string.lowercase
+if not re.search('^[%s]+$' % allChars, source):
+return "0000"
+
+# Soundex algorithm:
+# 1. make first character uppercase
+source = source[0].upper() + source[1:]
+
+# 2. translate all other characters to Soundex digits
+digits = source[0]
+for s in source[1:]:
+s = s.upper()
+digits += charToSoundex[s]
+
+# 3. remove consecutive duplicates
+digits2 = digits[0]
+for d in digits[1:]:
+if digits2[-1] != d:
+digits2 += d
+
+# 4. remove all "9"s
+digits3 = re.sub('9', '', digits2)
+
+# 5. pad end with "0"s to 4 characters
+while len(digits3) < 4:
+digits3 += "0"
+
+# 6. return first 4 characters
+return digits3[:4]
+
+if __name__ == '__main__':
+from timeit import Timer
+names = ('Woo', 'Pilgrim', 'Flingjingwaller')
+for name in names:
+statement = "soundex('%s')" % name
+t = Timer(statement, "from __main__ import soundex")
+print name.ljust(15), soundex(name), min(t.repeat())
+
+@{body}
+
+@{b}Further Reading on Soundex@{ub}
+
+* Soundexing and Genealogy gives a chronology of the evolution of the Soundex and its regional variations.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "18.2. Using the timeit Module"
+@TITLE "18.2. Using the timeit Module"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}18.2. Using the @{code}timeit@{body} Module @{ub}
+
+The most important thing you need to know about optimizing Python code is that you shouldn't write your own timing function.
+
+Timing short pieces of code is incredibly complex. How much processor time is your computer devoting to running this code? Are there things running in the background? Are you sure? Every modern computer has background processes running, some all the time, some intermittently. Cron jobs fire off at consistent intervals; background services occasionally "wake up" to do useful things like check for new mail, connect to instant messaging servers, check for application updates, scan for viruses, check whether a disk has been inserted into your CD drive in the last 100 nanoseconds, and so on. Before you start your timing tests, turn everything off and disconnect from the network. Then turn off all the things you forgot to turn off the first time, then turn off the service that's incessantly checking whether the network has come back yet, then ...
+
+And then there's the matter of the variations introduced by the timing framework itself. Does the Python interpreter cache method name lookups? Does it cache code block compilations? Regular expressions? Will your code have side effects if run more than once? Don't forget that you're dealing with small fractions of a second, so small mistakes in your timing framework will irreparably skew your results.
+
+The Python community has a saying: "Python comes with batteries included." Don't write your own timing framework. Python 2.3 comes with a perfectly good one called @{code}timeit@{body}.
+
+@{b}Example 18.2. Introducing @{code}timeit@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+>>> import timeit
+>>> t = timeit.Timer("soundex.soundex('Pilgrim')",
+... "import soundex")
+>>> t.timeit()
+8.21683733547
+>>> t.repeat(3, 2000000)
+[16.48319309109, 16.46128984923, 16.44203948912]
+
+@{body}
+
+The @{code}timeit@{body} module defines one class, @{code}Timer@{body}, which takes two arguments. Both arguments are strings. The first argument is the statement you wish to time; in this case, you are timing a call to the Soundex function within the @{code}soundex@{body} with an argument of @{code}'Pilgrim'@{body}. The second argument to the @{code}Timer@{body} class is the import statement that sets up the environment for the statement. Internally, @{code}timeit@{body} sets up an isolated virtual environment, manually executes the setup statement (importing the @{code}soundex@{body} module), then manually compiles and executes the timed statement (calling the Soundex function).
+
+Once you have the @{code}Timer@{body} object, the easiest thing to do is call @{code}timeit()@{body}, which calls your function 1 million times and returns the number of seconds it took to do it.
+
+The other major method of the @{code}Timer@{body} object is @{code}repeat()@{body}, which takes two optional arguments. The first argument is the number of times to repeat the entire test, and the second argument is the number of times to call the timed statement within each test. Both arguments are optional, and they default to @{code}3@{body} and @{code}1000000@{body} respectively. The @{code}repeat()@{body} method returns a list of the times each test cycle took, in seconds.
+
+You can use the @{code}timeit@{body} module on the command line to test an existing Python program, without modifying the code. See http://docs.python.org/lib/node396.html for documentation on the command-line flags.
+
+Note that @{code}repeat()@{body} returns a list of times. The times will almost never be identical, due to slight variations in how much processor time the Python interpreter is getting (and those pesky background processes that you can't get rid of). Your first thought might be to say "Let's take the average and call that The True Number."
+
+In fact, that's almost certainly wrong. The tests that took longer didn't take longer because of variations in your code or in the Python interpreter; they took longer because of those pesky background processes, or other factors outside of the Python interpreter that you can't fully eliminate. If the different timing results differ by more than a few percent, you still have too much variability to trust the results. Otherwise, take the minimum time and discard the rest.
+
+Python has a handy @{code}min@{body} function that takes a list and returns the smallest value:
+
+@{code}
+
+>>> min(t.repeat(3, 1000000))
+8.22203948912
+
+@{body}
+
+The @{code}timeit@{body} module only works if you already know what piece of code you need to optimize. If you have a larger Python program and don't know where your performance problems are, check out the @{code}hotshot@{body} module.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "18.3. Optimizing Regular Expressions"
+@TITLE "18.3. Optimizing Regular Expressions"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}18.3. Optimizing Regular Expressions @{ub}
+
+The first thing the Soundex function checks is whether the input is a non-empty string of letters. What's the best way to do this?
+
+If you answered "regular expressions", go sit in the corner and contemplate your bad instincts. Regular expressions are almost never the right answer; they should be avoided whenever possible. Not only for performance reasons, but simply because they're difficult to debug and maintain. Also for performance reasons.
+
+This code fragment from @{code}soundex/stage1/soundex1a.py@{body} checks whether the function argument @{code}source@{body} is a word made entirely of letters, with at least one letter (not the empty string):
+
+@{code}
+
+allChars = string.uppercase + string.lowercase
+if not re.search('^[%s]+$' % allChars, source):
+return "0000"
+
+@{body}
+
+How does @{code}soundex1a.py@{body} perform? For convenience, the @{code}__main__@{body} section of the script contains this code that calls the @{code}timeit@{body} module, sets up a timing test with three different names, tests each name three times, and displays the minimum time for each:
+
+@{code}
+
+if __name__ == '__main__':
+from timeit import Timer
+names = ('Woo', 'Pilgrim', 'Flingjingwaller')
+for name in names:
+statement = "soundex('%s')" % name
+t = Timer(statement, "from __main__ import soundex")
+print name.ljust(15), soundex(name), min(t.repeat())
+
+@{body}
+
+So how does @{code}soundex1a.py@{body} perform with this regular expression?
+
+@{code}
+
+C:\\samples\\soundex\\stage1>python soundex1a.py
+Woo W000 19.3356647283
+Pilgrim P426 24.0772053431
+Flingjingwaller F452 35.0463220884
+
+@{body}
+
+As you might expect, the algorithm takes significantly longer when called with longer names. There will be a few things we can do to narrow that gap (make the function take less relative time for longer input), but the nature of the algorithm dictates that it will never run in constant time.
+
+The other thing to keep in mind is that we are testing a representative sample of names. @{code}Woo@{body} is a kind of trivial case, in that it gets shorted down to a single letter and then padded with zeros. @{code}Pilgrim@{body} is a normal case, of average length and a mixture of significant and ignored letters. @{code}Flingjingwaller@{body} is extraordinarily long and contains consecutive duplicates. Other tests might also be helpful, but this hits a good range of different cases.
+
+So what about that regular expression? Well, it's inefficient. Since the expression is testing for ranges of characters (@{code}A-Z@{body} in uppercase, and @{code}a-z@{body} in lowercase), we can use a shorthand regular expression syntax. Here is @{code}soundex/stage1/soundex1b.py@{body}:
+
+@{code}
+
+if not re.search('^[A-Za-z]+$', source):
+return "0000"
+
+@{body}
+
+@{code}timeit@{body} says @{code}soundex1b.py@{body} is slightly faster than @{code}soundex1a.py@{body}, but nothing to get terribly excited about:
+
+@{code}
+
+C:\\samples\\soundex\\stage1>python soundex1b.py
+Woo W000 17.1361133887
+Pilgrim P426 21.8201693232
+Flingjingwaller F452 32.7262294509
+
+@{body}
+
+We saw in Section 15.3, "Refactoring" that regular expressions can be compiled and reused for faster results. Since this regular expression never changes across function calls, we can compile it once and use the compiled version. Here is @{code}soundex/stage1/soundex1c.py@{body}:
+
+@{code}
+
+isOnlyChars = re.compile('^[A-Za-z]+$').search
+def soundex(source):
+if not isOnlyChars(source):
+return "0000"
+
+@{body}
+
+Using a compiled regular expression in @{code}soundex1c.py@{body} is significantly faster:
+
+@{code}
+
+C:\\samples\\soundex\\stage1>python soundex1c.py
+Woo W000 14.5348347346
+Pilgrim P426 19.2784703084
+Flingjingwaller F452 30.0893873383
+
+@{body}
+
+But is this the wrong path? The logic here is simple: the input @{code}source@{body} needs to be non-empty, and it needs to be composed entirely of letters. Wouldn't it be faster to write a loop checking each character, and do away with regular expressions altogether?
+
+Here is @{code}soundex/stage1/soundex1d.py@{body}:
+
+@{code}
+
+if not source:
+return "0000"
+for c in source:
+if not ('A' python soundex1d.py
+Woo W000 15.4065058548
+Pilgrim P426 22.2753567842
+Flingjingwaller F452 37.5845122774
+
+@{body}
+
+Why isn't @{code}soundex1d.py@{body} faster? The answer lies in the interpreted nature of Python. The regular expression engine is written in C, and compiled to run natively on your computer. On the other hand, this loop is written in Python, and runs through the Python interpreter. Even though the loop is relatively simple, it's not simple enough to make up for the overhead of being interpreted. Regular expressions are never the right answer... except when they are.
+
+It turns out that Python offers an obscure string method. You can be excused for not knowing about it, since it's never been mentioned in this book. The method is called @{code}isalpha()@{body}, and it checks whether a string contains only letters.
+
+This is @{code}soundex/stage1/soundex1e.py@{body}:
+
+@{code}
+
+if (not source) and (not source.isalpha()):
+return "0000"
+
+@{body}
+
+How much did we gain by using this specific method in @{code}soundex1e.py@{body}? Quite a bit.
+
+@{code}
+
+C:\\samples\\soundex\\stage1>python soundex1e.py
+Woo W000 13.5069504644
+Pilgrim P426 18.2199394057
+Flingjingwaller F452 28.9975225902
+
+@{body}
+
+@{b}Example 18.3. Best Result So Far: @{code}soundex/stage1/soundex1e.py@{body}@{ub}
+
+@{code}
+
+import string, re
+
+charToSoundex = {"A": "9",
+"B": "1",
+"C": "2",
+"D": "3",
+"E": "9",
+"F": "1",
+"G": "2",
+"H": "9",
+"I": "9",
+"J": "2",
+"K": "2",
+"L": "4",
+"M": "5",
+"N": "5",
+"O": "9",
+"P": "1",
+"Q": "2",
+"R": "6",
+"S": "2",
+"T": "3",
+"U": "9",
+"V": "1",
+"W": "9",
+"X": "2",
+"Y": "9",
+"Z": "2"}
+
+def soundex(source):
+if (not source) and (not source.isalpha()):
+return "0000"
+source = source[0].upper() + source[1:]
+digits = source[0]
+for s in source[1:]:
+s = s.upper()
+digits += charToSoundex[s]
+digits2 = digits[0]
+for d in digits[1:]:
+if digits2[-1] != d:
+digits2 += d
+digits3 = re.sub('9', '', digits2)
+while len(digits3) < 4:
+digits3 += "0"
+return digits3[:4]
+
+if __name__ == '__main__':
+from timeit import Timer
+names = ('Woo', 'Pilgrim', 'Flingjingwaller')
+for name in names:
+statement = "soundex('%s')" % name
+t = Timer(statement, "from __main__ import soundex")
+print name.ljust(15), soundex(name), min(t.repeat())
+
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "18.4. Optimizing Dictionary Lookups"
+@TITLE "18.4. Optimizing Dictionary Lookups"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}18.4. Optimizing Dictionary Lookups @{ub}
+
+The second step of the Soundex algorithm is to convert characters to digits in a specific pattern. What's the best way to do this?
+
+The most obvious solution is to define a dictionary with individual characters as keys and their corresponding digits as values, and do dictionary lookups on each character. This is what we have in @{code}soundex/stage1/soundex1c.py@{body} (the current best result so far):
+
+@{code}
+
+charToSoundex = {"A": "9",
+"B": "1",
+"C": "2",
+"D": "3",
+"E": "9",
+"F": "1",
+"G": "2",
+"H": "9",
+"I": "9",
+"J": "2",
+"K": "2",
+"L": "4",
+"M": "5",
+"N": "5",
+"O": "9",
+"P": "1",
+"Q": "2",
+"R": "6",
+"S": "2",
+"T": "3",
+"U": "9",
+"V": "1",
+"W": "9",
+"X": "2",
+"Y": "9",
+"Z": "2"}
+
+def soundex(source):
+# ... input check omitted for brevity ...
+source = source[0].upper() + source[1:]
+digits = source[0]
+for s in source[1:]:
+s = s.upper()
+digits += charToSoundex[s]
+
+@{body}
+
+You timed @{code}soundex1c.py@{body} already; this is how it performs:
+
+@{code}
+
+C:\\samples\\soundex\\stage1>python soundex1c.py
+Woo W000 14.5341678901
+Pilgrim P426 19.2650071448
+Flingjingwaller F452 30.1003563302
+
+@{body}
+
+This code is straightforward, but is it the best solution? Calling @{code}upper()@{body} on each individual character seems inefficient; it would probably be better to call @{code}upper()@{body} once on the entire string.
+
+Then there's the matter of incrementally building the @{code}digits@{body} string. Incrementally building strings like this is horribly inefficient; internally, the Python interpreter needs to create a new string each time through the loop, then discard the old one.
+
+Python is good at lists, though. It can treat a string as a list of characters automatically. And lists are easy to combine into strings again, using the string method @{code}join()@{body}.
+
+Here is @{code}soundex/stage2/soundex2a.py@{body}, which converts letters to digits by using ? and @{code}lambda@{body}:
+
+@{code}
+
+def soundex(source):
+# ...
+source = source.upper()
+digits = source[0] + "".join(map(lambda c: charToSoundex[c], source[1:]))
+
+@{body}
+
+Surprisingly, @{code}soundex2a.py@{body} is not faster:
+
+@{code}
+
+C:\\samples\\soundex\\stage2>python soundex2a.py
+Woo W000 15.0097526362
+Pilgrim P426 19.254806407
+Flingjingwaller F452 29.3790847719
+
+@{body}
+
+The overhead of the anonymous @{code}lambda@{body} function kills any performance you gain by dealing with the string as a list of characters.
+
+@{code}soundex/stage2/soundex2b.py@{body} uses a list comprehension instead of ? and @{code}lambda@{body}:
+
+@{code}
+
+source = source.upper()
+digits = source[0] + "".join([charToSoundex[c] for c in source[1:]])
+
+@{body}
+
+Using a list comprehension in @{code}soundex2b.py@{body} is faster than using ? and @{code}lambda@{body} in @{code}soundex2a.py@{body}, but still not faster than the original code (incrementally building a string in @{code}soundex1c.py@{body}):
+
+@{code}
+
+C:\\samples\\soundex\\stage2>python soundex2b.py
+Woo W000 13.4221324219
+Pilgrim P426 16.4901234654
+Flingjingwaller F452 25.8186157738
+
+@{body}
+
+It's time for a radically different approach. Dictionary lookups are a general purpose tool. Dictionary keys can be any length string (or many other data types), but in this case we are only dealing with single-character keys @{i}and@{ui} single-character values. It turns out that Python has a specialized function for handling exactly this situation: the @{code}string.maketrans@{body} function.
+
+This is @{code}soundex/stage2/soundex2c.py@{body}:
+
+@{code}
+
+allChar = string.uppercase + string.lowercase
+charToSoundex = string.maketrans(allChar, "91239129922455912623919292" * 2)
+def soundex(source):
+# ...
+digits = source[0].upper() + source[1:].translate(charToSoundex)
+
+@{body}
+
+What the heck is going on here? @{code}string.maketrans@{body} creates a translation matrix between two strings: the first argument and the second argument. In this case, the first argument is the string @{code}ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@{body}, and the second argument is the string @{code}9123912992245591262391929291239129922455912623919292@{body}. See the pattern? It's the same conversion pattern we were setting up longhand with a dictionary. A maps to 9, B maps to 1, C maps to 2, and so forth. But it's not a dictionary; it's a specialized data structure that you can access using the string method @{code}translate@{body}, which translates each character into the corresponding digit, according to the matrix defined by @{code}string.maketrans@{body}.
+
+@{code}timeit@{body} shows that @{code}soundex2c.py@{body} is significantly faster than defining a dictionary and looping through the input and building the output incrementally:
+
+@{code}
+
+C:\\samples\\soundex\\stage2>python soundex2c.py
+Woo W000 11.437645008
+Pilgrim P426 13.2825062962
+Flingjingwaller F452 18.5570110168
+
+@{body}
+
+You're not going to get much better than that. Python has a specialized function that does exactly what you want to do; use it and move on.
+
+@{b}Example 18.4. Best Result So Far: @{code}soundex/stage2/soundex2c.py@{body}@{ub}
+
+@{code}
+
+import string, re
+
+allChar = string.uppercase + string.lowercase
+charToSoundex = string.maketrans(allChar, "91239129922455912623919292" * 2)
+isOnlyChars = re.compile('^[A-Za-z]+$').search
+
+def soundex(source):
+if not isOnlyChars(source):
+return "0000"
+digits = source[0].upper() + source[1:].translate(charToSoundex)
+digits2 = digits[0]
+for d in digits[1:]:
+if digits2[-1] != d:
+digits2 += d
+digits3 = re.sub('9', '', digits2)
+while len(digits3) < 4:
+digits3 += "0"
+return digits3[:4]
+
+if __name__ == '__main__':
+from timeit import Timer
+names = ('Woo', 'Pilgrim', 'Flingjingwaller')
+for name in names:
+statement = "soundex('%s')" % name
+t = Timer(statement, "from __main__ import soundex")
+print name.ljust(15), soundex(name), min(t.repeat())
+
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "18.5. Optimizing List Operations"
+@TITLE "18.5. Optimizing List Operations"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}18.5. Optimizing List Operations @{ub}
+
+The third step in the Soundex algorithm is eliminating consecutive duplicate digits. What's the best way to do this?
+
+Here's the code we have so far, in @{code}soundex/stage2/soundex2c.py@{body}:
+
+@{code}
+
+digits2 = digits[0]
+for d in digits[1:]:
+if digits2[-1] != d:
+digits2 += d
+
+@{body}
+
+Here are the performance results for @{code}soundex2c.py@{body}:
+
+@{code}
+
+C:\\samples\\soundex\\stage2>python soundex2c.py
+Woo W000 12.6070768771
+Pilgrim P426 14.4033353401
+Flingjingwaller F452 19.7774882003
+
+@{body}
+
+The first thing to consider is whether it's efficient to check @{code}digits[-1]@{body} each time through the loop. Are list indexes expensive? Would we be better off maintaining the last digit in a separate variable, and checking that instead?
+
+To answer this question, here is @{code}soundex/stage3/soundex3a.py@{body}:
+
+@{code}
+
+digits2 = ''
+last_digit = ''
+for d in digits:
+if d != last_digit:
+digits2 += d
+last_digit = d
+
+@{body}
+
+@{code}soundex3a.py@{body} does not run any faster than @{code}soundex2c.py@{body}, and may even be slightly slower (although it's not enough of a difference to say for sure):
+
+@{code}
+
+C:\\samples\\soundex\\stage3>python soundex3a.py
+Woo W000 11.5346048171
+Pilgrim P426 13.3950636184
+Flingjingwaller F452 18.6108927252
+
+@{body}
+
+Why isn't @{code}soundex3a.py@{body} faster? It turns out that list indexes in Python are extremely efficient. Repeatedly accessing @{code}digits2[-1]@{body} is no problem at all. On the other hand, manually maintaining the last seen digit in a separate variable means we have @{i}two@{ui} variable assignments for each digit we're storing, which wipes out any small gains we might have gotten from eliminating the list lookup.
+
+Let's try something radically different. If it's possible to treat a string as a list of characters, it should be possible to use a list comprehension to iterate through the list. The problem is, the code needs access to the previous character in the list, and that's not easy to do with a straightforward list comprehension.
+
+However, it is possible to create a list of index numbers using the built-in @{code}range()@{body} function, and use those index numbers to progressively search through the list and pull out each character that is different from the previous character. That will give you a list of characters, and you can use the string method @{code}join()@{body} to reconstruct a string from that.
+
+Here is @{code}soundex/stage3/soundex3b.py@{body}:
+
+@{code}
+
+digits2 = "".join([digits[i] for i in range(len(digits))
+if i == 0 or digits[i-1] != digits[i]])
+
+@{body}
+
+Is this faster? In a word, no.
+
+@{code}
+
+C:\\samples\\soundex\\stage3>python soundex3b.py
+Woo W000 14.2245271396
+Pilgrim P426 17.8337165757
+Flingjingwaller F452 25.9954005327
+
+@{body}
+
+It's possible that the techniques so far as have been "string-centric". Python can convert a string into a list of characters with a single command: @{code}list('abc')@{body} returns @{code}['a', 'b', 'c']@{body}. Furthermore, lists can be @{i}modified in place@{ui} very quickly. Instead of incrementally building a new list (or string) out of the source string, why not move elements around within a single list?
+
+Here is @{code}soundex/stage3/soundex3c.py@{body}, which modifies a list in place to remove consecutive duplicate elements:
+
+@{code}
+
+digits = list(source[0].upper() + source[1:].translate(charToSoundex))
+i=0
+for item in digits:
+if item==digits[i]: continue
+i+=1
+digits[i]=item
+del digits[i+1:]
+digits2 = "".join(digits)
+
+@{body}
+
+Is this faster than @{code}soundex3a.py@{body} or @{code}soundex3b.py@{body}? No, in fact it's the slowest method yet:
+
+@{code}
+
+C:\\samples\\soundex\\stage3>python soundex3c.py
+Woo W000 14.1662554878
+Pilgrim P426 16.0397885765
+Flingjingwaller F452 22.1789341942
+
+@{body}
+
+We haven't made any progress here at all, except to try and rule out several "clever" techniques. The fastest code we've seen so far was the original, most straightforward method (@{code}soundex2c.py@{body}). Sometimes it doesn't pay to be clever.
+
+@{b}Example 18.5. Best Result So Far: @{code}soundex/stage2/soundex2c.py@{body}@{ub}
+
+@{code}
+
+import string, re
+
+allChar = string.uppercase + string.lowercase
+charToSoundex = string.maketrans(allChar, "91239129922455912623919292" * 2)
+isOnlyChars = re.compile('^[A-Za-z]+$').search
+
+def soundex(source):
+if not isOnlyChars(source):
+return "0000"
+digits = source[0].upper() + source[1:].translate(charToSoundex)
+digits2 = digits[0]
+for d in digits[1:]:
+if digits2[-1] != d:
+digits2 += d
+digits3 = re.sub('9', '', digits2)
+while len(digits3) < 4:
+digits3 += "0"
+return digits3[:4]
+
+if __name__ == '__main__':
+from timeit import Timer
+names = ('Woo', 'Pilgrim', 'Flingjingwaller')
+for name in names:
+statement = "soundex('%s')" % name
+t = Timer(statement, "from __main__ import soundex")
+print name.ljust(15), soundex(name), min(t.repeat())
+
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "18.6. Optimizing String Manipulation"
+@TITLE "18.6. Optimizing String Manipulation"
+@NEXT "S7"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}18.6. Optimizing String Manipulation @{ub}
+
+The final step of the Soundex algorithm is padding short results with zeros, and truncating long results. What is the best way to do this?
+
+This is what we have so far, taken from @{code}soundex/stage2/soundex2c.py@{body}:
+
+@{code}
+
+digits3 = re.sub('9', '', digits2)
+while len(digits3) python soundex2c.py
+Woo W000 12.6070768771
+Pilgrim P426 14.4033353401
+Flingjingwaller F452 19.7774882003
+
+@{body}
+
+The first thing to consider is replacing that regular expression with a loop. This code is from @{code}soundex/stage4/soundex4a.py@{body}:
+
+@{code}
+
+digits3 = ''
+for d in digits2:
+if d != '9':
+digits3 += d
+
+@{body}
+
+Is @{code}soundex4a.py@{body} faster? Yes it is:
+
+@{code}
+
+C:\\samples\\soundex\\stage4>python soundex4a.py
+Woo W000 6.62865531792
+Pilgrim P426 9.02247576158
+Flingjingwaller F452 13.6328416042
+
+@{body}
+
+But wait a minute. A loop to remove characters from a string? We can use a simple string method for that. Here's @{code}soundex/stage4/soundex4b.py@{body}:
+
+@{code}
+
+digits3 = digits2.replace('9', '')
+
+@{body}
+
+Is @{code}soundex4b.py@{body} faster? That's an interesting question. It depends on the input:
+
+@{code}
+
+C:\\samples\\soundex\\stage4>python soundex4b.py
+Woo W000 6.75477414029
+Pilgrim P426 7.56652144337
+Flingjingwaller F452 10.8727729362
+
+@{body}
+
+The string method in @{code}soundex4b.py@{body} is faster than the loop for most names, but it's actually slightly slower than @{code}soundex4a.py@{body} in the trivial case (of a very short name). Performance optimizations aren't always uniform; tuning that makes one case faster can sometimes make other cases slower. In this case, the majority of cases will benefit from the change, so let's leave it at that, but the principle is an important one to remember.
+
+Last but not least, let's examine the final two steps of the algorithm: padding short results with zeros, and truncating long results to four characters. The code you see in @{code}soundex4b.py@{body} does just that, but it's horribly inefficient. Take a look at @{code}soundex/stage4/soundex4c.py@{body} to see why:
+
+@{code}
+
+digits3 += '000'
+return digits3[:4]
+
+@{body}
+
+Why do we need a @{code}while@{body} loop to pad out the result? We know in advance that we're going to truncate the result to four characters, and we know that we already have at least one character (the initial letter, which is passed unchanged from the original @{code}source@{body} variable). That means we can simply add three zeros to the output, then truncate it. Don't get stuck in a rut over the exact wording of the problem; looking at the problem slightly differently can lead to a simpler solution.
+
+How much speed do we gain in @{code}soundex4c.py@{body} by dropping the @{code}while@{body} loop? It's significant:
+
+@{code}
+
+C:\\samples\\soundex\\stage4>python soundex4c.py
+Woo W000 4.89129791636
+Pilgrim P426 7.30642134685
+Flingjingwaller F452 10.689832367
+
+@{body}
+
+Finally, there is still one more thing you can do to these three lines of code to make them faster: you can combine them into one line. Take a look at @{code}soundex/stage4/soundex4d.py@{body}:
+
+@{code}
+
+return (digits2.replace('9', '') + '000')[:4]
+
+@{body}
+
+Putting all this code on one line in @{code}soundex4d.py@{body} is barely faster than @{code}soundex4c.py@{body}:
+
+@{code}
+
+C:\\samples\\soundex\\stage4>python soundex4d.py
+Woo W000 4.93624105857
+Pilgrim P426 7.19747593619
+Flingjingwaller F452 10.5490700634
+
+@{body}
+
+It is also significantly less readable, and for not much performance gain. Is that worth it? I hope you have good comments. Performance isn't everything. Your optimization efforts must always be balanced against threats to your program's readability and maintainability.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S7 "18.7. Summary"
+@TITLE "18.7. Summary"
+@NEXT "MAIN"
+@PREV "S6"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}18.7. Summary @{ub}
+
+This chapter has illustrated several important aspects of performance tuning in Python, and performance tuning in general.
+
+* If you need to choose between regular expressions and writing a loop, choose regular expressions. The regular expression engine is compiled in C and runs natively on your computer; your loop is written in Python and runs through the Python interpreter.
+
+* If you need to choose between regular expressions and string methods, choose string methods. Both are compiled in C, so choose the simpler one.
+
+* General-purpose dictionary lookups are fast, but specialtiy functions such as @{code}string.maketrans@{body} and string methods such as @{code}isalpha()@{body} are faster. If Python has a custom-tailored function for you, use it.
+
+* Don't be too clever. Sometimes the most obvious algorithm is also the fastest.
+
+* Don't sweat it too much. Performance isn't everything.
+
+I can't emphasize that last point strongly enough. Over the course of this chapter, you made this function three times faster and saved 20 seconds over 1 million function calls. Great. Now think: over the course of those million function calls, how many seconds will your surrounding application wait for a database connection? Or wait for disk I/O? Or wait for user input? Don't spend too much time over-optimizing one algorithm, or you'll ignore obvious improvements somewhere else. Develop an instinct for the sort of code that Python runs well, correct obvious blunders if you find them, and leave the rest alone.
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

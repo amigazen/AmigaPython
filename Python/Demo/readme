@@ -1,0 +1,57 @@
+Demo programs for AmigaPython 2.7.18
+====================================
+
+These examples are trimmed and documented for classic AmigaOS with
+Python 2.7.18.  Copy-anywhere release: run them with the Python binary
+in the parent drawer (or Python:Python if you ASSIGN Python:).
+
+  Python Demo/scripts/beer.py
+  Python Demo/amiga/amiga_info.py
+
+
+Drawers
+-------
+
+amiga/          Small Amiga-specific samples (amiga / os modules).
+
+classes/        Classic class / operator overloading examples.
+                (complex.py is educational; builtin complex exists.)
+
+metaclasses/    Metaclass examples.  On 2.7 prefer new-style classes
+                (subclass object) for new code; these demos still teach
+                the classic metaclass hook.  Synch.py was removed (no
+                thread support on this port).
+
+scripts/        Self-contained scripts that run offline on Amiga.
+                Unix-only tools (pty, regex module, mpz, lpq, ...) were
+                removed.
+
+sockets/        TCP/UDP examples.  Need bsdsocket.library (e.g. Roadshow).
+                AF_UNIX, fork-based telnet, and multicast demos removed.
+
+xml/            xml.sax / Expat samples (local files).
+
+world/          Country code / TLD lookup (offline table).
+
+chatserver.py   Multi-user telnet chat (needs TCP stack).
+
+
+What was removed
+----------------
+
+Demos that cannot work on AmigaPython 2.7 were dropped, including:
+
+  * import regex / regsub (gone since 2.5)
+  * mpz, pty, thread, AF_UNIX, posix.fork
+  * Unix-only shell tools (lpq, which, audiodev, symlink RCS trees)
+  * Gopher / NNTP HTML generators aimed at Unix install paths
+
+Upstream CPython Demo/ has many more examples; most assume Unix.
+
+
+Tips
+----
+
+  * Use Amiga paths (DH0:Drawer/file), not Unix /path names.
+  * Raise the Python stack for heavy demos (pi.py, large imports).
+  * Start your TCP stack before sockets/ or chatserver.py.

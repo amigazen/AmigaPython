@@ -1,0 +1,948 @@
+@DATABASE "DIP03.guide"
+@$VER: DIP03.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "3. Native Datatypes"
+@TITLE "3. Native Datatypes"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}3. Native Datatypes@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}Core datatypes match CPython 2.7. Prefer Amiga paths (DH0:Drawer/file); os.path understands them.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 3.1. Introducing Dictionaries " LINK "S1"}
+@{" 3.2. Introducing Lists " LINK "S2"}
+@{" 3.3. Introducing Tuples " LINK "S3"}
+@{" 3.4. Declaring variables " LINK "S4"}
+@{" 3.5. Formatting Strings " LINK "S5"}
+@{" 3.6. Mapping Lists " LINK "S6"}
+@{" 3.7. Joining Lists and Splitting Strings " LINK "S7"}
+@{" 3.8. Summary " LINK "S8"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 3. Native Datatypes
+
+You'll get back to your first Python program in just a minute. But first, a short digression is in order, because you need to know about dictionaries, tuples, and lists (oh my!). If you're a Perl hacker, you can probably skim the bits about dictionaries and lists, but you should still pay attention to tuples.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "3.1. Introducing Dictionaries"
+@TITLE "3.1. Introducing Dictionaries"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}3.1. Introducing Dictionaries @{ub}
+
+One of Python's built-in datatypes is the dictionary, which defines one-to-one relationships between keys and values.
+
+A dictionary in Python is like a hash in Perl. In Perl, variables that store hashes always start with a @{code}%@{body} character. In Python, variables can be named anything, and Python keeps track of the datatype internally.
+
+A dictionary in Python is like an instance of the @{code}Hashtable@{body} class in Java.
+
+A dictionary in Python is like an instance of the @{code}Scripting.Dictionary@{body} object in Visual Basic.
+
+@{b}3.1.1. Defining Dictionaries @{ub}
+
+@{b}Example 3.1. Defining a Dictionary@{ub}
+
+@{code}
+>>> d = {"server":"mpilgrim", "database":"master"}
+>>> d
+{'server': 'mpilgrim', 'database': 'master'}
+>>> d["server"]
+'mpilgrim'
+>>> d["database"]
+'master'
+>>> d["mpilgrim"]
+Traceback (innermost last):
+File "", line 1, in ?
+KeyError: mpilgrim
+@{body}
+
+First, you create a new dictionary with two elements and assign it to the variable @{code}d@{body}. Each element is a key-value pair, and the whole set of elements is enclosed in curly braces.
+
+@{code}'server'@{body} is a key, and its associated value, referenced by @{code}d["server"]@{body}, is @{code}'mpilgrim'@{body}.
+
+@{code}'database'@{body} is a key, and its associated value, referenced by @{code}d["database"]@{body}, is @{code}'master'@{body}.
+
+You can get values by key, but you can't get keys by value. So @{code}d["server"]@{body} is @{code}'mpilgrim'@{body}, but @{code}d["mpilgrim"]@{body} raises an exception, because @{code}'mpilgrim'@{body} is not a key.
+
+@{b}3.1.2. Modifying Dictionaries @{ub}
+
+@{b}Example 3.2. Modifying a Dictionary@{ub}
+
+@{code}
+>>> d
+{'server': 'mpilgrim', 'database': 'master'}
+>>> d["database"] = "pubs"
+>>> d
+{'server': 'mpilgrim', 'database': 'pubs'}
+>>> d["uid"] = "sa"
+>>> d
+{'server': 'mpilgrim', 'uid': 'sa', 'database': 'pubs'}
+@{body}
+
+You can not have duplicate keys in a dictionary. Assigning a value to an existing key will wipe out the old value.
+
+You can add new key-value pairs at any time. This syntax is identical to modifying existing values. (Yes, this will annoy you someday when you think you are adding new values but are actually just modifying the same value over and over because your key isn't changing the way you think it is.)
+
+Note that the new element (key @{code}'uid'@{body}, value @{code}'sa'@{body}) appears to be in the middle. In fact, it was just a coincidence that the elements appeared to be in order in the first example; it is just as much a coincidence that they appear to be out of order now.
+
+Dictionaries have no concept of order among elements. It is incorrect to say that the elements are "out of order"; they are simply unordered. This is an important distinction that will annoy you when you want to access the elements of a dictionary in a specific, repeatable order (like alphabetical order by key). There are ways of doing this, but they're not built into the dictionary.
+
+When working with dictionaries, you need to be aware that dictionary keys are case-sensitive.
+
+@{b}Example 3.3. Dictionary Keys Are Case-Sensitive@{ub}
+
+@{code}
+
+>>> d = {}
+>>> d["key"] = "value"
+>>> d["key"] = "other value"
+>>> d
+{'key': 'other value'}
+>>> d["Key"] = "third value"
+>>> d
+{'Key': 'third value', 'key': 'other value'}
+
+@{body}
+
+Assigning a value to an existing dictionary key simply replaces the old value with a new one.
+
+This is not assigning a value to an existing dictionary key, because strings in Python are case-sensitive, so @{code}'key'@{body} is not the same as @{code}'Key'@{body}. This creates a new key/value pair in the dictionary; it may look similar to you, but as far as Python is concerned, it's completely different.
+
+@{b}Example 3.4. Mixing Datatypes in a Dictionary@{ub}
+
+@{code}
+>>> d
+{'server': 'mpilgrim', 'uid': 'sa', 'database': 'pubs'}
+>>> d["retrycount"] = 3
+>>> d
+{'server': 'mpilgrim', 'uid': 'sa', 'database': 'master', 'retrycount': 3}
+>>> d[42] = "douglas"
+>>> d
+{'server': 'mpilgrim', 'uid': 'sa', 'database': 'master',
+42: 'douglas', 'retrycount': 3}
+@{body}
+
+Dictionaries aren't just for strings. Dictionary values can be any datatype, including strings, integers, objects, or even other dictionaries. And within a single dictionary, the values don't all need to be the same type; you can mix and match as needed.
+
+Dictionary keys are more restricted, but they can be strings, integers, and a few other types. You can also mix and match key datatypes within a dictionary.
+
+@{b}3.1.3. Deleting Items From Dictionaries @{ub}
+
+@{b}Example 3.5. Deleting Items from a Dictionary@{ub}
+
+@{code}
+>>> d
+{'server': 'mpilgrim', 'uid': 'sa', 'database': 'master',
+42: 'douglas', 'retrycount': 3}
+>>> del d[42]
+>>> d
+{'server': 'mpilgrim', 'uid': 'sa', 'database': 'master', 'retrycount': 3}
+>>> d.clear()
+>>> d
+{}
+@{body}
+
+@{code}del@{body} lets you delete individual items from a dictionary by key.
+
+@{code}clear@{body} deletes all items from a dictionary. Note that the set of empty curly braces signifies a dictionary without any items.
+
+@{b}Further Reading on Dictionaries@{ub}
+
+* @{i}How to Think Like a Computer Scientist@{ui} teaches about dictionaries and shows how to use dictionaries to model sparse matrices.
+
+* Python Knowledge Base has a lot of example code using dictionaries.
+
+* Python Cookbook discusses how to sort the values of a dictionary by key.
+
+* @{i}Python Library Reference@{ui} summarizes all the dictionary methods.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "3.2. Introducing Lists"
+@TITLE "3.2. Introducing Lists"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}3.2. Introducing Lists @{ub}
+
+Lists are Python's workhorse datatype. If your only experience with lists is arrays in Visual Basic or (God forbid) the datastore in Powerbuilder, brace yourself for Python lists.
+
+A list in Python is like an array in Perl. In Perl, variables that store arrays always start with the @{code}\@@{body} character; in Python, variables can be named anything, and Python keeps track of the datatype internally.
+
+A list in Python is much more than an array in Java (although it can be used as one if that's really all you want out of life). A better analogy would be to the @{code}ArrayList@{body} class, which can hold arbitrary objects and can expand dynamically as new items are added.
+
+@{b}3.2.1. Defining Lists @{ub}
+
+@{b}Example 3.6. Defining a List@{ub}
+
+@{code}
+>>> li = ["a", "b", "mpilgrim", "z", "example"]
+>>> li
+['a', 'b', 'mpilgrim', 'z', 'example']
+>>> li[0]
+'a'
+>>> li[4]
+'example'
+@{body}
+
+First, you define a list of five elements. Note that they retain their original order. This is not an accident. A list is an ordered set of elements enclosed in square brackets.
+
+A list can be used like a zero-based array. The first element of any non-empty list is always @{code}li[0]@{body}.
+
+The last element of this five-element list is @{code}li[4]@{body}, because lists are always zero-based.
+
+@{b}Example 3.7. Negative List Indices@{ub}
+
+@{code}
+>>> li
+['a', 'b', 'mpilgrim', 'z', 'example']
+>>> li[-1]
+'example'
+>>> li[-3]
+'mpilgrim'
+@{body}
+
+A negative index accesses elements from the end of the list counting backwards. The last element of any non-empty list is always @{code}li[-1]@{body}.
+
+If the negative index is confusing to you, think of it this way: @{code}li[-n] == li[len(li) - n]@{body}. So in this list, @{code}li[-3] == li[5 - 3] == li[2]@{body}.
+
+@{b}Example 3.8. Slicing a List@{ub}
+
+@{code}
+>>> li
+['a', 'b', 'mpilgrim', 'z', 'example']
+>>> li[1:3]
+['b', 'mpilgrim']
+>>> li[1:-1]
+['b', 'mpilgrim', 'z']
+>>> li[0:3]
+['a', 'b', 'mpilgrim']
+@{body}
+
+You can get a subset of a list, called a "slice", by specifying two indices. The return value is a new list containing all the elements of the list, in order, starting with the first slice index (in this case @{code}li[1]@{body}), up to but not including the second slice index (in this case @{code}li[3]@{body}).
+
+Slicing works if one or both of the slice indices is negative. If it helps, you can think of it this way: reading the list from left to right, the first slice index specifies the first element you want, and the second slice index specifies the first element you don't want. The return value is everything in between.
+
+Lists are zero-based, so @{code}li[0:3]@{body} returns the first three elements of the list, starting at @{code}li[0]@{body}, up to but not including @{code}li[3]@{body}.
+
+@{b}Example 3.9. Slicing Shorthand@{ub}
+
+@{code}
+>>> li
+['a', 'b', 'mpilgrim', 'z', 'example']
+>>> li[:3]
+['a', 'b', 'mpilgrim']
+>>> li[3:]
+['z', 'example']
+>>> li[:]
+['a', 'b', 'mpilgrim', 'z', 'example']
+@{body}
+
+If the left slice index is 0, you can leave it out, and 0 is implied. So @{code}li[:3]@{body} is the same as @{code}li[0:3]@{body} from Example 3.8, "Slicing a List".
+
+Similarly, if the right slice index is the length of the list, you can leave it out. So @{code}li[3:]@{body} is the same as @{code}li[3:5]@{body}, because this list has five elements.
+
+Note the symmetry here. In this five-element list, @{code}li[:3]@{body} returns the first 3 elements, and @{code}li[3:]@{body} returns the last two elements. In fact, @{code}li[:n]@{body} will always return the first @{code}n@{body} elements, and @{code}li[n:]@{body} will return the rest, regardless of the length of the list.
+
+If both slice indices are left out, all elements of the list are included. But this is not the same as the original @{code}li@{body} list; it is a new list that happens to have all the same elements. @{code}li[:]@{body} is shorthand for making a complete copy of a list.
+
+@{b}3.2.2. Adding Elements to Lists @{ub}
+
+@{b}Example 3.10. Adding Elements to a List@{ub}
+
+@{code}
+>>> li
+['a', 'b', 'mpilgrim', 'z', 'example']
+>>> li.append("new")
+>>> li
+['a', 'b', 'mpilgrim', 'z', 'example', 'new']
+>>> li.insert(2, "new")
+>>> li
+['a', 'b', 'new', 'mpilgrim', 'z', 'example', 'new']
+>>> li.extend(["two", "elements"])
+>>> li
+['a', 'b', 'new', 'mpilgrim', 'z', 'example', 'new', 'two', 'elements']
+@{body}
+
+@{code}append@{body} adds a single element to the end of the list.
+
+@{code}insert@{body} inserts a single element into a list. The numeric argument is the index of the first element that gets bumped out of position. Note that list elements do not need to be unique; there are now two separate elements with the value @{code}'new'@{body}, @{code}li[2]@{body} and @{code}li[6]@{body}.
+
+@{code}extend@{body} concatenates lists. Note that you do not call @{code}extend@{body} with multiple arguments; you call it with one argument, a list. In this case, that list has two elements.
+
+@{b}Example 3.11. The Difference between @{code}extend@{body} and @{code}append@{body}@{ub}
+
+@{code}
+
+>>> li = ['a', 'b', 'c']
+>>> li.extend(['d', 'e', 'f'])
+>>> li
+['a', 'b', 'c', 'd', 'e', 'f']
+>>> len(li)
+6
+>>> li[-1]
+'f'
+>>> li = ['a', 'b', 'c']
+>>> li.append(['d', 'e', 'f'])
+>>> li
+['a', 'b', 'c', ['d', 'e', 'f']]
+>>> len(li)
+4
+>>> li[-1]
+['d', 'e', 'f']
+
+@{body}
+
+Lists have two methods, @{code}extend@{body} and @{code}append@{body}, that look like they do the same thing, but are in fact completely different. @{code}extend@{body} takes a single argument, which is always a list, and adds each of the elements of that list to the original list.
+
+Here you started with a list of three elements (@{code}'a'@{body}, @{code}'b'@{body}, and @{code}'c'@{body}), and you extended the list with a list of another three elements (@{code}'d'@{body}, @{code}'e'@{body}, and @{code}'f'@{body}), so you now have a list of six elements.
+
+On the other hand, @{code}append@{body} takes one argument, which can be any data type, and simply adds it to the end of the list. Here, you're calling the @{code}append@{body} method with a single argument, which is a list of three elements.
+
+Now the original list, which started as a list of three elements, contains four elements. Why four? Because the last element that you just appended @{i}is itself a list@{ui}. Lists can contain any type of data, including other lists. That may be what you want, or maybe not. Don't use @{code}append@{body} if you mean @{code}extend@{body}.
+
+@{b}3.2.3. Searching Lists @{ub}
+
+@{b}Example 3.12. Searching a List@{ub}
+
+@{code}
+>>> li
+['a', 'b', 'new', 'mpilgrim', 'z', 'example', 'new', 'two', 'elements']
+>>> li.index("example")
+5
+>>> li.index("new")
+2
+>>> li.index("c")
+Traceback (innermost last):
+File "", line 1, in ?
+ValueError: list.index(x): x not in list
+>>> "c" in li
+False
+@{body}
+
+@{code}index@{body} finds the first occurrence of a value in the list and returns the index.
+
+@{code}index@{body} finds the @{i}first@{ui} occurrence of a value in the list. In this case, @{code}'new'@{body} occurs twice in the list, in @{code}li[2]@{body} and @{code}li[6]@{body}, but @{code}index@{body} will return only the first index, @{code}2@{body}.
+
+If the value is not found in the list, Python raises an exception. This is notably different from most languages, which will return some invalid index. While this may seem annoying, it is a good thing, because it means your program will crash at the source of the problem, rather than later on when you try to use the invalid index.
+
+To test whether a value is in the list, use @{code}in@{body}, which returns @{code}True@{body} if the value is found or @{code}False@{body} if it is not.
+
+Before version 2.2.1, Python had no separate boolean datatype. To compensate for this, Python accepted almost anything in a boolean context (like an @{code}if@{body} statement), according to the following rules:
+
+* @{code}0@{body} is false; all other numbers are true.
+
+* An empty string (@{code}""@{body}) is false, all other strings are true.
+
+* An empty list (@{code}[]@{body}) is false; all other lists are true.
+
+* An empty tuple (@{code}()@{body}) is false; all other tuples are true.
+
+* An empty dictionary (@{code}{}@{body}) is false; all other dictionaries are true.
+
+These rules still apply in Python 2.2.1 and beyond, but now you can also use an actual boolean, which has a value of @{code}True@{body} or @{code}False@{body}. Note the capitalization; these values, like everything else in Python, are case-sensitive.
+
+@{b}3.2.4. Deleting List Elements @{ub}
+
+@{b}Example 3.13. Removing Elements from a List@{ub}
+
+@{code}
+>>> li
+['a', 'b', 'new', 'mpilgrim', 'z', 'example', 'new', 'two', 'elements']
+>>> li.remove("z")
+>>> li
+['a', 'b', 'new', 'mpilgrim', 'example', 'new', 'two', 'elements']
+>>> li.remove("new")
+>>> li
+['a', 'b', 'mpilgrim', 'example', 'new', 'two', 'elements']
+>>> li.remove("c")
+Traceback (innermost last):
+File "", line 1, in ?
+ValueError: list.remove(x): x not in list
+>>> li.pop()
+'elements'
+>>> li
+['a', 'b', 'mpilgrim', 'example', 'new', 'two']
+@{body}
+
+@{code}remove@{body} removes the first occurrence of a value from a list.
+
+@{code}remove@{body} removes @{i}only@{ui} the first occurrence of a value. In this case, @{code}'new'@{body} appeared twice in the list, but @{code}li.remove("new")@{body} removed only the first occurrence.
+
+If the value is not found in the list, Python raises an exception. This mirrors the behavior of the @{code}index@{body} method.
+
+@{code}pop@{body} is an interesting beast. It does two things: it removes the last element of the list, and it returns the value that it removed. Note that this is different from @{code}li[-1]@{body}, which returns a value but does not change the list, and different from @{code}li.remove(@{i}value@{ui})@{body}, which changes the list but does not return a value.
+
+@{b}3.2.5. Using List Operators @{ub}
+
+@{b}Example 3.14. List Operators@{ub}
+
+@{code}
+>>> li = ['a', 'b', 'mpilgrim']
+>>> li = li + ['example', 'new']
+>>> li
+['a', 'b', 'mpilgrim', 'example', 'new']
+>>> li += ['two']
+>>> li
+['a', 'b', 'mpilgrim', 'example', 'new', 'two']
+>>> li = [1, 2] * 3
+>>> li
+[1, 2, 1, 2, 1, 2]
+@{body}
+
+Lists can also be concatenated with the @{code}+@{body} operator. @{code}@{i}list@{ui} = @{i}list@{ui} + @{i}otherlist@{ui}@{body} has the same result as @{code}@{i}list@{ui}.extend(@{i}otherlist@{ui})@{body}. But the @{code}+@{body} operator returns a new (concatenated) list as a value, whereas @{code}extend@{body} only alters an existing list. This means that @{code}extend@{body} is faster, especially for large lists.
+
+Python supports the @{code}+=@{body} operator. @{code}li += ['two']@{body} is equivalent to @{code}li.extend(['two'])@{body}. The @{code}+=@{body} operator works for lists, strings, and integers, and it can be overloaded to work for user-defined classes as well. (More on classes in Chapter 5.)
+
+The @{code}*@{body} operator works on lists as a repeater. @{code}li = [1, 2] * 3@{body} is equivalent to @{code}li = [1, 2] + [1, 2] + [1, 2]@{body}, which concatenates the three lists into one.
+
+@{b}Further Reading on Lists@{ub}
+
+* @{i}How to Think Like a Computer Scientist@{ui} teaches about lists and makes an important point about passing lists as function arguments.
+
+* @{i}Python Tutorial@{ui} shows how to use lists as stacks and queues.
+
+* Python Knowledge Base answers common questions about lists and has a lot of example code using lists.
+
+* @{i}Python Library Reference@{ui} summarizes all the list methods.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "3.3. Introducing Tuples"
+@TITLE "3.3. Introducing Tuples"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}3.3. Introducing Tuples @{ub}
+
+A tuple is an immutable list. A tuple can not be changed in any way once it is created.
+
+@{b}Example 3.15. Defining a tuple@{ub}
+
+@{code}
+>>> t = ("a", "b", "mpilgrim", "z", "example")
+>>> t
+('a', 'b', 'mpilgrim', 'z', 'example')
+>>> t[0]
+'a'
+>>> t[-1]
+'example'
+>>> t[1:3]
+('b', 'mpilgrim')
+@{body}
+
+A tuple is defined in the same way as a list, except that the whole set of elements is enclosed in parentheses instead of square brackets.
+
+The elements of a tuple have a defined order, just like a list. Tuples indices are zero-based, just like a list, so the first element of a non-empty tuple is always @{code}t[0]@{body}.
+
+Negative indices count from the end of the tuple, just as with a list.
+
+Slicing works too, just like a list. Note that when you slice a list, you get a new list; when you slice a tuple, you get a new tuple.
+
+@{b}Example 3.16. Tuples Have No Methods@{ub}
+
+@{code}
+>>> t
+('a', 'b', 'mpilgrim', 'z', 'example')
+>>> t.append("new")
+Traceback (innermost last):
+File "", line 1, in ?
+AttributeError: 'tuple' object has no attribute 'append'
+>>> t.remove("z")
+Traceback (innermost last):
+File "", line 1, in ?
+AttributeError: 'tuple' object has no attribute 'remove'
+>>> t.index("example")
+Traceback (innermost last):
+File "", line 1, in ?
+AttributeError: 'tuple' object has no attribute 'index'
+>>> "z" in t
+True
+@{body}
+
+You can't add elements to a tuple. Tuples have no @{code}append@{body} or @{code}extend@{body} method.
+
+You can't remove elements from a tuple. Tuples have no @{code}remove@{body} or @{code}pop@{body} method.
+
+You can't find elements in a tuple. Tuples have no @{code}index@{body} method.
+
+You can, however, use @{code}in@{body} to see if an element exists in the tuple.
+
+So what are tuples good for?
+
+* Tuples are faster than lists. If you're defining a constant set of values and all you're ever going to do with it is iterate through it, use a tuple instead of a list.
+
+* It makes your code safer if you "write-protect" data that does not need to be changed. Using a tuple instead of a list is like having an implied @{code}assert@{body} statement that shows this data is constant, and that special thought (and a specific function) is required to override that.
+
+* Remember that I said that dictionary keys can be integers, strings, and "a few other types"? Tuples are one of those types. Tuples can be used as keys in a dictionary, but lists can't be used this way.Actually, it's more complicated than that. Dictionary keys must be immutable. Tuples themselves are immutable, but if you have a tuple of lists, that counts as mutable and isn't safe to use as a dictionary key. Only tuples of strings, numbers, or other dictionary-safe tuples can be used as dictionary keys.
+
+* Tuples are used in string formatting, as you'll see shortly.
+
+Tuples can be converted into lists, and vice-versa. The built-in @{code}tuple@{body} function takes a list and returns a tuple with the same elements, and the @{code}list@{body} function takes a tuple and returns a list. In effect, @{code}tuple@{body} freezes a list, and @{code}list@{body} thaws a tuple.
+
+@{b}Further Reading on Tuples@{ub}
+
+* @{i}How to Think Like a Computer Scientist@{ui} teaches about tuples and shows how to concatenate tuples.
+
+* Python Knowledge Base shows how to sort a tuple.
+
+* @{i}Python Tutorial@{ui} shows how to define a tuple with one element.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "3.4. Declaring variables"
+@TITLE "3.4. Declaring variables"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}3.4. Declaring variables @{ub}
+
+Now that you know something about dictionaries, tuples, and lists (oh my!), let's get back to the sample program from Chapter 2, @{code}odbchelper.py@{body}.
+
+Python has local and global variables like most other languages, but it has no explicit variable declarations. Variables spring into existence by being assigned a value, and they are automatically destroyed when they go out of scope.
+
+@{b}Example 3.17. Defining the @{code}myParams@{body} Variable @{ub}
+
+@{code}
+
+if __name__ == "__main__":
+myParams = {"server":"mpilgrim", \\
+"database":"master", \\
+"uid":"sa", \\
+"pwd":"secret" \\
+}
+@{body}
+
+Notice the indentation. An @{code}if@{body} statement is a code block and needs to be indented just like a function.
+
+Also notice that the variable assignment is one command split over several lines, with a backslash ("@{code}\\@{body} ") serving as a line-continuation marker.
+
+When a command is split among several lines with the line-continuation marker ("@{code}\\@{body} "), the continued lines can be indented in any manner; Python's normally stringent indentation rules do not apply. If your Python IDE auto-indents the continued line, you should probably accept its default unless you have a burning reason not to.
+
+Strictly speaking, expressions in parentheses, straight brackets, or curly braces (like defining a dictionary) can be split into multiple lines with or without the line continuation character ("@{code}\\@{body} "). I like to include the backslash even when it's not required because I think it makes the code easier to read, but that's a matter of style.
+
+Third, you never declared the variable @{code}myParams@{body}, you just assigned a value to it. This is like VBScript without the @{code}option explicit@{body} option. Luckily, unlike VBScript, Python will not allow you to reference a variable that has never been assigned a value; trying to do so will raise an exception.
+
+@{b}3.4.1. Referencing Variables @{ub}
+
+@{b}Example 3.18. Referencing an Unbound Variable@{ub}
+
+@{code}
+>>> x
+Traceback (innermost last):
+File "", line 1, in ?
+NameError: There is no variable named 'x'
+>>> x = 1
+>>> x
+1
+@{body}
+
+You will thank Python for this one day.
+
+@{b}3.4.2. Assigning Multiple Values at Once @{ub}
+
+One of the cooler programming shortcuts in Python is using sequences to assign multiple values at once.
+
+@{b}Example 3.19. Assigning multiple values at once@{ub}
+
+@{code}
+>>> v = ('a', 'b', 'e')
+>>> (x, y, z) = v
+>>> x
+'a'
+>>> y
+'b'
+>>> z
+'e'
+@{body}
+
+@{code}v@{body} is a tuple of three elements, and @{code}(x, y, z)@{body} is a tuple of three variables. Assigning one to the other assigns each of the values of @{code}v@{body} to each of the variables, in order.
+
+This has all sorts of uses. I often want to assign names to a range of values. In C, you would use @{code}enum@{body} and manually list each constant and its associated value, which seems especially tedious when the values are consecutive. In Python, you can use the built-in @{code}range@{body} function with multi-variable assignment to quickly assign consecutive values.
+
+@{b}Example 3.20. Assigning Consecutive Values@{ub}
+
+@{code}
+>>> range(7)
+[0, 1, 2, 3, 4, 5, 6]
+>>> (MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY) = range(7)
+>>> MONDAY
+0
+>>> TUESDAY
+1
+>>> SUNDAY
+6
+@{body}
+
+The built-in @{code}range@{body} function returns a list of integers. In its simplest form, it takes an upper limit and returns a zero-based list counting up to but not including the upper limit. (If you like, you can pass other parameters to specify a base other than @{code}0@{body} and a step other than @{code}1@{body}. You can @{code}print range.__doc__@{body} for details.)
+
+@{code}MONDAY@{body}, @{code}TUESDAY@{body}, @{code}WEDNESDAY@{body}, @{code}THURSDAY@{body}, @{code}FRIDAY@{body}, @{code}SATURDAY@{body}, and @{code}SUNDAY@{body} are the variables you're defining. (This example came from the @{code}calendar@{body} module, a fun little module that prints calendars, like the UNIX program @{code}cal@{body}. The @{code}calendar@{body} module defines integer constants for days of the week.)
+
+Now each variable has its value: @{code}MONDAY@{body} is @{code}0@{body}, @{code}TUESDAY@{body} is @{code}1@{body}, and so forth.
+
+You can also use multi-variable assignment to build functions that return multiple values, simply by returning a tuple of all the values. The caller can treat it as a tuple, or assign the values to individual variables. Many standard Python libraries do this, including the @{code}os@{body} module, which you'll discuss in Chapter 6.
+
+@{b}Further Reading on Variables@{ub}
+
+* @{i}Python Reference Manual@{ui} shows examples of when you can skip the line continuation character and when you need to use it.
+
+* @{i}How to Think Like a Computer Scientist@{ui} shows how to use multi-variable assignment to swap the values of two variables.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "3.5. Formatting Strings"
+@TITLE "3.5. Formatting Strings"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}3.5. Formatting Strings @{ub}
+
+Python supports formatting values into strings. Although this can include very complicated expressions, the most basic usage is to insert values into a string with the @{code}%s@{body} placeholder.
+
+String formatting in Python uses the same syntax as the @{code}sprintf@{body} function in C.
+
+@{b}Example 3.21. Introducing String Formatting@{ub}
+
+@{code}
+>>> k = "uid"
+>>> v = "sa"
+>>> "%s=%s" % (k, v)
+'uid=sa'
+@{body}
+
+The whole expression evaluates to a string. The first @{code}%s@{body} is replaced by the value of @{code}k@{body}; the second @{code}%s@{body} is replaced by the value of @{code}v@{body}. All other characters in the string (in this case, the equal sign) stay as they are.
+
+Note that @{code}(k, v)@{body} is a tuple. I told you they were good for something.
+
+You might be thinking that this is a lot of work just to do simple string concatentation, and you would be right, except that string formatting isn't just concatenation. It's not even just formatting. It's also type coercion.
+
+@{b}Example 3.22. String Formatting vs. Concatenating@{ub}
+
+@{code}
+>>> uid = "sa"
+>>> pwd = "secret"
+>>> print pwd + " is not a good password for " + uid
+secret is not a good password for sa
+>>> print "%s is not a good password for %s" % (pwd, uid)
+secret is not a good password for sa
+>>> userCount = 6
+>>> print "Users connected: %d" % (userCount, )
+Users connected: 6
+>>> print "Users connected: " + userCount
+Traceback (innermost last):
+File "", line 1, in ?
+TypeError: cannot concatenate 'str' and 'int' objects
+@{body}
+
+@{code}+@{body} is the string concatenation operator.
+
+In this trivial case, string formatting accomplishes the same result as concatentation.
+
+@{code}(userCount, )@{body} is a tuple with one element. Yes, the syntax is a little strange, but there's a good reason for it: it's unambiguously a tuple. In fact, you can always include a comma after the last element when defining a list, tuple, or dictionary, but the comma is required when defining a tuple with one element. If the comma weren't required, Python wouldn't know whether @{code}(userCount)@{body} was a tuple with one element or just the value of @{code}userCount@{body}.
+
+String formatting works with integers by specifying @{code}%d@{body} instead of @{code}%s@{body}.
+
+Trying to concatenate a string with a non-string raises an exception. Unlike string formatting, string concatenation works only when everything is already a string.
+
+As with @{code}printf@{body} in C, string formatting in Python is like a Swiss Army knife. There are options galore, and modifier strings to specially format many different types of values.
+
+@{b}Example 3.23. Formatting Numbers@{ub}
+
+@{code}
+
+>>> print "Today's stock price: %f" % 50.4625
+50.462500
+>>> print "Today's stock price: %.2f" % 50.4625
+50.46
+>>> print "Change since yesterday: %+.2f" % 1.5
++1.50
+
+@{body}
+
+The @{code}%f@{body} string formatting option treats the value as a decimal, and prints it to six decimal places.
+
+The ".2" modifier of the @{code}%f@{body} option truncates the value to two decimal places.
+
+You can even combine modifiers. Adding the @{code}+@{body} modifier displays a plus or minus sign before the value. Note that the ".2" modifier is still in place, and is padding the value to exactly two decimal places.
+
+@{b}Further Reading on String Formatting@{ub}
+
+* @{i}Python Library Reference@{ui} summarizes all the string formatting format characters.
+
+* @{i}Effective AWK Programming@{ui} discusses all the format characters and advanced string formatting techniques like specifying width, precision, and zero-padding.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "3.6. Mapping Lists"
+@TITLE "3.6. Mapping Lists"
+@NEXT "S7"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}3.6. Mapping Lists @{ub}
+
+One of the most powerful features of Python is the list comprehension, which provides a compact way of mapping a list into another list by applying a function to each of the elements of the list.
+
+@{b}Example 3.24. Introducing List Comprehensions@{ub}
+
+@{code}
+>>> li = [1, 9, 8, 4]
+>>> [elem*2 for elem in li]
+[2, 18, 16, 8]
+>>> li
+[1, 9, 8, 4]
+>>> li = [elem*2 for elem in li]
+>>> li
+[2, 18, 16, 8]
+@{body}
+
+To make sense of this, look at it from right to left. @{code}li@{body} is the list you're mapping. Python loops through @{code}li@{body} one element at a time, temporarily assigning the value of each element to the variable @{code}elem@{body}. Python then applies the function @{code}@{code}elem@{body} *2@{body} and appends that result to the returned list.
+
+Note that list comprehensions do not change the original list.
+
+It is safe to assign the result of a list comprehension to the variable that you're mapping. Python constructs the new list in memory, and when the list comprehension is complete, it assigns the result to the variable.
+
+Here are the list comprehensions in the @{code}buildConnectionString@{body} function that you declared in Chapter 2:
+
+@{code}
+
+["%s=%s" % (k, v) for k, v in params.items()]
+@{body}
+
+First, notice that you're calling the @{code}items@{body} function of the @{code}params@{body} dictionary. This function returns a list of tuples of all the data in the dictionary.
+
+@{b}Example 3.25. The @{code}keys@{body}, @{code}values@{body}, and @{code}items@{body} Functions @{ub}
+
+@{code}
+>>> params = {"server":"mpilgrim", "database":"master", "uid":"sa", "pwd":"secret"}
+>>> params.keys()
+['server', 'uid', 'database', 'pwd']
+>>> params.values()
+['mpilgrim', 'sa', 'master', 'secret']
+>>> params.items()
+[('server', 'mpilgrim'), ('uid', 'sa'), ('database', 'master'), ('pwd', 'secret')]
+@{body}
+
+The @{code}keys@{body} method of a dictionary returns a list of all the keys. The list is not in the order in which the dictionary was defined (remember that elements in a dictionary are unordered), but it is a list.
+
+The @{code}values@{body} method returns a list of all the values. The list is in the same order as the list returned by @{code}keys@{body}, so @{code}params.values()[n] == params[params.keys()[n]]@{body} for all values of @{code}n@{body}.
+
+The @{code}items@{body} method returns a list of tuples of the form @{code}(@{i}key@{ui}, @{i}value@{ui})@{body}. The list contains all the data in the dictionary.
+
+Now let's see what @{code}buildConnectionString@{body} does. It takes a list, @{code}@{code}params@{body}.@{code}items@{body} ()@{body}, and maps it to a new list by applying string formatting to each element. The new list will have the same number of elements as @{code}@{code}params@{body}.@{code}items@{body} ()@{body}, but each element in the new list will be a string that contains both a key and its associated value from the @{code}params@{body} dictionary.
+
+@{b}Example 3.26. List Comprehensions in @{code}buildConnectionString@{body}, Step by Step @{ub}
+
+@{code}
+>>> params = {"server":"mpilgrim", "database":"master", "uid":"sa", "pwd":"secret"}
+>>> params.items()
+[('server', 'mpilgrim'), ('uid', 'sa'), ('database', 'master'), ('pwd', 'secret')]
+>>> [k for k, v in params.items()]
+['server', 'uid', 'database', 'pwd']
+>>> [v for k, v in params.items()]
+['mpilgrim', 'sa', 'master', 'secret']
+>>> ["%s=%s" % (k, v) for k, v in params.items()]
+['server=mpilgrim', 'uid=sa', 'database=master', 'pwd=secret']
+@{body}
+
+Note that you're using two variables to iterate through the @{code}params.items()@{body} list. This is another use of multi-variable assignment. The first element of @{code}params.items()@{body} is @{code}('server', 'mpilgrim')@{body}, so in the first iteration of the list comprehension, @{code}k@{body} will get @{code}'server'@{body} and @{code}v@{body} will get @{code}'mpilgrim'@{body}. In this case, you're ignoring the value of @{code}v@{body} and only including the value of @{code}k@{body} in the returned list, so this list comprehension ends up being equivalent to @{code}@{code}params@{body}.@{code}keys@{body} ()@{body}.
+
+Here you're doing the same thing, but ignoring the value of @{code}k@{body}, so this list comprehension ends up being equivalent to @{code}@{code}params@{body}.@{code}values@{body} ()@{body}.
+
+Combining the previous two examples with some simple string formatting, you get a list of strings that include both the key and value of each element of the dictionary. This looks suspiciously like the output of the program. All that remains is to join the elements in this list into a single string.
+
+@{b}Further Reading on List Comprehensions@{ub}
+
+* @{i}Python Tutorial@{ui} discusses another way to map lists using the built-in @{code}map@{body} function.
+
+* @{i}Python Tutorial@{ui} shows how to do nested list comprehensions.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S7 "3.7. Joining Lists and Splitting Strings"
+@TITLE "3.7. Joining Lists and Splitting Strings"
+@NEXT "S8"
+@PREV "S6"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}3.7. Joining Lists and Splitting Strings @{ub}
+
+You have a list of key-value pairs in the form @{code}@{i}key@{ui} =@{i}value@{ui}@{body}, and you want to join them into a single string. To join any list of strings into a single string, use the @{code}join@{body} method of a string object.
+
+Here is an example of joining a list from the @{code}buildConnectionString@{body} function:
+
+@{code}
+
+return ";".join(["%s=%s" % (k, v) for k, v in params.items()])
+@{body}
+
+One interesting note before you continue. I keep repeating that functions are objects, strings are objects... everything is an object. You might have thought I meant that string @{i}variables@{ui} are objects. But no, look closely at this example and you'll see that the string @{code}";"@{body} itself is an object, and you are calling its @{code}join@{body} method.
+
+The @{code}join@{body} method joins the elements of the list into a single string, with each element separated by a semi-colon. The delimiter doesn't need to be a semi-colon; it doesn't even need to be a single character. It can be any string.
+
+@{code}join@{body} works only on lists of strings; it does not do any type coercion. Joining a list that has one or more non-string elements will raise an exception.
+
+@{b}Example 3.27. Output of @{code}odbchelper.py@{body}@{ub}
+
+@{code}
+>>> params = {"server":"mpilgrim", "database":"master", "uid":"sa", "pwd":"secret"}
+>>> ["%s=%s" % (k, v) for k, v in params.items()]
+['server=mpilgrim', 'uid=sa', 'database=master', 'pwd=secret']
+>>> ";".join(["%s=%s" % (k, v) for k, v in params.items()])
+'server=mpilgrim;uid=sa;database=master;pwd=secret'
+@{body}
+
+This string is then returned from the @{code}odbchelper@{body} function and printed by the calling block, which gives you the output that you marveled at when you started reading this chapter.
+
+You're probably wondering if there's an analogous method to split a string into a list. And of course there is, and it's called @{code}split@{body}.
+
+@{b}Example 3.28. Splitting a String@{ub}
+
+@{code}
+>>> li = ['server=mpilgrim', 'uid=sa', 'database=master', 'pwd=secret']
+>>> s = ";".join(li)
+>>> s
+'server=mpilgrim;uid=sa;database=master;pwd=secret'
+>>> s.split(";")
+['server=mpilgrim', 'uid=sa', 'database=master', 'pwd=secret']
+>>> s.split(";", 1)
+['server=mpilgrim', 'uid=sa;database=master;pwd=secret']
+@{body}
+
+@{code}split@{body} reverses @{code}join@{body} by splitting a string into a multi-element list. Note that the delimiter ("@{code};@{body} ") is stripped out completely; it does not appear in any of the elements of the returned list.
+
+@{code}split@{body} takes an optional second argument, which is the number of times to split. (""Oooooh, optional arguments..." You'll learn how to do this in your own functions in the next chapter.)
+
+@{code}@{i}anystring@{ui}.@{code}split@{body} (@{i}delimiter@{ui}, 1)@{body} is a useful technique when you want to search a string for a substring and then work with everything before the substring (which ends up in the first element of the returned list) and everything after it (which ends up in the second element).
+
+@{b}Further Reading on String Methods@{ub}
+
+* Python Knowledge Base answers common questions about strings and has a lot of example code using strings.
+
+* @{i}Python Library Reference@{ui} summarizes all the string methods.
+
+* @{i}Python Library Reference@{ui} documents the @{code}string@{body} module.
+
+* @{i}The Whole Python FAQ@{ui} explains why @{code}join@{body} is a string method instead of a list method.
+
+@{b}3.7.1. Historical Note on String Methods @{ub}
+
+When I first learned Python, I expected @{code}join@{body} to be a method of a list, which would take the delimiter as an argument. Many people feel the same way, and there's a story behind the @{code}join@{body} method. Prior to Python 1.6, strings didn't have all these useful methods. There was a separate @{code}string@{body} module that contained all the string functions; each function took a string as its first argument. The functions were deemed important enough to put onto the strings themselves, which made sense for functions like @{code}lower@{body}, @{code}upper@{body}, and @{code}split@{body}. But many hard-core Python programmers objected to the new @{code}join@{body} method, arguing that it should be a method of the list instead, or that it shouldn't move at all but simply stay a part of the old @{code}string@{body} module (which still has a lot of useful stuff in it). I use the new @{code}join@{body} method exclusively, but you will see code written either way, and if it really bothers you, you can use the old @{code}string.join@{body} function instead.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S8 "3.8. Summary"
+@TITLE "3.8. Summary"
+@NEXT "MAIN"
+@PREV "S7"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}3.8. Summary @{ub}
+
+The @{code}odbchelper.py@{body} program and its output should now make perfect sense.
+
+@{code}
+
+def buildConnectionString(params):
+"""Build a connection string from a dictionary of parameters.
+
+Returns string."""
+return ";".join(["%s=%s" % (k, v) for k, v in params.items()])
+
+if __name__ == "__main__":
+myParams = {"server":"mpilgrim", \\
+"database":"master", \\
+"uid":"sa", \\
+"pwd":"secret" \\
+}
+print buildConnectionString(myParams)
+@{body}
+
+Here is the output of @{code}odbchelper.py@{body}:
+
+@{code}
+server=mpilgrim;uid=sa;database=master;pwd=secret
+@{body}
+
+Before diving into the next chapter, make sure you're comfortable doing all of these things:
+
+* Using the Python IDE to test expressions interactively
+
+* Writing Python programs and running them from within your IDE, or from the command line
+
+* Importing modules and calling their functions
+
+* Declaring functions and using @{code}doc string@{body} s, local variables, and proper indentation
+
+* Defining dictionaries, tuples, and lists
+
+* Accessing attributes and methods of any object, including strings, lists, dictionaries, functions, and modules
+
+* Concatenating values through string formatting
+
+* Mapping lists into other lists using list comprehensions
+
+* Splitting strings into lists and joining lists into strings
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

@@ -3,8 +3,8 @@ AmigaPython port (docs, local tests, experimental modules, and legacy
 utilities).
 
 AmigaPython 2.7.18 notes:
-- Module documentation lives in Docs/ (mirrored under Python/docs/amiga
-  in the distribution tree).
+- Module documentation lives in Docs/ (mirrored under Python/Docs/Amiga
+  in the release drawer).
 - Prefer the builtin `amiga' module for Dos helpers, ASL/catalog/icon,
   EasyRequest/CurrentTime/DisplayBeep, AvailMem, and path converters.
 - Prefer builtin `amigagui' for simple Intuition windows (plot/line).

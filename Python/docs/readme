@@ -1,8 +1,0 @@
-This directory contains documentation for the AmigaPython distribution.
-
-Amiga-specific library documentation is in the amiga/ subdirectory and
-uses the same reStructuredText conventions as the Python 2.7 Library
-Reference (Doc/library/*.rst).
-
-See amiga/readme for the document index.
-Full language/library docs: https://docs.python.org/2.7/

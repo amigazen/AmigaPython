@@ -1,0 +1,578 @@
+@DATABASE "DIP13.guide"
+@$VER: DIP13.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "13. Unit Testing"
+@TITLE "13. Unit Testing"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}13. Unit Testing@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}unittest works. Suites are slow on 68020-class machines; see also RunTest.py in the release drawer.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 13.1. Introduction to Roman numerals " LINK "S1"}
+@{" 13.2. Diving in " LINK "S2"}
+@{" 13.3. Introducing romantest.py " LINK "S3"}
+@{" 13.4. Testing for success " LINK "S4"}
+@{" 13.5. Testing for failure " LINK "S5"}
+@{" 13.6. Testing for sanity " LINK "S6"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 13. Unit Testing
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "13.1. Introduction to Roman numerals"
+@TITLE "13.1. Introduction to Roman numerals"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}13.1. Introduction to Roman numerals @{ub}
+
+In previous chapters, you "dived in" by immediately looking at code and trying to understand it as quickly as possible. Now that you have some Python under your belt, you're going to step back and look at the steps that happen @{i}before@{ui} the code gets written.
+
+In the next few chapters, you're going to write, debug, and optimize a set of utility functions to convert to and from Roman numerals. You saw the mechanics of constructing and validating Roman numerals in Section 7.3, "Case Study: Roman Numerals", but now let's step back and consider what it would take to expand that into a two-way utility.
+
+The rules for Roman numerals lead to a number of interesting observations:
+
+* There is only one correct way to represent a particular number as Roman numerals.
+
+* The converse is also true: if a string of characters is a valid Roman numeral, it represents only one number (@{i}i.e.@{ui} it can only be read one way).
+
+* There is a limited range of numbers that can be expressed as Roman numerals, specifically @{code}1@{body} through @{code}3999@{body}. (The Romans did have several ways of expressing larger numbers, for instance by having a bar over a numeral to represent that its normal value should be multiplied by @{code}1000@{body}, but you're not going to deal with that. For the purposes of this chapter, let's stipulate that Roman numerals go from @{code}1@{body} to @{code}3999@{body}.)
+
+* There is no way to represent @{code}0@{body} in Roman numerals. (Amazingly, the ancient Romans had no concept of @{code}0@{body} as a number. Numbers were for counting things you had; how can you count what you don't have?)
+
+* There is no way to represent negative numbers in Roman numerals.
+
+* There is no way to represent fractions or non-integer numbers in Roman numerals.
+
+Given all of this, what would you expect out of a set of functions to convert to and from Roman numerals?
+
+@{b}@{code}roman.py@{body} requirements @{ub}
+
+* @{code}toRoman@{body} should return the Roman numeral representation for all integers @{code}1@{body} to @{code}3999@{body}.
+
+* @{code}toRoman@{body} should fail when given an integer outside the range @{code}1@{body} to @{code}3999@{body}.
+
+* @{code}toRoman@{body} should fail when given a non-integer number.
+
+* @{code}fromRoman@{body} should take a valid Roman numeral and return the number that it represents.
+
+* @{code}fromRoman@{body} should fail when given an invalid Roman numeral.
+
+* If you take a number, convert it to Roman numerals, then convert that back to a number, you should end up with the number you started with. So @{code}fromRoman(toRoman(n)) == n@{body} for all @{code}n@{body} in @{code}1..3999@{body}.
+
+* @{code}toRoman@{body} should always return a Roman numeral using uppercase letters.
+
+* @{code}fromRoman@{body} should only accept uppercase Roman numerals (@{i}i.e.@{ui} it should fail when given lowercase input).
+
+@{b}Further reading@{ub}
+
+* This site has more on Roman numerals, including a fascinating history of how Romans and other civilizations really used them (short answer: haphazardly and inconsistently).
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "13.2. Diving in"
+@TITLE "13.2. Diving in"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}13.2. Diving in @{ub}
+
+Now that you've completely defined the behavior you expect from your conversion functions, you're going to do something a little unexpected: you're going to write a test suite that puts these functions through their paces and makes sure that they behave the way you want them to. You read that right: you're going to write code that tests code that you haven't written yet.
+
+This is called unit testing, since the set of two conversion functions can be written and tested as a unit, separate from any larger program they may become part of later. Python has a framework for unit testing, the appropriately-named @{code}unittest@{body} module.
+
+@{code}unittest@{body} is included with Python 2.1 and later. Python 2.0 users can download it from @{code}pyunit.sourceforge.net@{body}.
+
+Unit testing is an important part of an overall testing-centric development strategy. If you write unit tests, it is important to write them early (preferably before writing the code that they test), and to keep them updated as code and requirements change. Unit testing is not a replacement for higher-level functional or system testing, but it is important in all phases of development:
+
+* Before writing code, it forces you to detail your requirements in a useful fashion.
+
+* While writing code, it keeps you from over-coding. When all the test cases pass, the function is complete.
+
+* When refactoring code, it assures you that the new version behaves the same way as the old version.
+
+* When maintaining code, it helps you cover your ass when someone comes screaming that your latest change broke their old code. ("But @{i}sir@{ui}, all the unit tests passed when I checked it in...")
+
+* When writing code in a team, it increases confidence that the code you're about to commit isn't going to break other peoples' code, because you can run their unittests first. (I've seen this sort of thing in code sprints. A team breaks up the assignment, everybody takes the specs for their task, writes unit tests for it, then shares their unit tests with the rest of the team. That way, nobody goes off too far into developing code that won't play well with others.)
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "13.3. Introducing romantest.py"
+@TITLE "13.3. Introducing romantest.py"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}13.3. Introducing @{code}romantest.py@{body}@{ub}
+
+This is the complete test suite for your Roman numeral conversion functions, which are yet to be written but will eventually be in @{code}roman.py@{body}. It is not immediately obvious how it all fits together; none of these classes or methods reference any of the others. There are good reasons for this, as you'll see shortly.
+
+@{b}Example 13.1. @{code}romantest.py@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+"""Unit test for roman.py"""
+
+import roman
+import unittest
+
+class KnownValues(unittest.TestCase):
+knownValues = ( (1, 'I'),
+(2, 'II'),
+(3, 'III'),
+(4, 'IV'),
+(5, 'V'),
+(6, 'VI'),
+(7, 'VII'),
+(8, 'VIII'),
+(9, 'IX'),
+(10, 'X'),
+(50, 'L'),
+(100, 'C'),
+(500, 'D'),
+(1000, 'M'),
+(31, 'XXXI'),
+(148, 'CXLVIII'),
+(294, 'CCXCIV'),
+(312, 'CCCXII'),
+(421, 'CDXXI'),
+(528, 'DXXVIII'),
+(621, 'DCXXI'),
+(782, 'DCCLXXXII'),
+(870, 'DCCCLXX'),
+(941, 'CMXLI'),
+(1043, 'MXLIII'),
+(1110, 'MCX'),
+(1226, 'MCCXXVI'),
+(1301, 'MCCCI'),
+(1485, 'MCDLXXXV'),
+(1509, 'MDIX'),
+(1607, 'MDCVII'),
+(1754, 'MDCCLIV'),
+(1832, 'MDCCCXXXII'),
+(1993, 'MCMXCIII'),
+(2074, 'MMLXXIV'),
+(2152, 'MMCLII'),
+(2212, 'MMCCXII'),
+(2343, 'MMCCCXLIII'),
+(2499, 'MMCDXCIX'),
+(2574, 'MMDLXXIV'),
+(2646, 'MMDCXLVI'),
+(2723, 'MMDCCXXIII'),
+(2892, 'MMDCCCXCII'),
+(2975, 'MMCMLXXV'),
+(3051, 'MMMLI'),
+(3185, 'MMMCLXXXV'),
+(3250, 'MMMCCL'),
+(3313, 'MMMCCCXIII'),
+(3408, 'MMMCDVIII'),
+(3501, 'MMMDI'),
+(3610, 'MMMDCX'),
+(3743, 'MMMDCCXLIII'),
+(3844, 'MMMDCCCXLIV'),
+(3888, 'MMMDCCCLXXXVIII'),
+(3940, 'MMMCMXL'),
+(3999, 'MMMCMXCIX'))
+
+def testToRomanKnownValues(self):
+"""toRoman should give known result with known input"""
+for integer, numeral in self.knownValues:
+result = roman.toRoman(integer)
+self.assertEqual(numeral, result)
+
+def testFromRomanKnownValues(self):
+"""fromRoman should give known result with known input"""
+for integer, numeral in self.knownValues:
+result = roman.fromRoman(numeral)
+self.assertEqual(integer, result)
+
+class ToRomanBadInput(unittest.TestCase):
+def testTooLarge(self):
+"""toRoman should fail with large input"""
+self.assertRaises(roman.OutOfRangeError, roman.toRoman, 4000)
+
+def testZero(self):
+"""toRoman should fail with 0 input"""
+self.assertRaises(roman.OutOfRangeError, roman.toRoman, 0)
+
+def testNegative(self):
+"""toRoman should fail with negative input"""
+self.assertRaises(roman.OutOfRangeError, roman.toRoman, -1)
+
+def testNonInteger(self):
+"""toRoman should fail with non-integer input"""
+self.assertRaises(roman.NotIntegerError, roman.toRoman, 0.5)
+
+class FromRomanBadInput(unittest.TestCase):
+def testTooManyRepeatedNumerals(self):
+"""fromRoman should fail with too many repeated numerals"""
+for s in ('MMMM', 'DD', 'CCCC', 'LL', 'XXXX', 'VV', 'IIII'):
+self.assertRaises(roman.InvalidRomanNumeralError, roman.fromRoman, s)
+
+def testRepeatedPairs(self):
+"""fromRoman should fail with repeated pairs of numerals"""
+for s in ('CMCM', 'CDCD', 'XCXC', 'XLXL', 'IXIX', 'IVIV'):
+self.assertRaises(roman.InvalidRomanNumeralError, roman.fromRoman, s)
+
+def testMalformedAntecedent(self):
+"""fromRoman should fail with malformed antecedents"""
+for s in ('IIMXCC', 'VX', 'DCM', 'CMM', 'IXIV',
+'MCMC', 'XCX', 'IVI', 'LM', 'LD', 'LC'):
+self.assertRaises(roman.InvalidRomanNumeralError, roman.fromRoman, s)
+
+class SanityCheck(unittest.TestCase):
+def testSanity(self):
+"""fromRoman(toRoman(n))==n for all n"""
+for integer in range(1, 4000):
+numeral = roman.toRoman(integer)
+result = roman.fromRoman(numeral)
+self.assertEqual(integer, result)
+
+class CaseCheck(unittest.TestCase):
+def testToRomanCase(self):
+"""toRoman should always return uppercase"""
+for integer in range(1, 4000):
+numeral = roman.toRoman(integer)
+self.assertEqual(numeral, numeral.upper())
+
+def testFromRomanCase(self):
+"""fromRoman should only accept uppercase input"""
+for integer in range(1, 4000):
+numeral = roman.toRoman(integer)
+roman.fromRoman(numeral.upper())
+self.assertRaises(roman.InvalidRomanNumeralError,
+roman.fromRoman, numeral.lower())
+
+if __name__ == "__main__":
+unittest.main()
+@{body}
+
+@{b}Further reading@{ub}
+
+* The PyUnit home page has an in-depth discussion of using the @{code}unittest@{body} framework, including advanced features not covered in this chapter.
+
+* The PyUnit FAQ explains why test cases are stored separately from the code they test.
+
+* @{i}Python Library Reference@{ui} summarizes the @{code}unittest@{body} module.
+
+* ExtremeProgramming.org discusses why you should write unit tests.
+
+* The Portland Pattern Repository has an ongoing discussion of unit tests, including a standard definition, why you should code unit tests first, and several in-depth case studies.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "13.4. Testing for success"
+@TITLE "13.4. Testing for success"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}13.4. Testing for success @{ub}
+
+The most fundamental part of unit testing is constructing individual test cases. A test case answers a single question about the code it is testing.
+
+A test case should be able to...
+
+* ...run completely by itself, without any human input. Unit testing is about automation.
+
+* ...determine by itself whether the function it is testing has passed or failed, without a human interpreting the results.
+
+* ...run in isolation, separate from any other test cases (even if they test the same functions). Each test case is an island.
+
+Given that, let's build the first test case. You have the following requirement:
+
+* @{code}toRoman@{body} should return the Roman numeral representation for all integers @{code}1@{body} to @{code}3999@{body}.
+
+@{b}Example 13.2. @{code}testToRomanKnownValues@{body}@{ub}
+
+@{code}
+
+class KnownValues(unittest.TestCase):
+knownValues = ( (1, 'I'),
+(2, 'II'),
+(3, 'III'),
+(4, 'IV'),
+(5, 'V'),
+(6, 'VI'),
+(7, 'VII'),
+(8, 'VIII'),
+(9, 'IX'),
+(10, 'X'),
+(50, 'L'),
+(100, 'C'),
+(500, 'D'),
+(1000, 'M'),
+(31, 'XXXI'),
+(148, 'CXLVIII'),
+(294, 'CCXCIV'),
+(312, 'CCCXII'),
+(421, 'CDXXI'),
+(528, 'DXXVIII'),
+(621, 'DCXXI'),
+(782, 'DCCLXXXII'),
+(870, 'DCCCLXX'),
+(941, 'CMXLI'),
+(1043, 'MXLIII'),
+(1110, 'MCX'),
+(1226, 'MCCXXVI'),
+(1301, 'MCCCI'),
+(1485, 'MCDLXXXV'),
+(1509, 'MDIX'),
+(1607, 'MDCVII'),
+(1754, 'MDCCLIV'),
+(1832, 'MDCCCXXXII'),
+(1993, 'MCMXCIII'),
+(2074, 'MMLXXIV'),
+(2152, 'MMCLII'),
+(2212, 'MMCCXII'),
+(2343, 'MMCCCXLIII'),
+(2499, 'MMCDXCIX'),
+(2574, 'MMDLXXIV'),
+(2646, 'MMDCXLVI'),
+(2723, 'MMDCCXXIII'),
+(2892, 'MMDCCCXCII'),
+(2975, 'MMCMLXXV'),
+(3051, 'MMMLI'),
+(3185, 'MMMCLXXXV'),
+(3250, 'MMMCCL'),
+(3313, 'MMMCCCXIII'),
+(3408, 'MMMCDVIII'),
+(3501, 'MMMDI'),
+(3610, 'MMMDCX'),
+(3743, 'MMMDCCXLIII'),
+(3844, 'MMMDCCCXLIV'),
+(3888, 'MMMDCCCLXXXVIII'),
+(3940, 'MMMCMXL'),
+(3999, 'MMMCMXCIX'))
+
+def testToRomanKnownValues(self):
+"""toRoman should give known result with known input"""
+for integer, numeral in self.knownValues:
+result = roman.toRoman(integer)
+self.assertEqual(numeral, result)
+@{body}
+
+To write a test case, first subclass the @{code}TestCase@{body} class of the @{code}unittest@{body} module. This class provides many useful methods which you can use in your test case to test specific conditions.
+
+This is a list of integer/numeral pairs that I verified manually. It includes the lowest ten numbers, the highest number, every number that translates to a single-character Roman numeral, and a random sampling of other valid numbers. The point of a unit test is not to test every possible input, but to test a representative sample.
+
+Every individual test is its own method, which must take no parameters and return no value. If the method exits normally without raising an exception, the test is considered passed; if the method raises an exception, the test is considered failed.
+
+Here you call the actual @{code}toRoman@{body} function. (Well, the function hasn't be written yet, but once it is, this is the line that will call it.) Notice that you have now defined the API for the @{code}toRoman@{body} function: it must take an integer (the number to convert) and return a string (the Roman numeral representation). If the API is different than that, this test is considered failed.
+
+Also notice that you are not trapping any exceptions when you call @{code}toRoman@{body}. This is intentional. @{code}toRoman@{body} shouldn't raise an exception when you call it with valid input, and these input values are all valid. If @{code}toRoman@{body} raises an exception, this test is considered failed.
+
+Assuming the @{code}toRoman@{body} function was defined correctly, called correctly, completed successfully, and returned a value, the last step is to check whether it returned the @{i}right@{ui} value. This is a common question, and the @{code}TestCase@{body} class provides a method, @{code}assertEqual@{body}, to check whether two values are equal. If the result returned from @{code}toRoman@{body} (@{code}result@{body}) does not match the known value you were expecting (@{code}numeral@{body}), @{code}assertEqual@{body} will raise an exception and the test will fail. If the two values are equal, @{code}assertEqual@{body} will do nothing. If every value returned from @{code}toRoman@{body} matches the known value you expect, @{code}assertEqual@{body} never raises an exception, so @{code}testToRomanKnownValues@{body} eventually exits normally, which means @{code}toRoman@{body} has passed this test.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "13.5. Testing for failure"
+@TITLE "13.5. Testing for failure"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}13.5. Testing for failure @{ub}
+
+It is not enough to test that functions succeed when given good input; you must also test that they fail when given bad input. And not just any sort of failure; they must fail in the way you expect.
+
+Remember the other requirements for @{code}toRoman@{body}:
+
+* @{code}toRoman@{body} should fail when given an integer outside the range @{code}1@{body} to @{code}3999@{body}.
+
+* @{code}toRoman@{body} should fail when given a non-integer number.
+
+In Python, functions indicate failure by raising exceptions, and the @{code}unittest@{body} module provides methods for testing whether a function raises a particular exception when given bad input.
+
+@{b}Example 13.3. Testing bad input to @{code}toRoman@{body}@{ub}
+
+@{code}
+
+class ToRomanBadInput(unittest.TestCase):
+def testTooLarge(self):
+"""toRoman should fail with large input"""
+self.assertRaises(roman.OutOfRangeError, roman.toRoman, 4000)
+
+def testZero(self):
+"""toRoman should fail with 0 input"""
+self.assertRaises(roman.OutOfRangeError, roman.toRoman, 0)
+
+def testNegative(self):
+"""toRoman should fail with negative input"""
+self.assertRaises(roman.OutOfRangeError, roman.toRoman, -1)
+
+def testNonInteger(self):
+"""toRoman should fail with non-integer input"""
+self.assertRaises(roman.NotIntegerError, roman.toRoman, 0.5)
+@{body}
+
+The @{code}TestCase@{body} class of the @{code}unittest@{body} provides the @{code}assertRaises@{body} method, which takes the following arguments: the exception you're expecting, the function you're testing, and the arguments you're passing that function. (If the function you're testing takes more than one argument, pass them all to @{code}assertRaises@{body}, in order, and it will pass them right along to the function you're testing.) Pay close attention to what you're doing here: instead of calling @{code}toRoman@{body} directly and manually checking that it raises a particular exception (by wrapping it in a @{code}try...except@{body} block), @{code}assertRaises@{body} has encapsulated all of that for us. All you do is give it the exception (@{code}roman.OutOfRangeError@{body}), the function (@{code}toRoman@{body}), and @{code}toRoman@{body} 's arguments (@{code}4000@{body}), and @{code}assertRaises@{body} takes care of calling @{code}toRoman@{body} and checking to make sure that it raises @{code}roman.OutOfRangeError@{body}. (Also note that you're passing the @{code}toRoman@{body} function itself as an argument; you're not calling it, and you're not passing the name of it as a string. Have I mentioned recently how handy it is that everything in Python is an object, including functions and exceptions?)
+
+Along with testing numbers that are too large, you need to test numbers that are too small. Remember, Roman numerals cannot express @{code}0@{body} or negative numbers, so you have a test case for each of those (@{code}testZero@{body} and @{code}testNegative@{body}). In @{code}testZero@{body}, you are testing that @{code}toRoman@{body} raises a @{code}roman.OutOfRangeError@{body} exception when called with @{code}0@{body}; if it does @{i}not@{ui} raise a @{code}roman.OutOfRangeError@{body} (either because it returns an actual value, or because it raises some other exception), this test is considered failed.
+
+Requirement #3 specifies that @{code}toRoman@{body} cannot accept a non-integer number, so here you test to make sure that @{code}toRoman@{body} raises a @{code}roman.NotIntegerError@{body} exception when called with @{code}0.5@{body}. If @{code}toRoman@{body} does not raise a @{code}roman.NotIntegerError@{body}, this test is considered failed.
+
+The next two requirements are similar to the first three, except they apply to @{code}fromRoman@{body} instead of @{code}toRoman@{body}:
+
+* @{code}fromRoman@{body} should take a valid Roman numeral and return the number that it represents.
+
+* @{code}fromRoman@{body} should fail when given an invalid Roman numeral.
+
+Requirement #4 is handled in the same way as requirement #1, iterating through a sampling of known values and testing each in turn. Requirement #5 is handled in the same way as requirements #2 and #3, by testing a series of bad inputs and making sure @{code}fromRoman@{body} raises the appropriate exception.
+
+@{b}Example 13.4. Testing bad input to @{code}fromRoman@{body}@{ub}
+
+@{code}
+
+class FromRomanBadInput(unittest.TestCase):
+def testTooManyRepeatedNumerals(self):
+"""fromRoman should fail with too many repeated numerals"""
+for s in ('MMMM', 'DD', 'CCCC', 'LL', 'XXXX', 'VV', 'IIII'):
+self.assertRaises(roman.InvalidRomanNumeralError, roman.fromRoman, s)
+
+def testRepeatedPairs(self):
+"""fromRoman should fail with repeated pairs of numerals"""
+for s in ('CMCM', 'CDCD', 'XCXC', 'XLXL', 'IXIX', 'IVIV'):
+self.assertRaises(roman.InvalidRomanNumeralError, roman.fromRoman, s)
+
+def testMalformedAntecedent(self):
+"""fromRoman should fail with malformed antecedents"""
+for s in ('IIMXCC', 'VX', 'DCM', 'CMM', 'IXIV',
+'MCMC', 'XCX', 'IVI', 'LM', 'LD', 'LC'):
+self.assertRaises(roman.InvalidRomanNumeralError, roman.fromRoman, s)
+@{body}
+
+Not much new to say about these; the pattern is exactly the same as the one you used to test bad input to @{code}toRoman@{body}. I will briefly note that you have another exception: @{code}roman.InvalidRomanNumeralError@{body}. That makes a total of three custom exceptions that will need to be defined in @{code}roman.py@{body} (along with @{code}roman.OutOfRangeError@{body} and @{code}roman.NotIntegerError@{body}). You'll see how to define these custom exceptions when you actually start writing @{code}roman.py@{body}, later in this chapter.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "13.6. Testing for sanity"
+@TITLE "13.6. Testing for sanity"
+@NEXT "MAIN"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}13.6. Testing for sanity @{ub}
+
+Often, you will find that a unit of code contains a set of reciprocal functions, usually in the form of conversion functions where one converts A to B and the other converts B to A. In these cases, it is useful to create a "sanity check" to make sure that you can convert A to B and back to A without losing precision, incurring rounding errors, or triggering any other sort of bug.
+
+Consider this requirement:
+
+* If you take a number, convert it to Roman numerals, then convert that back to a number, you should end up with the number you started with. So @{code}fromRoman(toRoman(n)) == n@{body} for all @{code}n@{body} in @{code}1..3999@{body}.
+
+@{b}Example 13.5. Testing @{code}toRoman@{body} against @{code}fromRoman@{body}@{ub}
+
+@{code}
+
+class SanityCheck(unittest.TestCase):
+def testSanity(self):
+"""fromRoman(toRoman(n))==n for all n"""
+for integer in range(1, 4000):
+numeral = roman.toRoman(integer)
+result = roman.fromRoman(numeral)
+self.assertEqual(integer, result)
+@{body}
+
+You've seen the @{code}range@{body} function before, but here it is called with two arguments, which returns a list of integers starting at the first argument (@{code}1@{body}) and counting consecutively up to @{i}but not including@{ui} the second argument (@{code}4000@{body}). Thus, @{code}1..3999@{body}, which is the valid range for converting to Roman numerals.
+
+I just wanted to mention in passing that @{code}integer@{body} is not a keyword in Python; here it's just a variable name like any other.
+
+The actual testing logic here is straightforward: take a number (@{code}integer@{body}), convert it to a Roman numeral (@{code}numeral@{body}), then convert it back to a number (@{code}result@{body}) and make sure you end up with the same number you started with. If not, @{code}assertEqual@{body} will raise an exception and the test will immediately be considered failed. If all the numbers match, @{code}assertEqual@{body} will always return silently, the entire @{code}testSanity@{body} method will eventually return silently, and the test will be considered passed.
+
+The last two requirements are different from the others because they seem both arbitrary and trivial:
+
+* @{code}toRoman@{body} should always return a Roman numeral using uppercase letters.
+
+* @{code}fromRoman@{body} should only accept uppercase Roman numerals (@{i}i.e.@{ui} it should fail when given lowercase input).
+
+In fact, they are somewhat arbitrary. You could, for instance, have stipulated that @{code}fromRoman@{body} accept lowercase and mixed case input. But they are not completely arbitrary; if @{code}toRoman@{body} is always returning uppercase output, then @{code}fromRoman@{body} must at least accept uppercase input, or the "sanity check" (requirement #6) would fail. The fact that it @{i}only@{ui} accepts uppercase input is arbitrary, but as any systems integrator will tell you, case always matters, so it's worth specifying the behavior up front. And if it's worth specifying, it's worth testing.
+
+@{b}Example 13.6. Testing for case@{ub}
+
+@{code}
+
+class CaseCheck(unittest.TestCase):
+def testToRomanCase(self):
+"""toRoman should always return uppercase"""
+for integer in range(1, 4000):
+numeral = roman.toRoman(integer)
+self.assertEqual(numeral, numeral.upper())
+
+def testFromRomanCase(self):
+"""fromRoman should only accept uppercase input"""
+for integer in range(1, 4000):
+numeral = roman.toRoman(integer)
+roman.fromRoman(numeral.upper())
+self.assertRaises(roman.InvalidRomanNumeralError,
+roman.fromRoman, numeral.lower())
+@{body}
+
+The most interesting thing about this test case is all the things it doesn't test. It doesn't test that the value returned from @{code}toRoman@{body} is right or even consistent; those questions are answered by separate test cases. You have a whole test case just to test for uppercase-ness. You might be tempted to combine this with the sanity check, since both run through the entire range of values and call @{code}toRoman@{body}.[6] But that would violate one of the fundamental rules: each test case should answer only a single question. Imagine that you combined this case check with the sanity check, and then that test case failed. You would need to do further analysis to figure out which part of the test case failed to determine what the problem was. If you need to analyze the results of your unit testing just to figure out what they mean, it's a sure sign that you've mis-designed your test cases.
+
+There's a similar lesson to be learned here: even though "you know" that @{code}toRoman@{body} always returns uppercase, you are explicitly converting its return value to uppercase here to test that @{code}fromRoman@{body} accepts uppercase input. Why? Because the fact that @{code}toRoman@{body} always returns uppercase is an independent requirement. If you changed that requirement so that, for instance, it always returned lowercase, the @{code}testToRomanCase@{body} test case would need to change, but this test case would still work. This was another of the fundamental rules: each test case must be able to work in isolation from any of the others. Every test case is an island.
+
+Note that you're not assigning the return value of @{code}fromRoman@{body} to anything. This is legal syntax in Python; if a function returns a value but nobody's listening, Python just throws away the return value. In this case, that's what you want. This test case doesn't test anything about the return value; it just tests that @{code}fromRoman@{body} accepts the uppercase input without raising an exception.
+
+This is a complicated line, but it's very similar to what you did in the @{code}ToRomanBadInput@{body} and @{code}FromRomanBadInput@{body} tests. You are testing to make sure that calling a particular function (@{code}roman.fromRoman@{body}) with a particular value (@{code}numeral.lower()@{body}, the lowercase version of the current Roman numeral in the loop) raises a particular exception (@{code}roman.InvalidRomanNumeralError@{body}). If it does (each time through the loop), the test passes; if even one time it does something else (like raises a different exception, or returning a value without raising an exception at all), the test fails.
+
+In the next chapter, you'll see how to write code that passes these tests.
+
+@{line}
+
+[6] "I can resist everything except temptation." --Oscar Wilde
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

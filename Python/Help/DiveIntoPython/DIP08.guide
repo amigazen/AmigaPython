@@ -1,0 +1,1093 @@
+@DATABASE "DIP08.guide"
+@$VER: DIP08.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "8. HTML Processing"
+@TITLE "8. HTML Processing"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}8. HTML Processing@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}HTML examples need local files or a download. Networking uses bsdsocket.library (e.g. Roadshow). I-Net225 is unsupported.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 8.1. Diving in " LINK "S1"}
+@{" 8.2. Introducing sgmllib.py " LINK "S2"}
+@{" 8.3. Extracting data from HTML documents " LINK "S3"}
+@{" 8.4. Introducing BaseHTMLProcessor.py " LINK "S4"}
+@{" 8.5. locals and globals " LINK "S5"}
+@{" 8.6. Dictionary-based string formatting " LINK "S6"}
+@{" 8.7. Quoting attribute values " LINK "S7"}
+@{" 8.8. Introducing dialect.py " LINK "S8"}
+@{" 8.9. Putting it all together " LINK "S9"}
+@{" 8.10. Summary " LINK "S10"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 8. HTML Processing
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "8.1. Diving in"
+@TITLE "8.1. Diving in"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}8.1. Diving in @{ub}
+
+I often see questions on comp.lang.python like "How can I list all the [headers|images|links] in my HTML document?" "How do I parse/translate/munge the text of my HTML document but leave the tags alone?" "How can I add/remove/quote attributes of all my HTML tags at once?" This chapter will answer all of these questions.
+
+Here is a complete, working Python program in two parts. The first part, @{code}BaseHTMLProcessor.py@{body}, is a generic tool to help you process HTML files by walking through the tags and text blocks. The second part, @{code}dialect.py@{body}, is an example of how to use @{code}BaseHTMLProcessor.py@{body} to translate the text of an HTML document but leave the tags alone. Read the @{code}doc string@{body} s and comments to get an overview of what's going on. Most of it will seem like black magic, because it's not obvious how any of these class methods ever get called. Don't worry, all will be revealed in due time.
+
+@{b}Example 8.1. @{code}BaseHTMLProcessor.py@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+from sgmllib import SGMLParser
+import htmlentitydefs
+
+class BaseHTMLProcessor(SGMLParser):
+def reset(self):
+# extend (called by SGMLParser.__init__)
+self.pieces = []
+SGMLParser.reset(self)
+
+def unknown_starttag(self, tag, attrs):
+# called for each start tag
+# attrs is a list of (attr, value) tuples
+# e.g. for , tag="pre", attrs=[("class", "screen")]
+# Ideally we would like to reconstruct original tag and attributes, but
+# we may end up quoting attribute values that weren't quoted in the source
+# document, or we may change the type of quotes around the attribute value
+# (single to double quotes).
+# Note that improperly embedded non-HTML code (like client-side Javascript)
+# may be parsed incorrectly by the ancestor, causing runtime script errors.
+# All non-HTML code must be enclosed in HTML comment tags ()
+# to ensure that it will pass through this parser unaltered (in handle_comment).
+strattrs = "".join([' %s="%s"' % (key, value) for key, value in attrs])
+self.pieces.append("" % locals())
+
+def unknown_endtag(self, tag):
+# called for each end tag, e.g. for , tag will be "pre"
+# Reconstruct the original end tag.
+self.pieces.append("" % locals())
+
+def handle_charref(self, ref):
+# called for each character reference, e.g. for " ", ref will be "160"
+# Reconstruct the original character reference.
+self.pieces.append("&#%(ref)s;" % locals())
+
+def handle_entityref(self, ref):
+# called for each entity reference, e.g. for "&copy;", ref will be "copy"
+# Reconstruct the original entity reference.
+self.pieces.append("&%(ref)s" % locals())
+# standard HTML entities are closed with a semicolon; other entities are not
+if htmlentitydefs.entitydefs.has_key(ref):
+self.pieces.append(";")
+
+def handle_data(self, text):
+# called for each block of plain text, i.e. outside of any tag and
+# not containing any character or entity references
+# Store the original text verbatim.
+self.pieces.append(text)
+
+def handle_comment(self, text):
+# called for each HTML comment, e.g.
+# Reconstruct the original comment.
+# It is especially important that the source document enclose client-side
+# code (like Javascript) within comments so it can pass through this
+# processor undisturbed; see comments in unknown_starttag for details.
+self.pieces.append("" % locals())
+
+def handle_pi(self, text):
+# called for each processing instruction, e.g.
+# Reconstruct original processing instruction.
+self.pieces.append("" % locals())
+
+def handle_decl(self, text):
+# called for the DOCTYPE, if present, e.g.
+#
+# Reconstruct original DOCTYPE
+self.pieces.append("" % locals())
+
+def output(self):
+"""Return processed HTML as a single string"""
+return "".join(self.pieces)
+@{body}
+
+@{b}Example 8.2. @{code}dialect.py@{body}@{ub}
+
+@{code}
+
+import re
+from BaseHTMLProcessor import BaseHTMLProcessor
+
+class Dialectizer(BaseHTMLProcessor):
+subs = ()
+
+def reset(self):
+# extend (called from __init__ in ancestor)
+# Reset all data attributes
+self.verbatim = 0
+BaseHTMLProcessor.reset(self)
+
+def start_pre(self, attrs):
+# called for every tag in HTML source
+# Increment verbatim mode count, then handle tag like normal
+self.verbatim += 1
+self.unknown_starttag("pre", attrs)
+
+def end_pre(self):
+# called for every tag in HTML source
+# Decrement verbatim mode count
+self.unknown_endtag("pre")
+self.verbatim -= 1
+
+def handle_data(self, text):
+# override
+# called for every block of text in HTML source
+# If in verbatim mode, save text unaltered;
+# otherwise process the text with a series of substitutions
+self.pieces.append(self.verbatim and text or self.process(text))
+
+def process(self, text):
+# called from handle_data
+# Process text block by performing series of regular expression
+# substitutions (actual substitions are defined in descendant)
+for fromPattern, toPattern in self.subs:
+text = re.sub(fromPattern, toPattern, text)
+return text
+
+class ChefDialectizer(Dialectizer):
+"""convert HTML to Swedish Chef-speak
+
+based on the classic chef.x, copyright (c) 1992, 1993 John Hagerman
+"""
+subs = ((r'a([nu])', r'u\\1'),
+(r'A([nu])', r'U\\1'),
+(r'a\\B', r'e'),
+(r'A\\B', r'E'),
+(r'en\\b', r'ee'),
+(r'\\Bew', r'oo'),
+(r'\\Be\\b', r'e-a'),
+(r'\\be', r'i'),
+(r'\\bE', r'I'),
+(r'\\Bf', r'ff'),
+(r'\\Bir', r'ur'),
+(r'(\\w*?)i(\\w*?)$', r'\\1ee\\2'),
+(r'\\bow', r'oo'),
+(r'\\bo', r'oo'),
+(r'\\bO', r'Oo'),
+(r'the', r'zee'),
+(r'The', r'Zee'),
+(r'th\\b', r't'),
+(r'\\Btion', r'shun'),
+(r'\\Bu', r'oo'),
+(r'\\BU', r'Oo'),
+(r'v', r'f'),
+(r'V', r'F'),
+(r'w', r'w'),
+(r'W', r'W'),
+(r'([a-z])[.]', r'\\1. Bork Bork Bork!'))
+
+class FuddDialectizer(Dialectizer):
+"""convert HTML to Elmer Fudd-speak"""
+subs = ((r'[rl]', r'w'),
+(r'qu', r'qw'),
+(r'th\\b', r'f'),
+(r'th', r'd'),
+(r'n[.]', r'n, uh-hah-hah-hah.'))
+
+class OldeDialectizer(Dialectizer):
+"""convert HTML to mock Middle English"""
+subs = ((r'i([bcdfghjklmnpqrstvwxyz])e\\b', r'y\\1'),
+(r'i([bcdfghjklmnpqrstvwxyz])e', r'y\\1\\1e'),
+(r'ick\\b', r'yk'),
+(r'ia([bcdfghjklmnpqrstvwxyz])', r'e\\1e'),
+(r'e[ea]([bcdfghjklmnpqrstvwxyz])', r'e\\1e'),
+(r'([bcdfghjklmnpqrstvwxyz])y', r'\\1ee'),
+(r'([bcdfghjklmnpqrstvwxyz])er', r'\\1re'),
+(r'([aeiou])re\\b', r'\\1r'),
+(r'ia([bcdfghjklmnpqrstvwxyz])', r'i\\1e'),
+(r'tion\\b', r'cioun'),
+(r'ion\\b', r'ioun'),
+(r'aid', r'ayde'),
+(r'ai', r'ey'),
+(r'ay\\b', r'y'),
+(r'ay', r'ey'),
+(r'ant', r'aunt'),
+(r'ea', r'ee'),
+(r'oa', r'oo'),
+(r'ue', r'e'),
+(r'oe', r'o'),
+(r'ou', r'ow'),
+(r'ow', r'ou'),
+(r'\\bhe', r'hi'),
+(r've\\b', r'veth'),
+(r'se\\b', r'e'),
+(r"'s\\b", r'es'),
+(r'ic\\b', r'ick'),
+(r'ics\\b', r'icc'),
+(r'ical\\b', r'ick'),
+(r'tle\\b', r'til'),
+(r'll\\b', r'l'),
+(r'ould\\b', r'olde'),
+(r'own\\b', r'oune'),
+(r'un\\b', r'onne'),
+(r'rry\\b', r'rye'),
+(r'est\\b', r'este'),
+(r'pt\\b', r'pte'),
+(r'th\\b', r'the'),
+(r'ch\\b', r'che'),
+(r'ss\\b', r'sse'),
+(r'([wybdp])\\b', r'\\1e'),
+(r'([rnt])\\b', r'\\1\\1e'),
+(r'from', r'fro'),
+(r'when', r'whan'))
+
+def translate(url, dialectName="chef"):
+"""fetch URL and translate using dialect
+
+dialect in ("chef", "fudd", "olde")"""
+import urllib
+sock = urllib.urlopen(url)
+htmlSource = sock.read()
+sock.close()
+parserName = "%sDialectizer" % dialectName.capitalize()
+parserClass = globals()[parserName]
+parser = parserClass()
+parser.feed(htmlSource)
+parser.close()
+return parser.output()
+
+def test(url):
+"""test all dialects against URL"""
+for dialect in ("chef", "fudd", "olde"):
+outfile = "%s.html" % dialect
+fsock = open(outfile, "wb")
+fsock.write(translate(url, dialect))
+fsock.close()
+import webbrowser
+webbrowser.open_new(outfile)
+
+if __name__ == "__main__":
+test("http://diveintopython.org/odbchelper_list.html")
+@{body}
+
+@{b}Example 8.3. Output of @{code}dialect.py@{body}@{ub}
+
+Running this script will translate Section 3.2, "Introducing Lists" into mock Swedish Chef-speak (from The Muppets), mock Elmer Fudd-speak (from Bugs Bunny cartoons), and mock Middle English (loosely based on Chaucer's @{i}The Canterbury Tales@{ui}). If you look at the HTML source of the output pages, you'll see that all the HTML tags and attributes are untouched, but the text between the tags has been "translated" into the mock language. If you look closer, you'll see that, in fact, only the titles and paragraphs were translated; the code listings and screen examples were left untouched.
+
+@{code}
+
+Lists awe Pydon's wowkhowse datatype.
+If youw onwy expewience wif wists is awways in
+Visuaw Basic ow (God fowbid) de datastowe
+in Powewbuiwdew, bwace youwsewf fow
+Pydon wists.
+
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "8.2. Introducing sgmllib.py"
+@TITLE "8.2. Introducing sgmllib.py"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}8.2. Introducing @{code}sgmllib.py@{body}@{ub}
+
+HTML processing is broken into three steps: breaking down the HTML into its constituent pieces, fiddling with the pieces, and reconstructing the pieces into HTML again. The first step is done by @{code}sgmllib.py@{body}, a part of the standard Python library.
+
+The key to understanding this chapter is to realize that HTML is not just text, it is structured text. The structure is derived from the more-or-less-hierarchical sequence of start tags and end tags. Usually you don't work with HTML this way; you work with it @{i}textually@{ui} in a text editor, or @{i}visually@{ui} in a web browser or web authoring tool. @{code}sgmllib.py@{body} presents HTML @{i}structurally@{ui}.
+
+@{code}sgmllib.py@{body} contains one important class: @{code}SGMLParser@{body}. @{code}SGMLParser@{body} parses HTML into useful pieces, like start tags and end tags. As soon as it succeeds in breaking down some data into a useful piece, it calls a method on itself based on what it found. In order to use the parser, you subclass the @{code}SGMLParser@{body} class and override these methods. This is what I meant when I said that it presents HTML @{i}structurally@{ui}: the structure of the HTML determines the sequence of method calls and the arguments passed to each method.
+
+@{code}SGMLParser@{body} parses HTML into 8 kinds of data, and calls a separate method for each of them:
+
+Start tag An HTML tag that starts a block, like @{code}@{body}, @{code}@{body}, @{code}@{body}, or @{code}@{body}, or a standalone tag like @{code}@{body} or @{code}@{body}. When it finds a start tag @{i}@{code}tagname@{body}@{ui}, @{code}SGMLParser@{body} will look for a method called @{code}start_@{i}@{code}tagname@{body}@{ui}@{body} or @{code}do_@{i}@{code}tagname@{body}@{ui}@{body}. For instance, when it finds a @{code}@{body} tag, it will look for a @{code}start_pre@{body} or @{code}do_pre@{body} method. If found, @{code}SGMLParser@{body} calls this method with a list of the tag's attributes; otherwise, it calls @{code}unknown_starttag@{body} with the tag name and list of attributes. End tag An HTML tag that ends a block, like @{code}@{body}, @{code}@{body}, @{code}@{body}, or @{code}@{body}. When it finds an end tag, @{code}SGMLParser@{body} will look for a method called @{code}end_@{i}@{code}tagname@{body}@{ui}@{body}. If found, @{code}SGMLParser@{body} calls this method, otherwise it calls @{code}unknown_endtag@{body} with the tag name. Character reference An escaped character referenced by its decimal or hexadecimal equivalent, like @{code} @{body}. When found, @{code}SGMLParser@{body} calls @{code}handle_charref@{body} with the text of the decimal or hexadecimal character equivalent. Entity reference An HTML entity, like @{code}&copy;@{body}. When found, @{code}SGMLParser@{body} calls @{code}handle_entityref@{body} with the name of the HTML entity. Comment An HTML comment, enclosed in @{code}@{body}. When found, @{code}SGMLParser@{body} calls @{code}handle_comment@{body} with the body of the comment. Processing instruction An HTML processing instruction, enclosed in @{code}@{body}. When found, @{code}SGMLParser@{body} calls @{code}handle_pi@{body} with the body of the processing instruction. Declaration An HTML declaration, such as a @{code}DOCTYPE@{body}, enclosed in @{code}@{body}. When found, @{code}SGMLParser@{body} calls @{code}handle_decl@{body} with the body of the declaration. Text data A block of text. Anything that doesn't fit into the other 7 categories. When found, @{code}SGMLParser@{body} calls @{code}handle_data@{body} with the text.
+
+Python 2.0 had a bug where @{code}SGMLParser@{body} would not recognize declarations at all (@{code}handle_decl@{body} would never be called), which meant that @{code}DOCTYPE@{body} s were silently ignored. This is fixed in Python 2.1.
+
+@{code}sgmllib.py@{body} comes with a test suite to illustrate this. You can run @{code}sgmllib.py@{body}, passing the name of an HTML file on the command line, and it will print out the tags and other elements as it parses them. It does this by subclassing the @{code}SGMLParser@{body} class and defining @{code}unknown_starttag@{body}, @{code}unknown_endtag@{body}, @{code}handle_data@{body} and other methods which simply print their arguments.
+
+In the ActivePython IDE on Windows, you can specify command line arguments in the "Run script" dialog. Separate multiple arguments with spaces.
+
+@{b}Example 8.4. Sample test of @{code}sgmllib.py@{body}@{ub}
+
+Here is a snippet from the table of contents of the HTML version of this book. Of course your paths may vary. (If you haven't downloaded the HTML version of the book, you can do so at http://diveintopython.org/.
+
+@{code}
+
+c:\\python23\\lib> type "c:\\downloads\\diveintopython\\html\\toc\\index.html"
+
+Dive Into Python
+
+... rest of file omitted for brevity ...
+
+@{body}
+
+Running this through the test suite of @{code}sgmllib.py@{body} yields this output:
+
+@{code}
+
+c:\\python23\\lib> python sgmllib.py "c:\\downloads\\diveintopython\\html\\toc\\index.html"
+data: '\\n\\n'
+start tag:
+data: '\\n '
+start tag:
+data: '\\n '
+start tag:
+data: '\\n \\n '
+start tag:
+data: 'Dive Into Python'
+end tag:
+data: '\\n '
+start tag:
+data: '\\n '
+
+... rest of output omitted for brevity ...
+
+@{body}
+
+Here's the roadmap for the rest of the chapter:
+
+* Subclass @{code}SGMLParser@{body} to create classes that extract interesting data out of HTML documents.
+
+* Subclass @{code}SGMLParser@{body} to create @{code}BaseHTMLProcessor@{body}, which overrides all 8 handler methods and uses them to reconstruct the original HTML from the pieces.
+
+* Subclass @{code}BaseHTMLProcessor@{body} to create @{code}Dialectizer@{body}, which adds some methods to process specific HTML tags specially, and overrides the @{code}handle_data@{body} method to provide a framework for processing the text blocks between the HTML tags.
+
+* Subclass @{code}Dialectizer@{body} to create classes that define text processing rules used by @{code}Dialectizer.handle_data@{body}.
+
+* Write a test suite that grabs a real web page from @{code}http://diveintopython.org/@{body} and processes it.
+
+Along the way, you'll also learn about @{code}locals@{body}, @{code}globals@{body}, and dictionary-based string formatting.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "8.3. Extracting data from HTML documents"
+@TITLE "8.3. Extracting data from HTML documents"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}8.3. Extracting data from HTML documents @{ub}
+
+To extract data from HTML documents, subclass the @{code}SGMLParser@{body} class and define methods for each tag or entity you want to capture.
+
+The first step to extracting data from an HTML document is getting some HTML. If you have some HTML lying around on your hard drive, you can use file functions to read it, but the real fun begins when you get HTML from live web pages.
+
+@{b}Example 8.5. Introducing @{code}urllib@{body}@{ub}
+
+@{code}
+
+>>> import urllib
+>>> sock = urllib.urlopen("http://diveintopython.org/")
+>>> htmlSource = sock.read()
+>>> sock.close()
+>>> print htmlSource
+
+Dive Into Python
+
+diveintopython.org
+
+Python for experienced programmers
+
+[...snip...]
+@{body}
+
+The @{code}urllib@{body} module is part of the standard Python library. It contains functions for getting information about and actually retrieving data from Internet-based URLs (mainly web pages).
+
+The simplest use of @{code}urllib@{body} is to retrieve the entire text of a web page using the @{code}urlopen@{body} function. Opening a URL is similar to opening a file. The return value of @{code}urlopen@{body} is a file-like object, which has some of the same methods as a file object.
+
+The simplest thing to do with the file-like object returned by @{code}urlopen@{body} is @{code}read@{body}, which reads the entire HTML of the web page into a single string. The object also supports @{code}readlines@{body}, which reads the text line by line into a list.
+
+When you're done with the object, make sure to @{code}close@{body} it, just like a normal file object.
+
+You now have the complete HTML of the home page of @{code}http://diveintopython.org/@{body} in a string, and you're ready to parse it.
+
+@{b}Example 8.6. Introducing @{code}urllister.py@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+from sgmllib import SGMLParser
+
+class URLLister(SGMLParser):
+def reset(self):
+SGMLParser.reset(self)
+self.urls = []
+
+def start_a(self, attrs):
+href = [v for k, v in attrs if k=='href']
+if href:
+self.urls.extend(href)
+@{body}
+
+@{code}reset@{body} is called by the @{code}__init__@{body} method of @{code}SGMLParser@{body}, and it can also be called manually once an instance of the parser has been created. So if you need to do any initialization, do it in @{code}reset@{body}, not in @{code}__init__@{body}, so that it will be re-initialized properly when someone re-uses a parser instance.
+
+@{code}start_a@{body} is called by @{code}SGMLParser@{body} whenever it finds an @{code}@{body} tag. The tag may contain an @{code}href@{body} attribute, and/or other attributes, like @{code}name@{body} or @{code}title@{body}. The @{code}attrs@{body} parameter is a list of tuples, @{code}[(@{i}attribute@{ui}, @{i}value@{ui}), (@{i}attribute@{ui}, @{i}value@{ui}), ...]@{body}. Or it may be just an @{code}@{body}, a valid (if useless) HTML tag, in which case @{code}attrs@{body} would be an empty list.
+
+You can find out whether this @{code}@{body} tag has an @{code}href@{body} attribute with a simple multi-variable list comprehension.
+
+String comparisons like @{code}k=='href'@{body} are always case-sensitive, but that's safe in this case, because @{code}SGMLParser@{body} converts attribute names to lowercase while building @{code}attrs@{body}.
+
+@{b}Example 8.7. Using @{code}urllister.py@{body}@{ub}
+
+@{code}
+
+>>> import urllib, urllister
+>>> usock = urllib.urlopen("http://diveintopython.org/")
+>>> parser = urllister.URLLister()
+>>> parser.feed(usock.read())
+>>> usock.close()
+>>> parser.close()
+>>> for url in parser.urls: print url
+toc/index.html
+#download
+#languages
+toc/index.html
+appendix/history.html
+download/diveintopython-html-5.0.zip
+download/diveintopython-pdf-5.0.zip
+download/diveintopython-word-5.0.zip
+download/diveintopython-text-5.0.zip
+download/diveintopython-html-flat-5.0.zip
+download/diveintopython-xml-5.0.zip
+download/diveintopython-common-5.0.zip
+
+... rest of output omitted for brevity ...
+@{body}
+
+Call the @{code}feed@{body} method, defined in @{code}SGMLParser@{body}, to get HTML into the parser.[1] It takes a string, which is what @{code}usock.read()@{body} returns.
+
+Like files, you should @{code}close@{body} your URL objects as soon as you're done with them.
+
+You should @{code}close@{body} your parser object, too, but for a different reason. You've read all the data and fed it to the parser, but the @{code}feed@{body} method isn't guaranteed to have actually processed all the HTML you give it; it may buffer it, waiting for more. Be sure to call @{code}close@{body} to flush the buffer and force everything to be fully parsed.
+
+Once the parser is @{code}close@{body} d, the parsing is complete, and @{code}parser.urls@{body} contains a list of all the linked URLs in the HTML document. (Your output may look different, if the download links have been updated by the time you read this.)
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "8.4. Introducing BaseHTMLProcessor.py"
+@TITLE "8.4. Introducing BaseHTMLProcessor.py"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}8.4. Introducing @{code}BaseHTMLProcessor.py@{body}@{ub}
+
+@{code}SGMLParser@{body} doesn't produce anything by itself. It parses and parses and parses, and it calls a method for each interesting thing it finds, but the methods don't do anything. @{code}SGMLParser@{body} is an HTML @{i}consumer@{ui}: it takes HTML and breaks it down into small, structured pieces. As you saw in the previous section, you can subclass @{code}SGMLParser@{body} to define classes that catch specific tags and produce useful things, like a list of all the links on a web page. Now you'll take this one step further by defining a class that catches everything @{code}SGMLParser@{body} throws at it and reconstructs the complete HTML document. In technical terms, this class will be an HTML @{i}producer@{ui}.
+
+@{code}BaseHTMLProcessor@{body} subclasses @{code}SGMLParser@{body} and provides all 8 essential handler methods: @{code}unknown_starttag@{body}, @{code}unknown_endtag@{body}, @{code}handle_charref@{body}, @{code}handle_entityref@{body}, @{code}handle_comment@{body}, @{code}handle_pi@{body}, @{code}handle_decl@{body}, and @{code}handle_data@{body}.
+
+@{b}Example 8.8. Introducing @{code}BaseHTMLProcessor@{body}@{ub}
+
+@{code}
+
+class BaseHTMLProcessor(SGMLParser):
+def reset(self):
+self.pieces = []
+SGMLParser.reset(self)
+
+def unknown_starttag(self, tag, attrs):
+strattrs = "".join([' %s="%s"' % (key, value) for key, value in attrs])
+self.pieces.append("" % locals())
+
+def unknown_endtag(self, tag):
+self.pieces.append("" % locals())
+
+def handle_charref(self, ref):
+self.pieces.append("&#%(ref)s;" % locals())
+
+def handle_entityref(self, ref):
+self.pieces.append("&%(ref)s" % locals())
+if htmlentitydefs.entitydefs.has_key(ref):
+self.pieces.append(";")
+
+def handle_data(self, text):
+self.pieces.append(text)
+
+def handle_comment(self, text):
+self.pieces.append("" % locals())
+
+def handle_pi(self, text):
+self.pieces.append("" % locals())
+
+def handle_decl(self, text):
+self.pieces.append("" % locals())
+@{body}
+
+@{code}reset@{body}, called by @{code}SGMLParser.__init__@{body}, initializes @{code}self.pieces@{body} as an empty list before calling the ancestor method. @{code}self.pieces@{body} is a data attribute which will hold the pieces of the HTML document you're constructing. Each handler method will reconstruct the HTML that @{code}SGMLParser@{body} parsed, and each method will append that string to @{code}self.pieces@{body}. Note that @{code}self.pieces@{body} is a list. You might be tempted to define it as a string and just keep appending each piece to it. That would work, but Python is much more efficient at dealing with lists.[2]
+
+Since @{code}BaseHTMLProcessor@{body} does not define any methods for specific tags (like the @{code}start_a@{body} method in @{code}URLLister@{body}), @{code}SGMLParser@{body} will call @{code}unknown_starttag@{body} for every start tag. This method takes the tag (@{code}tag@{body}) and the list of attribute name/value pairs (@{code}attrs@{body}), reconstructs the original HTML, and appends it to @{code}self.pieces@{body}. The string formatting here is a little strange; you'll untangle that (and also the odd-looking @{code}locals@{body} function) later in this chapter.
+
+Reconstructing end tags is much simpler; just take the tag name and wrap it in the @{code}@{body} brackets.
+
+When @{code}SGMLParser@{body} finds a character reference, it calls @{code}handle_charref@{body} with the bare reference. If the HTML document contains the reference @{code} @{body}, @{code}ref@{body} will be @{code}160@{body}. Reconstructing the original complete character reference just involves wrapping @{code}ref@{body} in @{code}&#...;@{body} characters.
+
+Entity references are similar to character references, but without the hash mark. Reconstructing the original entity reference requires wrapping @{code}ref@{body} in @{code}&...;@{body} characters. (Actually, as an erudite reader pointed out to me, it's slightly more complicated than this. Only certain standard HTML entites end in a semicolon; other similar-looking entities do not. Luckily for us, the set of standard HTML entities is defined in a dictionary in a Python module called @{code}htmlentitydefs@{body}. Hence the extra @{code}if@{body} statement.)
+
+Blocks of text are simply appended to @{code}self.pieces@{body} unaltered.
+
+HTML comments are wrapped in @{code}@{body} characters.
+
+Processing instructions are wrapped in @{code}@{body} characters.
+
+The HTML specification requires that all non-HTML (like client-side JavaScript) must be enclosed in HTML comments, but not all web pages do this properly (and all modern web browsers are forgiving if they don't). @{code}BaseHTMLProcessor@{body} is not forgiving; if script is improperly embedded, it will be parsed as if it were HTML. For instance, if the script contains less-than and equals signs, @{code}SGMLParser@{body} may incorrectly think that it has found tags and attributes. @{code}SGMLParser@{body} always converts tags and attribute names to lowercase, which may break the script, and @{code}BaseHTMLProcessor@{body} always encloses attribute values in double quotes (even if the original HTML document used single quotes or no quotes), which will certainly break the script. Always protect your client-side script within HTML comments.
+
+@{b}Example 8.9. @{code}BaseHTMLProcessor@{body} output @{ub}
+
+@{code}
+
+def output(self):
+"""Return processed HTML as a single string"""
+return "".join(self.pieces)
+@{body}
+
+This is the one method in @{code}BaseHTMLProcessor@{body} that is never called by the ancestor @{code}SGMLParser@{body}. Since the other handler methods store their reconstructed HTML in @{code}self.pieces@{body}, this function is needed to join all those pieces into one string. As noted before, Python is great at lists and mediocre at strings, so you only create the complete string when somebody explicitly asks for it.
+
+If you prefer, you could use the @{code}join@{body} method of the @{code}string@{body} module instead: @{code}string.join(self.pieces, "")@{body}
+
+@{b}Further reading@{ub}
+
+* W3C discusses character and entity references.
+
+* @{i}Python Library Reference@{ui} confirms your suspicions that the @{code}htmlentitydefs@{body} module is exactly what it sounds like.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "8.5. locals and globals"
+@TITLE "8.5. locals and globals"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}8.5. @{code}locals@{body} and @{code}globals@{body}@{ub}
+
+Let's digress from HTML processing for a minute and talk about how Python handles variables. Python has two built-in functions, @{code}locals@{body} and @{code}globals@{body}, which provide dictionary-based access to local and global variables.
+
+Remember @{code}locals@{body}? You first saw it here:
+
+@{code}
+
+def unknown_starttag(self, tag, attrs):
+strattrs = "".join([' %s="%s"' % (key, value) for key, value in attrs])
+self.pieces.append("" % locals())
+
+@{body}
+
+No, wait, you can't learn about @{code}locals@{body} yet. First, you need to learn about namespaces. This is dry stuff, but it's important, so pay attention.
+
+Python uses what are called namespaces to keep track of variables. A namespace is just like a dictionary where the keys are names of variables and the dictionary values are the values of those variables. In fact, you can access a namespace as a Python dictionary, as you'll see in a minute.
+
+At any particular point in a Python program, there are several namespaces available. Each function has its own namespace, called the local namespace, which keeps track of the function's variables, including function arguments and locally defined variables. Each module has its own namespace, called the global namespace, which keeps track of the module's variables, including functions, classes, any other imported modules, and module-level variables and constants. And there is the built-in namespace, accessible from any module, which holds built-in functions and exceptions.
+
+When a line of code asks for the value of a variable @{code}x@{body}, Python will search for that variable in all the available namespaces, in order:
+
+* local namespace - specific to the current function or class method. If the function defines a local variable @{code}x@{body}, or has an argument @{code}x@{body}, Python will use this and stop searching.
+
+* global namespace - specific to the current module. If the module has defined a variable, function, or class called @{code}x@{body}, Python will use that and stop searching.
+
+* built-in namespace - global to all modules. As a last resort, Python will assume that @{code}x@{body} is the name of built-in function or variable.
+
+If Python doesn't find @{code}x@{body} in any of these namespaces, it gives up and raises a @{code}NameError@{body} with the message @{code}There is no variable named 'x'@{body}, which you saw back in Example 3.18, "Referencing an Unbound Variable", but you didn't appreciate how much work Python was doing before giving you that error.
+
+Python 2.2 introduced a subtle but important change that affects the namespace search order: nested scopes. In versions of Python prior to 2.2, when you reference a variable within a nested function or @{code}lambda@{body} function, Python will search for that variable in the current (nested or @{code}lambda@{body}) function's namespace, then in the module's namespace. Python 2.2 will search for the variable in the current (nested or @{code}lambda@{body}) function's namespace, @{i}then in the parent function's namespace@{ui}, then in the module's namespace. Python 2.1 can work either way; by default, it works like Python 2.0, but you can add the following line of code at the top of your module to make your module work like Python 2.2:
+
+@{code}
+
+from __future__ import nested_scopes
+@{body}
+
+Are you confused yet? Don't despair! This is really cool, I promise. Like many things in Python, namespaces are @{i}directly accessible at run-time@{ui}. How? Well, the local namespace is accessible via the built-in @{code}locals@{body} function, and the global (module level) namespace is accessible via the built-in @{code}globals@{body} function.
+
+@{b}Example 8.10. Introducing @{code}locals@{body}@{ub}
+
+@{code}
+>>> def foo(arg):
+... x = 1
+... print locals()
+...
+>>> foo(7)
+{'arg': 7, 'x': 1}
+>>> foo('bar')
+{'arg': 'bar', 'x': 1}
+@{body}
+
+The function @{code}foo@{body} has two variables in its local namespace: @{code}arg@{body}, whose value is passed in to the function, and @{code}x@{body}, which is defined within the function.
+
+@{code}locals@{body} returns a dictionary of name/value pairs. The keys of this dictionary are the names of the variables as strings; the values of the dictionary are the actual values of the variables. So calling @{code}foo@{body} with @{code}7@{body} prints the dictionary containing the function's two local variables: @{code}arg@{body} (@{code}7@{body}) and @{code}x@{body} (@{code}1@{body}).
+
+Remember, Python has dynamic typing, so you could just as easily pass a string in for @{code}arg@{body}; the function (and the call to @{code}locals@{body}) would still work just as well. @{code}locals@{body} works with all variables of all datatypes.
+
+What @{code}locals@{body} does for the local (function) namespace, @{code}globals@{body} does for the global (module) namespace. @{code}globals@{body} is more exciting, though, because a module's namespace is more exciting.[3] Not only does the module's namespace include module-level variables and constants, it includes all the functions and classes defined in the module. Plus, it includes anything that was imported into the module.
+
+Remember the difference between @{code}from @{i}module@{ui} import@{body} and @{code}import @{i}module@{ui}@{body}? With @{code}import @{i}module@{ui}@{body}, the module itself is imported, but it retains its own namespace, which is why you need to use the module name to access any of its functions or attributes: @{code}@{i}module@{ui}.@{i}function@{ui}@{body}. But with @{code}from @{i}module@{ui} import@{body}, you're actually importing specific functions and attributes from another module into your own namespace, which is why you access them directly without referencing the original module they came from. With the @{code}globals@{body} function, you can actually see this happen.
+
+@{b}Example 8.11. Introducing @{code}globals@{body}@{ub}
+
+Look at the following block of code at the bottom of @{code}BaseHTMLProcessor.py@{body}:
+
+@{code}
+
+if __name__ == "__main__":
+for k, v in globals().items():
+print k, "=", v
+@{body}
+
+Just so you don't get intimidated, remember that you've seen all this before. The @{code}globals@{body} function returns a dictionary, and you're iterating through the dictionary using the @{code}items@{body} method and multi-variable assignment. The only thing new here is the @{code}globals@{body} function.
+
+Now running the script from the command line gives this output (note that your output may be slightly different, depending on your platform and where you installed Python):
+
+@{code}
+c:\\docbook\\dip\\py> python BaseHTMLProcessor.py
+@{body}
+
+@{code}
+
+SGMLParser = sgmllib.SGMLParser
+htmlentitydefs =
+BaseHTMLProcessor = __main__.BaseHTMLProcessor
+__name__ = __main__
+... rest of output omitted for brevity...
+@{body}
+
+@{code}SGMLParser@{body} was imported from @{code}sgmllib@{body}, using @{code}from @{i}module@{ui} import@{body}. That means that it was imported directly into the module's namespace, and here it is.
+
+Contrast this with @{code}htmlentitydefs@{body}, which was imported using @{code}import@{body}. That means that the @{code}htmlentitydefs@{body} module itself is in the namespace, but the @{code}entitydefs@{body} variable defined within @{code}htmlentitydefs@{body} is not.
+
+This module only defines one class, @{code}BaseHTMLProcessor@{body}, and here it is. Note that the value here is the class itself, not a specific instance of the class.
+
+Remember the @{code}if __name__@{body} trick? When running a module (as opposed to importing it from another module), the built-in @{code}__name__@{body} attribute is a special value, @{code}__main__@{body}. Since you ran this module as a script from the command line, @{code}__name__@{body} is @{code}__main__@{body}, which is why the little test code to print the @{code}globals@{body} got executed.
+
+Using the @{code}locals@{body} and @{code}globals@{body} functions, you can get the value of arbitrary variables dynamically, providing the variable name as a string. This mirrors the functionality of the @{code}getattr@{body} function, which allows you to access arbitrary functions dynamically by providing the function name as a string.
+
+There is one other important difference between the @{code}locals@{body} and @{code}globals@{body} functions, which you should learn now before it bites you. It will bite you anyway, but at least then you'll remember learning it.
+
+@{b}Example 8.12. @{code}locals@{body} is read-only, @{code}globals@{body} is not @{ub}
+
+@{code}
+
+def foo(arg):
+x = 1
+print locals()
+locals()["x"] = 2
+print "x=",x
+
+z = 7
+print "z=",z
+foo(3)
+globals()["z"] = 8
+print "z=",z
+
+@{body}
+
+Since @{code}foo@{body} is called with @{code}3@{body}, this will print @{code}{'arg': 3, 'x': 1}@{body}. This should not be a surprise.
+
+@{code}locals@{body} is a function that returns a dictionary, and here you are setting a value in that dictionary. You might think that this would change the value of the local variable @{code}x@{body} to @{code}2@{body}, but it doesn't. @{code}locals@{body} does not actually return the local namespace, it returns a copy. So changing it does nothing to the value of the variables in the local namespace.
+
+This prints @{code}x= 1@{body}, not @{code}x= 2@{body}.
+
+After being burned by @{code}locals@{body}, you might think that this @{i}wouldn't@{ui} change the value of @{code}z@{body}, but it does. Due to internal differences in how Python is implemented (which I'd rather not go into, since I don't fully understand them myself), @{code}globals@{body} returns the actual global namespace, not a copy: the exact opposite behavior of @{code}locals@{body}. So any changes to the dictionary returned by @{code}globals@{body} directly affect your global variables.
+
+This prints @{code}z= 8@{body}, not @{code}z= 7@{body}.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "8.6. Dictionary-based string formatting"
+@TITLE "8.6. Dictionary-based string formatting"
+@NEXT "S7"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}8.6. Dictionary-based string formatting @{ub}
+
+Why did you learn about @{code}locals@{body} and @{code}globals@{body}? So you can learn about dictionary-based string formatting. As you recall, regular string formatting provides an easy way to insert values into strings. Values are listed in a tuple and inserted in order into the string in place of each formatting marker. While this is efficient, it is not always the easiest code to read, especially when multiple values are being inserted. You can't simply scan through the string in one pass and understand what the result will be; you're constantly switching between reading the string and reading the tuple of values.
+
+There is an alternative form of string formatting that uses dictionaries instead of tuples of values.
+
+@{b}Example 8.13. Introducing dictionary-based string formatting@{ub}
+
+@{code}
+
+>>> params = {"server":"mpilgrim", "database":"master", "uid":"sa", "pwd":"secret"}
+>>> "%(pwd)s" % params
+'secret'
+>>> "%(pwd)s is not a good password for %(uid)s" % params
+'secret is not a good password for sa'
+>>> "%(database)s of mind, %(database)s of body" % params
+'master of mind, master of body'
+@{body}
+
+Instead of a tuple of explicit values, this form of string formatting uses a dictionary, @{code}params@{body}. And instead of a simple @{code}%s@{body} marker in the string, the marker contains a name in parentheses. This name is used as a key in the @{code}params@{body} dictionary and subsitutes the corresponding value, @{code}secret@{body}, in place of the @{code}%(pwd)s@{body} marker.
+
+Dictionary-based string formatting works with any number of named keys. Each key must exist in the given dictionary, or the formatting will fail with a @{code}KeyError@{body}.
+
+You can even specify the same key twice; each occurrence will be replaced with the same value.
+
+So why would you use dictionary-based string formatting? Well, it does seem like overkill to set up a dictionary of keys and values simply to do string formatting in the next line; it's really most useful when you happen to have a dictionary of meaningful keys and values already. Like @{code}locals@{body}.
+
+@{b}Example 8.14. Dictionary-based string formatting in @{code}BaseHTMLProcessor.py@{body}@{ub}
+
+@{code}
+
+def handle_comment(self, text):
+self.pieces.append("" % locals())
+
+@{body}
+
+Using the built-in @{code}locals@{body} function is the most common use of dictionary-based string formatting. It means that you can use the names of local variables within your string (in this case, @{code}text@{body}, which was passed to the class method as an argument) and each named variable will be replaced by its value. If @{code}text@{body} is @{code}'Begin page footer'@{body}, the string formatting @{code}"" % locals()@{body} will resolve to the string @{code}''@{body}.
+
+@{b}Example 8.15. More dictionary-based string formatting@{ub}
+
+@{code}
+
+def unknown_starttag(self, tag, attrs):
+strattrs = "".join([' %s="%s"' % (key, value) for key, value in attrs])
+self.pieces.append("" % locals())
+
+@{body}
+
+When this method is called, @{code}attrs@{body} is a list of key/value tuples, just like the @{code}items@{body} of a dictionary, which means you can use multi-variable assignment to iterate through it. This should be a familiar pattern by now, but there's a lot going on here, so let's break it down:
+
+* Suppose @{code}attrs@{body} is @{code}[('href', 'index.html'), ('title', 'Go to home page')]@{body}.
+
+* In the first round of the list comprehension, @{code}key@{body} will get @{code}'href'@{body}, and @{code}value@{body} will get @{code}'index.html'@{body}.
+
+* The string formatting @{code}' %s="%s"' % (key, value)@{body} will resolve to @{code}' href="index.html"'@{body}. This string becomes the first element of the list comprehension's return value.
+
+* In the second round, @{code}key@{body} will get @{code}'title'@{body}, and @{code}value@{body} will get @{code}'Go to home page'@{body}.
+
+* The string formatting will resolve to @{code}' title="Go to home page"'@{body}.
+
+* The list comprehension returns a list of these two resolved strings, and @{code}strattrs@{body} will join both elements of this list together to form @{code}' href="index.html" title="Go to home page"'@{body}.
+
+Now, using dictionary-based string formatting, you insert the value of @{code}tag@{body} and @{code}strattrs@{body} into a string. So if @{code}tag@{body} is @{code}'a'@{body}, the final result would be @{code}''@{body}, and that is what gets appended to @{code}self.pieces@{body}.
+
+Using dictionary-based string formatting with @{code}locals@{body} is a convenient way of making complex string formatting expressions more readable, but it comes with a price. There is a slight performance hit in making the call to @{code}locals@{body}, since @{code}locals@{body} builds a copy of the local namespace.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S7 "8.7. Quoting attribute values"
+@TITLE "8.7. Quoting attribute values"
+@NEXT "S8"
+@PREV "S6"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}8.7. Quoting attribute values @{ub}
+
+A common question on comp.lang.python is "I have a bunch of HTML documents with unquoted attribute values, and I want to properly quote them all. How can I do this?"[4] (This is generally precipitated by a project manager who has found the HTML-is-a-standard religion joining a large project and proclaiming that all pages must validate against an HTML validator. Unquoted attribute values are a common violation of the HTML standard.) Whatever the reason, unquoted attribute values are easy to fix by feeding HTML through @{code}BaseHTMLProcessor@{body}.
+
+@{code}BaseHTMLProcessor@{body} consumes HTML (since it's descended from @{code}SGMLParser@{body}) and produces equivalent HTML, but the HTML output is not identical to the input. Tags and attribute names will end up in lowercase, even if they started in uppercase or mixed case, and attribute values will be enclosed in double quotes, even if they started in single quotes or with no quotes at all. It is this last side effect that you can take advantage of.
+
+@{b}Example 8.16. Quoting attribute values@{ub}
+
+@{code}
+
+>>> htmlSource = """
+...
+...
+... Test page
+...
+...
+...
+... Home
+... Table of contents
+... Revision history
+...
+...
+... """
+>>> from BaseHTMLProcessor import BaseHTMLProcessor
+>>> parser = BaseHTMLProcessor()
+>>> parser.feed(htmlSource)
+>>> print parser.output()
+
+Test page
+
+Home
+Table of contents
+Revision history
+
+@{body}
+
+Note that the attribute values of the @{code}href@{body} attributes in the @{code}@{body} tags are not properly quoted. (Also note that you're using triple quotes for something other than a @{code}doc string@{body}. And directly in the IDE, no less. They're very useful.)
+
+Feed the parser.
+
+Using the @{code}output@{body} function defined in @{code}BaseHTMLProcessor@{body}, you get the output as a single string, complete with quoted attribute values. While this may seem anti-climactic, think about how much has actually happened here: @{code}SGMLParser@{body} parsed the entire HTML document, breaking it down into tags, refs, data, and so forth; @{code}BaseHTMLProcessor@{body} used those elements to reconstruct pieces of HTML (which are still stored in @{code}parser.pieces@{body}, if you want to see them); finally, you called @{code}parser.output@{body}, which joined all the pieces of HTML into one string.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S8 "8.8. Introducing dialect.py"
+@TITLE "8.8. Introducing dialect.py"
+@NEXT "S9"
+@PREV "S7"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}8.8. Introducing @{code}dialect.py@{body}@{ub}
+
+@{code}Dialectizer@{body} is a simple (and silly) descendant of @{code}BaseHTMLProcessor@{body}. It runs blocks of text through a series of substitutions, but it makes sure that anything within a @{code}@{code}@{body}...@{code}@{body}@{body} block passes through unaltered.
+
+To handle the @{code}@{body} blocks, you define two methods in @{code}Dialectizer@{body}: @{code}start_pre@{body} and @{code}end_pre@{body}.
+
+@{b}Example 8.17. Handling specific tags@{ub}
+
+@{code}
+
+def start_pre(self, attrs):
+self.verbatim += 1
+self.unknown_starttag("pre", attrs)
+
+def end_pre(self):
+self.unknown_endtag("pre")
+self.verbatim -= 1
+@{body}
+
+@{code}start_pre@{body} is called every time @{code}SGMLParser@{body} finds a @{code}@{body} tag in the HTML source. (In a minute, you'll see exactly how this happens.) The method takes a single parameter, @{code}attrs@{body}, which contains the attributes of the tag (if any). @{code}attrs@{body} is a list of key/value tuples, just like @{code}unknown_starttag@{body} takes.
+
+In the @{code}reset@{body} method, you initialize a data attribute that serves as a counter for @{code}@{body} tags. Every time you hit a @{code}@{body} tag, you increment the counter; every time you hit a @{code}@{body} tag, you'll decrement the counter. (You could just use this as a flag and set it to @{code}1@{body} and reset it to @{code}0@{body}, but it's just as easy to do it this way, and this handles the odd (but possible) case of nested @{code}@{body} tags.) In a minute, you'll see how this counter is put to good use.
+
+That's it, that's the only special processing you do for @{code}@{body} tags. Now you pass the list of attributes along to @{code}unknown_starttag@{body} so it can do the default processing.
+
+@{code}end_pre@{body} is called every time @{code}SGMLParser@{body} finds a @{code}@{body} tag. Since end tags can not contain attributes, the method takes no parameters.
+
+First, you want to do the default processing, just like any other end tag.
+
+Second, you decrement your counter to signal that this @{code}@{body} block has been closed.
+
+At this point, it's worth digging a little further into @{code}SGMLParser@{body}. I've claimed repeatedly (and you've taken it on faith so far) that @{code}SGMLParser@{body} looks for and calls specific methods for each tag, if they exist. For instance, you just saw the definition of @{code}start_pre@{body} and @{code}end_pre@{body} to handle @{code}@{body} and @{code}@{body}. But how does this happen? Well, it's not magic, it's just good Python coding.
+
+@{b}Example 8.18. @{code}SGMLParser@{body}@{ub}
+
+@{code}
+
+def finish_starttag(self, tag, attrs):
+try:
+method = getattr(self, 'start_' + tag)
+except AttributeError:
+try:
+method = getattr(self, 'do_' + tag)
+except AttributeError:
+self.unknown_starttag(tag, attrs)
+return -1
+else:
+self.handle_starttag(tag, method, attrs)
+return 0
+else:
+self.stack.append(tag)
+self.handle_starttag(tag, method, attrs)
+return 1
+
+def handle_starttag(self, tag, method, attrs):
+method(attrs)
+@{body}
+
+At this point, @{code}SGMLParser@{body} has already found a start tag and parsed the attribute list. The only thing left to do is figure out whether there is a specific handler method for this tag, or whether you should fall back on the default method (@{code}unknown_starttag@{body}).
+
+The "magic" of @{code}SGMLParser@{body} is nothing more than your old friend, @{code}getattr@{body}. What you may not have realized before is that @{code}getattr@{body} will find methods defined in descendants of an object as well as the object itself. Here the object is @{code}self@{body}, the current instance. So if @{code}tag@{body} is @{code}'pre'@{body}, this call to @{code}getattr@{body} will look for a @{code}start_pre@{body} method on the current instance, which is an instance of the @{code}Dialectizer@{body} class.
+
+@{code}getattr@{body} raises an @{code}AttributeError@{body} if the method it's looking for doesn't exist in the object (or any of its descendants), but that's okay, because you wrapped the call to @{code}getattr@{body} inside a @{code}try...except@{body} block and explicitly caught the @{code}AttributeError@{body}.
+
+Since you didn't find a @{code}start_xxx@{body} method, you'll also look for a @{code}do_xxx@{body} method before giving up. This alternate naming scheme is generally used for standalone tags, like @{code}@{body}, which have no corresponding end tag. But you can use either naming scheme; as you can see, @{code}SGMLParser@{body} tries both for every tag. (You shouldn't define both a @{code}start_xxx@{body} and @{code}do_xxx@{body} handler method for the same tag, though; only the @{code}start_xxx@{body} method will get called.)
+
+Another @{code}AttributeError@{body}, which means that the call to @{code}getattr@{body} failed with @{code}do_xxx@{body}. Since you found neither a @{code}start_xxx@{body} nor a @{code}do_xxx@{body} method for this tag, you catch the exception and fall back on the default method, @{code}unknown_starttag@{body}.
+
+Remember, @{code}try...except@{body} blocks can have an @{code}else@{body} clause, which is called if no exception is raised during the @{code}try...except@{body} block. Logically, that means that you @{i}did@{ui} find a @{code}do_xxx@{body} method for this tag, so you're going to call it.
+
+By the way, don't worry about these different return values; in theory they mean something, but they're never actually used. Don't worry about the @{code}self.stack.append(tag)@{body} either; @{code}SGMLParser@{body} keeps track internally of whether your start tags are balanced by appropriate end tags, but it doesn't do anything with this information either. In theory, you could use this module to validate that your tags were fully balanced, but it's probably not worth it, and it's beyond the scope of this chapter. You have better things to worry about right now.
+
+@{code}start_xxx@{body} and @{code}do_xxx@{body} methods are not called directly; the tag, method, and attributes are passed to this function, @{code}handle_starttag@{body}, so that descendants can override it and change the way @{i}all@{ui} start tags are dispatched. You don't need that level of control, so you just let this method do its thing, which is to call the method (@{code}start_xxx@{body} or @{code}do_xxx@{body}) with the list of attributes. Remember, @{code}method@{body} is a function, returned from @{code}getattr@{body}, and functions are objects. (I know you're getting tired of hearing it, and I promise I'll stop saying it as soon as I run out of ways to use it to my advantage.) Here, the function object is passed into this dispatch method as an argument, and this method turns around and calls the function. At this point, you don't need to know what the function is, what it's named, or where it's defined; the only thing you need to know about the function is that it is called with one argument, @{code}attrs@{body}.
+
+Now back to our regularly scheduled program: @{code}Dialectizer@{body}. When you left, you were in the process of defining specific handler methods for @{code}@{body} and @{code}@{body} tags. There's only one thing left to do, and that is to process text blocks with the pre-defined substitutions. For that, you need to override the @{code}handle_data@{body} method.
+
+@{b}Example 8.19. Overriding the @{code}handle_data@{body} method @{ub}
+
+@{code}
+
+def handle_data(self, text):
+self.pieces.append(self.verbatim and text or self.process(text))
+@{body}
+
+@{code}handle_data@{body} is called with only one argument, the text to process.
+
+In the ancestor @{code}BaseHTMLProcessor@{body}, the @{code}handle_data@{body} method simply appended the text to the output buffer, @{code}self.pieces@{body}. Here the logic is only slightly more complicated. If you're in the middle of a @{code}@{code}@{body}...@{code}@{body}@{body} block, @{code}self.verbatim@{body} will be some value greater than @{code}0@{body}, and you want to put the text in the output buffer unaltered. Otherwise, you will call a separate method to process the substitutions, then put the result of that into the output buffer. In Python, this is a one-liner, using the @{code}and-or@{body} trick.
+
+You're close to completely understanding @{code}Dialectizer@{body}. The only missing link is the nature of the text substitutions themselves. If you know any Perl, you know that when complex text substitutions are required, the only real solution is regular expressions. The classes later in @{code}dialect.py@{body} define a series of regular expressions that operate on the text between the HTML tags. But you just had a whole chapter on regular expressions. You don't really want to slog through regular expressions again, do you? God knows I don't. I think you've learned enough for one chapter.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S9 "8.9. Putting it all together"
+@TITLE "8.9. Putting it all together"
+@NEXT "S10"
+@PREV "S8"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}8.9. Putting it all together @{ub}
+
+It's time to put everything you've learned so far to good use. I hope you were paying attention.
+
+@{b}Example 8.20. The @{code}translate@{body} function, part 1 @{ub}
+
+@{code}
+
+def translate(url, dialectName="chef"):
+import urllib
+sock = urllib.urlopen(url)
+htmlSource = sock.read()
+sock.close()
+
+@{body}
+
+The @{code}translate@{body} function has an optional argument @{code}dialectName@{body}, which is a string that specifies the dialect you'll be using. You'll see how this is used in a minute.
+
+Hey, wait a minute, there's an @{code}import@{body} statement in this function! That's perfectly legal in Python. You're used to seeing @{code}import@{body} statements at the top of a program, which means that the imported module is available anywhere in the program. But you can also import modules within a function, which means that the imported module is only available within the function. If you have a module that is only ever used in one function, this is an easy way to make your code more modular. (When you find that your weekend hack has turned into an 800-line work of art and decide to split it up into a dozen reusable modules, you'll appreciate this.)
+
+Now you get the source of the given URL.
+
+@{b}Example 8.21. The @{code}translate@{body} function, part 2: curiouser and curiouser @{ub}
+
+@{code}
+
+parserName = "%sDialectizer" % dialectName.capitalize()
+parserClass = globals()[parserName]
+parser = parserClass()
+
+@{body}
+
+@{code}capitalize@{body} is a string method you haven't seen before; it simply capitalizes the first letter of a string and forces everything else to lowercase. Combined with some string formatting, you've taken the name of a dialect and transformed it into the name of the corresponding Dialectizer class. If @{code}dialectName@{body} is the string @{code}'chef'@{body}, @{code}parserName@{body} will be the string @{code}'ChefDialectizer'@{body}.
+
+You have the name of a class as a string (@{code}parserName@{body}), and you have the global namespace as a dictionary (@{code}globals@{body} ()). Combined, you can get a reference to the class which the string names. (Remember, classes are objects, and they can be assigned to variables just like any other object.) If @{code}parserName@{body} is the string @{code}'ChefDialectizer'@{body}, @{code}parserClass@{body} will be the class @{code}ChefDialectizer@{body}.
+
+Finally, you have a class object (@{code}parserClass@{body}), and you want an instance of the class. Well, you already know how to do that: call the class like a function. The fact that the class is being stored in a local variable makes absolutely no difference; you just call the local variable like a function, and out pops an instance of the class. If @{code}parserClass@{body} is the class @{code}ChefDialectizer@{body}, @{code}parser@{body} will be an instance of the class @{code}ChefDialectizer@{body}.
+
+Why bother? After all, there are only 3 @{code}Dialectizer@{body} classes; why not just use a @{code}case@{body} statement? (Well, there's no @{code}case@{body} statement in Python, but why not just use a series of @{code}if@{body} statements?) One reason: extensibility. The @{code}translate@{body} function has absolutely no idea how many Dialectizer classes you've defined. Imagine if you defined a new @{code}FooDialectizer@{body} tomorrow; @{code}translate@{body} would work by passing @{code}'foo'@{body} as the @{code}dialectName@{body}.
+
+Even better, imagine putting @{code}FooDialectizer@{body} in a separate module, and importing it with @{code}from @{i}module@{ui} import@{body}. You've already seen that this includes it in @{code}globals@{body} (), so @{code}translate@{body} would still work without modification, even though @{code}FooDialectizer@{body} was in a separate file.
+
+Now imagine that the name of the dialect is coming from somewhere outside the program, maybe from a database or from a user-inputted value on a form. You can use any number of server-side Python scripting architectures to dynamically generate web pages; this function could take a URL and a dialect name (both strings) in the query string of a web page request, and output the "translated" web page.
+
+Finally, imagine a @{code}Dialectizer@{body} framework with a plug-in architecture. You could put each @{code}Dialectizer@{body} class in a separate file, leaving only the @{code}translate@{body} function in @{code}dialect.py@{body}. Assuming a consistent naming scheme, the @{code}translate@{body} function could dynamic import the appropiate class from the appropriate file, given nothing but the dialect name. (You haven't seen dynamic importing yet, but I promise to cover it in a later chapter.) To add a new dialect, you would simply add an appropriately-named file in the plug-ins directory (like @{code}foodialect.py@{body} which contains the @{code}FooDialectizer@{body} class). Calling the @{code}translate@{body} function with the dialect name @{code}'foo'@{body} would find the module @{code}foodialect.py@{body}, import the class @{code}FooDialectizer@{body}, and away you go.
+
+@{b}Example 8.22. The @{code}translate@{body} function, part 3 @{ub}
+
+@{code}
+
+parser.feed(htmlSource)
+parser.close()
+return parser.output()
+
+@{body}
+
+After all that imagining, this is going to seem pretty boring, but the @{code}feed@{body} function is what does the entire transformation. You had the entire HTML source in a single string, so you only had to call @{code}feed@{body} once. However, you can call @{code}feed@{body} as often as you want, and the parser will just keep parsing. So if you were worried about memory usage (or you knew you were going to be dealing with very large HTML pages), you could set this up in a loop, where you read a few bytes of HTML and fed it to the parser. The result would be the same.
+
+Because @{code}feed@{body} maintains an internal buffer, you should always call the parser's @{code}close@{body} method when you're done (even if you fed it all at once, like you did). Otherwise you may find that your output is missing the last few bytes.
+
+Remember, @{code}output@{body} is the function you defined on @{code}BaseHTMLProcessor@{body} that joins all the pieces of output you've buffered and returns them in a single string.
+
+And just like that, you've "translated" a web page, given nothing but a URL and the name of a dialect.
+
+@{b}Further reading@{ub}
+
+* You thought I was kidding about the server-side scripting idea. So did I, until I found this web-based dialectizer. Unfortunately, source code does not appear to be available.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S10 "8.10. Summary"
+@TITLE "8.10. Summary"
+@NEXT "MAIN"
+@PREV "S9"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}8.10. Summary @{ub}
+
+Python provides you with a powerful tool, @{code}sgmllib.py@{body}, to manipulate HTML by turning its structure into an object model. You can use this tool in many different ways.
+
+* parsing the HTML looking for something specific
+
+* aggregating the results, like the URL lister
+
+* altering the structure along the way, like the attribute quoter
+
+* transforming the HTML into something else by manipulating the text while leaving the tags alone, like the @{code}Dialectizer@{body}
+
+Along with these examples, you should be comfortable doing all of the following things:
+
+* Using @{code}locals@{body} () and @{code}globals@{body} () to access namespaces
+
+* Formatting strings using dictionary-based substitutions
+
+@{line}
+
+[1] The technical term for a parser like @{code}SGMLParser@{body} is a @{i}consumer@{ui}: it consumes HTML and breaks it down. Presumably, the name @{code}feed@{body} was chosen to fit into the whole "consumer" motif. Personally, it makes me think of an exhibit in the zoo where there's just a dark cage with no trees or plants or evidence of life of any kind, but if you stand perfectly still and look really closely you can make out two beady eyes staring back at you from the far left corner, but you convince yourself that that's just your mind playing tricks on you, and the only way you can tell that the whole thing isn't just an empty cage is a small innocuous sign on the railing that reads, "Do not feed the parser." But maybe that's just me. In any event, it's an interesting mental image.
+
+[2] The reason Python is better at lists than strings is that lists are mutable but strings are immutable. This means that appending to a list just adds the element and updates the index. Since strings can not be changed after they are created, code like @{code}s = s + newpiece@{body} will create an entirely new string out of the concatenation of the original and the new piece, then throw away the original string. This involves a lot of expensive memory management, and the amount of effort involved increases as the string gets longer, so doing @{code}s = s + newpiece@{body} in a loop is deadly. In technical terms, appending @{code}n@{body} items to a list is @{code}O(n)@{body}, while appending @{code}n@{body} items to a string is @{code}O(n2)@{body}.
+
+[3] I don't get out much.
+
+[4] All right, it's not that common a question. It's not up there with "What editor should I use to write Python code?" (answer: Emacs) or "Is Python better or worse than Perl?" (answer: "Perl is worse than Python because people wanted it worse." -Larry Wall, 10/14/1998) But questions about HTML processing pop up in one form or another about once a month, and among those questions, this is a popular one.
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

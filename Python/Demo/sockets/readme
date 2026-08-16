@@ -1,0 +1,27 @@
+sockets/ - TCP/UDP demos for AmigaPython 2.7
+===========================================
+
+Require bsdsocket.library (Roadshow or similar).  Start the stack first.
+
+Kept:
+
+  broadcast.py    UDP broadcast time
+  radio.py        Receive broadcasts from broadcast.py
+  unicast.py      UDP to localhost
+  udpecho.py      UDP echo client/server
+  echosvr.py      Simple TCP echo server
+  throughput.py   TCP throughput test
+  finger.py       Finger client (port 79; service often absent)
+  ftp.py          Minimal FTP client
+  rpython.py      Remote Python client
+  rpythond.py     Remote Python server (insecure; demo only)
+
+Removed: AF_UNIX (unixclient/unixserver), fork-based telnet.py,
+multicast/regsub mcast.py, Unix-shell gopher.py.
+
+Also see ../chatserver.py for a multi-user TCP chat demo.
+
+Example (two Shells, stack running):
+
+  Python echosvr.py
+  Python -c "import socket; s=socket.socket(); s.connect(('127.0.0.1',7)); s.send('hi\n'); print s.recv(100)"

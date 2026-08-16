@@ -1,0 +1,21 @@
+metaclasses/ - teaching demos (classic style)
+============================================
+
+These illustrate Python's metaclass hooks.  They date from the 1.5 era
+but still run on 2.7.
+
+For new AmigaPython code, prefer new-style classes::
+
+  class C(object):
+      ...
+
+  Eiffel.py     Pre/post conditions via metaclass
+  Enum.py       Enumeration types
+  Meta.py       Generic metaclass helpers
+  Simple.py     Minimal tracing metaclass
+  Trace.py      Call tracing
+
+  index.html / meta-vladimir.txt   Background reading
+
+Synch.py (thread locks) was removed: this Amiga port is built without
+threads (WITH_THREAD undefined).

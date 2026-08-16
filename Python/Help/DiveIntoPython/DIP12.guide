@@ -1,0 +1,899 @@
+@DATABASE "DIP12.guide"
+@$VER: DIP12.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "12. SOAP Web Services"
+@TITLE "12. SOAP Web Services"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}12. SOAP Web Services@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}SOAP / network demos need a TCP stack. Many examples assume desktop Internet tools; treat as reading unless adapted.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 12.1. Diving In " LINK "S1"}
+@{" 12.2. Installing the SOAP Libraries " LINK "S2"}
+@{" 12.3. First Steps with SOAP " LINK "S3"}
+@{" 12.4. Debugging SOAP Web Services " LINK "S4"}
+@{" 12.5. Introducing WSDL " LINK "S5"}
+@{" 12.6. Introspecting SOAP Web Services with WSDL " LINK "S6"}
+@{" 12.7. Searching Google " LINK "S7"}
+@{" 12.8. Troubleshooting SOAP Web Services " LINK "S8"}
+@{" 12.9. Summary " LINK "S9"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 12. SOAP Web Services
+
+Chapter 11 focused on document-oriented web services over HTTP. The "input parameter" was the URL, and the "return value" was an actual XML document which it was your responsibility to parse.
+
+This chapter will focus on SOAP web services, which take a more structured approach. Rather than dealing with HTTP requests and XML documents directly, SOAP allows you to simulate calling functions that return native data types. As you will see, the illusion is almost perfect; you can "call" a function through a SOAP library, with the standard Python calling syntax, and the function appears to return Python objects and values. But under the covers, the SOAP library has actually performed a complex transaction involving multiple XML documents and a remote server.
+
+SOAP is a complex specification, and it is somewhat misleading to say that SOAP is all about calling remote functions. Some people would pipe up to add that SOAP allows for one-way asynchronous message passing, and document-oriented web services. And those people would be correct; SOAP can be used that way, and in many different ways. But this chapter will focus on so-called "RPC-style" SOAP -- calling a remote function and getting results back.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "12.1. Diving In"
+@TITLE "12.1. Diving In"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}12.1. Diving In @{ub}
+
+You use Google, right? It's a popular search engine. Have you ever wished you could programmatically access Google search results? Now you can. Here is a program to search Google from Python.
+
+@{b}Example 12.1. @{code}search.py@{body}@{ub}
+
+@{code}
+from SOAPpy import WSDL
+
+# you'll need to configure these two values;
+# see http://www.google.com/apis/
+WSDLFILE = '/path/to/copy/of/GoogleSearch.wsdl'
+APIKEY = 'YOUR_GOOGLE_API_KEY'
+
+_server = WSDL.Proxy(WSDLFILE)
+def search(q):
+"""Search Google and return list of {title, link, description}"""
+results = _server.doGoogleSearch(
+APIKEY, q, 0, 10, False, "", False, "", "utf-8", "utf-8")
+return [{"title": r.title.encode("utf-8"),
+"link": r.URL.encode("utf-8"),
+"description": r.snippet.encode("utf-8")}
+for r in results.resultElements]
+
+if __name__ == '__main__':
+import sys
+for r in search(sys.argv[1])[:5]:
+print r['title']
+print r['link']
+print r['description']
+print
+@{body}
+
+You can import this as a module and use it from a larger program, or you can run the script from the command line. On the command line, you give the search query as a command-line argument, and it prints out the URL, title, and description of the top five Google search results.
+
+Here is the sample output for a search for the word "python".
+
+@{b}Example 12.2. Sample Usage of @{code}search.py@{body}@{ub}
+
+@{code}
+
+C:\\diveintopython\\common\\py> python search.py "python"
+Python Programming Language
+http://www.python.org/
+Home page for Python, an interpreted, interactive, object-oriented,
+extensible programming language. ... Python
+is OSI Certified Open Source: OSI Certified.
+
+Python Documentation Index
+http://www.python.org/doc/
+... New-style classes (aka descrintro). Regular expressions. Database
+API. Email Us. docs\@python.org. (c) 2004. Python
+Software Foundation. Python Documentation. ...
+
+Download Python Software
+http://www.python.org/download/
+Download Standard Python Software. Python 2.3.3 is the
+current production version of Python. ...
+Python is OSI Certified Open Source:
+
+Pythonline
+http://www.pythonline.com/
+
+Dive Into Python
+http://diveintopython.org/
+Dive Into Python. Python from novice to pro. Find:
+... It is also available in multiple languages. Read
+Dive Into Python. This book is still being written. ...
+
+@{body}
+
+@{b}Further Reading on SOAP@{ub}
+
+* http://www.xmethods.net/ is a repository of public access SOAP web services.
+
+* The SOAP specification is surprisingly readable, if you like that sort of thing.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "12.2. Installing the SOAP Libraries"
+@TITLE "12.2. Installing the SOAP Libraries"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}12.2. Installing the SOAP Libraries @{ub}
+
+Unlike the other code in this book, this chapter relies on libraries that do not come pre-installed with Python.
+
+Before you can dive into SOAP web services, you'll need to install three libraries: PyXML, fpconst, and SOAPpy.
+
+@{b}12.2.1. Installing PyXML@{ub}
+
+The first library you need is PyXML, an advanced set of XML libraries that provide more functionality than the built-in XML libraries we studied in Chapter 9.
+
+@{b}Procedure 12.1. @{ub}
+
+Here is the procedure for installing PyXML:
+
+*
+
+Go to http://pyxml.sourceforge.net/, click Downloads, and download the latest version for your operating system.
+
+*
+
+If you are using Windows, there are several choices. Make sure to download the version of PyXML that matches the version of Python you are using.
+
+*
+
+Double-click the installer. If you download PyXML 0.8.3 for Windows and Python 2.3, the installer program will be @{code}PyXML-0.8.3.win32-py2.3.exe@{body}.
+
+*
+
+Step through the installer program.
+
+*
+
+After the installation is complete, close the installer. There will not be any visible indication of success (no programs installed on the Start Menu or shortcuts installed on the desktop). PyXML is simply a collection of XML libraries used by other programs.
+
+To verify that you installed PyXML correctly, run your Python IDE and check the version of the XML libraries you have installed, as shown here.
+
+@{b}Example 12.3. Verifying PyXML Installation @{ub}
+
+@{code}
+
+>>> import xml
+>>> xml.__version__
+'0.8.3'
+
+@{body}
+
+This version number should match the version number of the PyXML installer program you downloaded and ran.
+
+@{b}12.2.2. Installing fpconst@{ub}
+
+The second library you need is fpconst, a set of constants and functions for working with IEEE754 double-precision special values. This provides support for the special values Not-a-Number (NaN), Positive Infinity (Inf), and Negative Infinity (-Inf), which are part of the SOAP datatype specification.
+
+@{b}Procedure 12.2. @{ub}
+
+Here is the procedure for installing fpconst:
+
+*
+
+Download the latest version of fpconst from http://www.analytics.washington.edu/statcomp/projects/rzope/fpconst/.
+
+*
+
+There are two downloads available, one in @{code}.tar.gz@{body} format, the other in @{code}.zip@{body} format. If you are using Windows, download the @{code}.zip@{body} file; otherwise, download the @{code}.tar.gz@{body} file.
+
+*
+
+Decompress the downloaded file. On Windows XP, you can right-click on the file and choose Extract All; on earlier versions of Windows, you will need a third-party program such as WinZip. On Mac OS X, you can double-click the compressed file to decompress it with Stuffit Expander.
+
+*
+
+Open a command prompt and navigate to the directory where you decompressed the fpconst files.
+
+*
+
+Type @{b}@{code}python setup.py install@{body}@{ub} to run the installation program.
+
+To verify that you installed fpconst correctly, run your Python IDE and check the version number.
+
+@{b}Example 12.4. Verifying fpconst Installation @{ub}
+
+@{code}
+
+>>> import fpconst
+>>> fpconst.__version__
+'0.6.0'
+
+@{body}
+
+This version number should match the version number of the fpconst archive you downloaded and installed.
+
+@{b}12.2.3. Installing SOAPpy@{ub}
+
+The third and final requirement is the SOAP library itself: SOAPpy.
+
+@{b}Procedure 12.3. @{ub}
+
+Here is the procedure for installing SOAPpy:
+
+*
+
+Go to http://pywebsvcs.sourceforge.net/ and select Latest Official Release under the SOAPpy section.
+
+*
+
+There are two downloads available. If you are using Windows, download the @{code}.zip@{body} file; otherwise, download the @{code}.tar.gz@{body} file.
+
+*
+
+Decompress the downloaded file, just as you did with fpconst.
+
+*
+
+Open a command prompt and navigate to the directory where you decompressed the SOAPpy files.
+
+*
+
+Type @{b}@{code}python setup.py install@{body}@{ub} to run the installation program.
+
+To verify that you installed SOAPpy correctly, run your Python IDE and check the version number.
+
+@{b}Example 12.5. Verifying SOAPpy Installation @{ub}
+
+@{code}
+
+>>> import SOAPpy
+>>> SOAPpy.__version__
+'0.11.4'
+
+@{body}
+
+This version number should match the version number of the SOAPpy archive you downloaded and installed.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "12.3. First Steps with SOAP"
+@TITLE "12.3. First Steps with SOAP"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}12.3. First Steps with SOAP@{ub}
+
+The heart of SOAP is the ability to call remote functions. There are a number of public access SOAP servers that provide simple functions for demonstration purposes.
+
+The most popular public access SOAP server is http://www.xmethods.net/. This example uses a demonstration function that takes a United States zip code and returns the current temperature in that region.
+
+@{b}Example 12.6. Getting the Current Temperature@{ub}
+
+@{code}
+
+>>> from SOAPpy import SOAPProxy
+>>> url = 'http://services.xmethods.net:80/soap/servlet/rpcrouter'
+>>> namespace = 'urn:xmethods-Temperature'
+>>> server = SOAPProxy(url, namespace)
+>>> server.getTemp('27502')
+80.0
+
+@{body}
+
+You access the remote SOAP server through a proxy class, @{code}SOAPProxy@{body}. The proxy handles all the internals of SOAP for you, including creating the XML request document out of the function name and argument list, sending the request over HTTP to the remote SOAP server, parsing the XML response document, and creating native Python values to return. You'll see what these XML documents look like in the next section.
+
+Every SOAP service has a URL which handles all the requests. The same URL is used for all function calls. This particular service only has a single function, but later in this chapter you'll see examples of the Google API, which has several functions. The service URL is shared by all functions.Each SOAP service also has a namespace, which is defined by the server and is completely arbitrary. It's simply part of the configuration required to call SOAP methods. It allows the server to share a single service URL and route requests between several unrelated services. It's like dividing Python modules into packages.
+
+You're creating the @{code}SOAPProxy@{body} with the service URL and the service namespace. This doesn't make any connection to the SOAP server; it simply creates a local Python object.
+
+Now with everything configured properly, you can actually call remote SOAP methods as if they were local functions. You pass arguments just like a normal function, and you get a return value just like a normal function. But under the covers, there's a heck of a lot going on.
+
+Let's peek under those covers.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "12.4. Debugging SOAP Web Services"
+@TITLE "12.4. Debugging SOAP Web Services"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}12.4. Debugging SOAP Web Services @{ub}
+
+The SOAP libraries provide an easy way to see what's going on behind the scenes.
+
+Turning on debugging is a simple matter of setting two flags in the @{code}SOAPProxy@{body} 's configuration.
+
+@{b}Example 12.7. Debugging SOAP Web Services @{ub}
+
+@{code}
+
+>>> from SOAPpy import SOAPProxy
+>>> url = 'http://services.xmethods.net:80/soap/servlet/rpcrouter'
+>>> n = 'urn:xmethods-Temperature'
+>>> server = SOAPProxy(url, namespace=n)
+>>> server.config.dumpSOAPOut = 1
+>>> server.config.dumpSOAPIn = 1
+>>> temperature = server.getTemp('27502')
+*** Outgoing SOAP ******************************************************
+
+27502
+
+************************************************************************
+*** Incoming SOAP ******************************************************
+
+80.0
+
+************************************************************************
+
+>>> temperature
+80.0
+
+@{body}
+
+First, create the @{code}SOAPProxy@{body} like normal, with the service URL and the namespace.
+
+Second, turn on debugging by setting @{code}server.config.dumpSOAPIn@{body} and @{code}server.config.dumpSOAPOut@{body}.
+
+Third, call the remote SOAP method as usual. The SOAP library will print out both the outgoing XML request document, and the incoming XML response document. This is all the hard work that @{code}SOAPProxy@{body} is doing for you. Intimidating, isn't it? Let's break it down.
+
+Most of the XML request document that gets sent to the server is just boilerplate. Ignore all the namespace declarations; they're going to be the same (or similar) for all SOAP calls. The heart of the "function call" is this fragment within the @{code}@{body} element:
+
+@{code}
+
+27502
+
+@{body}
+
+The element name is the function name, @{code}getTemp@{body}. @{code}SOAPProxy@{body} uses @{code}getattr@{body} as a dispatcher. Instead of calling separate local methods based on the method name, it actually uses the method name to construct the XML request document.
+
+The function's XML element is contained in a specific namespace, which is the namespace you specified when you created the @{code}SOAPProxy@{body} object. Don't worry about the @{code}SOAP-ENC:root@{body}; that's boilerplate too.
+
+The arguments of the function also got translated into XML. @{code}SOAPProxy@{body} introspects each argument to determine its datatype (in this case it's a string). The argument datatype goes into the @{code}xsi:type@{body} attribute, followed by the actual string value.
+
+The XML return document is equally easy to understand, once you know what to ignore. Focus on this fragment within the @{code}@{body}:
+
+@{code}
+
+80.0
+
+@{body}
+
+The server wraps the function return value within a @{code}@{body} element. By convention, this wrapper element is the name of the function, plus @{code}Response@{body}. But it could really be almost anything; the important thing that @{code}SOAPProxy@{body} notices is not the element name, but the namespace.
+
+The server returns the response in the same namespace we used in the request, the same namespace we specified when we first create the @{code}SOAPProxy@{body}. Later in this chapter we'll see what happens if you forget to specify the namespace when creating the @{code}SOAPProxy@{body}.
+
+The return value is specified, along with its datatype (it's a float). @{code}SOAPProxy@{body} uses this explicit datatype to create a Python object of the correct native datatype and return it.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "12.5. Introducing WSDL"
+@TITLE "12.5. Introducing WSDL"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}12.5. Introducing WSDL@{ub}
+
+The @{code}SOAPProxy@{body} class proxies local method calls and transparently turns then into invocations of remote SOAP methods. As you've seen, this is a lot of work, and @{code}SOAPProxy@{body} does it quickly and transparently. What it doesn't do is provide any means of method introspection.
+
+Consider this: the previous two sections showed an example of calling a simple remote SOAP method with one argument and one return value, both of simple data types. This required knowing, and keeping track of, the service URL, the service namespace, the function name, the number of arguments, and the datatype of each argument. If any of these is missing or wrong, the whole thing falls apart.
+
+That shouldn't come as a big surprise. If I wanted to call a local function, I would need to know what package or module it was in (the equivalent of service URL and namespace). I would need to know the correct function name and the correct number of arguments. Python deftly handles datatyping without explicit types, but I would still need to know how many argument to pass, and how many return values to expect.
+
+The big difference is introspection. As you saw in Chapter 4, Python excels at letting you discover things about modules and functions at runtime. You can list the available functions within a module, and with a little work, drill down to individual function declarations and arguments.
+
+WSDL lets you do that with SOAP web services. WSDL stands for "Web Services Description Language". Although designed to be flexible enough to describe many types of web services, it is most often used to describe SOAP web services.
+
+A WSDL file is just that: a file. More specifically, it's an XML file. It usually lives on the same server you use to access the SOAP web services it describes, although there's nothing special about it. Later in this chapter, we'll download the WSDL file for the Google API and use it locally. That doesn't mean we're calling Google locally; the WSDL file still describes the remote functions sitting on Google's server.
+
+A WSDL file contains a description of everything involved in calling a SOAP web service:
+
+* The service URL and namespace
+
+* The type of web service (probably function calls using SOAP, although as I mentioned, WSDL is flexible enough to describe a wide variety of web services)
+
+* The list of available functions
+
+* The arguments for each function
+
+* The datatype of each argument
+
+* The return values of each function, and the datatype of each return value
+
+In other words, a WSDL file tells you everything you need to know to be able to call a SOAP web service.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "12.6. Introspecting SOAP Web Services with WSDL"
+@TITLE "12.6. Introspecting SOAP Web Services with WSDL"
+@NEXT "S7"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}12.6. Introspecting SOAP Web Services with WSDL@{ub}
+
+Like many things in the web services arena, WSDL has a long and checkered history, full of political strife and intrigue. I will skip over this history entirely, since it bores me to tears. There were other standards that tried to do similar things, but WSDL won, so let's learn how to use it.
+
+The most fundamental thing that WSDL allows you to do is discover the available methods offered by a SOAP server.
+
+@{b}Example 12.8. Discovering The Available Methods@{ub}
+
+@{code}
+
+>>> from SOAPpy import WSDL
+>>> wsdlFile = 'http://www.xmethods.net/sd/2001/TemperatureService.wsdl')
+>>> server = WSDL.Proxy(wsdlFile)
+>>> server.methods.keys()
+[u'getTemp']
+
+@{body}
+
+SOAPpy includes a WSDL parser. At the time of this writing, it was labeled as being in the early stages of development, but I had no problem parsing any of the WSDL files I tried.
+
+To use a WSDL file, you again use a proxy class, @{code}WSDL.Proxy@{body}, which takes a single argument: the WSDL file. Note that in this case you are passing in the URL of a WSDL file stored on the remote server, but the proxy class works just as well with a local copy of the WSDL file. The act of creating the WSDL proxy will download the WSDL file and parse it, so it there are any errors in the WSDL file (or it can't be fetched due to networking problems), you'll know about it immediately.
+
+The WSDL proxy class exposes the available functions as a Python dictionary, @{code}server.methods@{body}. So getting the list of available methods is as simple as calling the dictionary method @{code}keys()@{body}.
+
+Okay, so you know that this SOAP server offers a single method: @{code}getTemp@{body}. But how do you call it? The WSDL proxy object can tell you that too.
+
+@{b}Example 12.9. Discovering A Method's Arguments@{ub}
+
+@{code}
+
+>>> callInfo = server.methods['getTemp']
+>>> callInfo.inparams
+[]
+>>> callInfo.inparams[0].name
+u'zipcode'
+>>> callInfo.inparams[0].type
+(u'http://www.w3.org/2001/XMLSchema', u'string')
+
+@{body}
+
+The @{code}server.methods@{body} dictionary is filled with a SOAPpy-specific structure called @{code}CallInfo@{body}. A @{code}CallInfo@{body} object contains information about one specific function, including the function arguments.
+
+The function arguments are stored in @{code}callInfo.inparams@{body}, which is a Python list of @{code}ParameterInfo@{body} objects that hold information about each parameter.
+
+Each @{code}ParameterInfo@{body} object contains a @{code}name@{body} attribute, which is the argument name. You are not required to know the argument name to call the function through SOAP, but SOAP does support calling functions with named arguments (just like Python), and @{code}WSDL.Proxy@{body} will correctly handle mapping named arguments to the remote function if you choose to use them.
+
+Each parameter is also explicitly typed, using datatypes defined in XML Schema. You saw this in the wire trace in the previous section; the XML Schema namespace was part of the "boilerplate" I told you to ignore. For our purposes here, you may continue to ignore it. The @{code}zipcode@{body} parameter is a string, and if you pass in a Python string to the @{code}WSDL.Proxy@{body} object, it will map it correctly and send it to the server.
+
+WSDL also lets you introspect into a function's return values.
+
+@{b}Example 12.10. Discovering A Method's Return Values@{ub}
+
+@{code}
+
+>>> callInfo.outparams
+[]
+>>> callInfo.outparams[0].name
+u'return'
+>>> callInfo.outparams[0].type
+(u'http://www.w3.org/2001/XMLSchema', u'float')
+
+@{body}
+
+The adjunct to @{code}callInfo.inparams@{body} for function arguments is @{code}callInfo.outparams@{body} for return value. It is also a list, because functions called through SOAP can return multiple values, just like Python functions.
+
+Each @{code}ParameterInfo@{body} object contains @{code}name@{body} and @{code}type@{body}. This function returns a single value, named @{code}return@{body}, which is a float.
+
+Let's put it all together, and call a SOAP web service through a WSDL proxy.
+
+@{b}Example 12.11. Calling A Web Service Through A WSDL Proxy @{ub}
+
+@{code}
+
+>>> from SOAPpy import WSDL
+>>> wsdlFile = 'http://www.xmethods.net/sd/2001/TemperatureService.wsdl')
+>>> server = WSDL.Proxy(wsdlFile)
+>>> server.getTemp('90210')
+66.0
+>>> server.soapproxy.config.dumpSOAPOut = 1
+>>> server.soapproxy.config.dumpSOAPIn = 1
+>>> temperature = server.getTemp('90210')
+*** Outgoing SOAP ******************************************************
+
+90210
+
+************************************************************************
+*** Incoming SOAP ******************************************************
+
+66.0
+
+************************************************************************
+
+>>> temperature
+66.0
+
+@{body}
+
+The configuration is simpler than calling the SOAP service directly, since the WSDL file contains the both service URL and namespace you need to call the service. Creating the @{code}WSDL.Proxy@{body} object downloads the WSDL file, parses it, and configures a @{code}SOAPProxy@{body} object that it uses to call the actual SOAP web service.
+
+Once the @{code}WSDL.Proxy@{body} object is created, you can call a function as easily as you did with the @{code}SOAPProxy@{body} object. This is not surprising; the @{code}WSDL.Proxy@{body} is just a wrapper around the @{code}SOAPProxy@{body} with some introspection methods added, so the syntax for calling functions is the same.
+
+You can access the @{code}WSDL.Proxy@{body} 's @{code}SOAPProxy@{body} with @{code}server.soapproxy@{body}. This is useful to turning on debugging, so that when you can call functions through the WSDL proxy, its @{code}SOAPProxy@{body} will dump the outgoing and incoming XML documents that are going over the wire.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S7 "12.7. Searching Google"
+@TITLE "12.7. Searching Google"
+@NEXT "S8"
+@PREV "S6"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}12.7. Searching Google @{ub}
+
+Let's finally turn to the sample code that you saw that the beginning of this chapter, which does something more useful and exciting than get the current temperature.
+
+Google provides a SOAP API for programmatically accessing Google search results. To use it, you will need to sign up for Google Web Services.
+
+@{b}Procedure 12.4. Signing Up for Google Web Services@{ub}
+
+*
+
+Go to http://www.google.com/apis/ and create a Google account. This requires only an email address. After you sign up you will receive your Google API license key by email. You will need this key to pass as a parameter whenever you call Google's search functions.
+
+*
+
+Also on http://www.google.com/apis/, download the Google Web APIs developer kit. This includes some sample code in several programming languages (but not Python), and more importantly, it includes the WSDL file.
+
+*
+
+Decompress the developer kit file and find @{code}GoogleSearch.wsdl@{body}. Copy this file to some permanent location on your local drive. You will need it later in this chapter.
+
+Once you have your developer key and your Google WSDL file in a known place, you can start poking around with Google Web Services.
+
+@{b}Example 12.12. Introspecting Google Web Services@{ub}
+
+@{code}
+
+>>> from SOAPpy import WSDL
+>>> server = WSDL.Proxy('/path/to/your/GoogleSearch.wsdl')
+>>> server.methods.keys()
+[u'doGoogleSearch', u'doGetCachedPage', u'doSpellingSuggestion']
+>>> callInfo = server.methods['doGoogleSearch']
+>>> for arg in callInfo.inparams:
+... print arg.name.ljust(15), arg.type
+key (u'http://www.w3.org/2001/XMLSchema', u'string')
+q (u'http://www.w3.org/2001/XMLSchema', u'string')
+start (u'http://www.w3.org/2001/XMLSchema', u'int')
+maxResults (u'http://www.w3.org/2001/XMLSchema', u'int')
+filter (u'http://www.w3.org/2001/XMLSchema', u'boolean')
+restrict (u'http://www.w3.org/2001/XMLSchema', u'string')
+safeSearch (u'http://www.w3.org/2001/XMLSchema', u'boolean')
+lr (u'http://www.w3.org/2001/XMLSchema', u'string')
+ie (u'http://www.w3.org/2001/XMLSchema', u'string')
+oe (u'http://www.w3.org/2001/XMLSchema', u'string')
+
+@{body}
+
+Getting started with Google web services is easy: just create a @{code}WSDL.Proxy@{body} object and point it at your local copy of Google's WSDL file.
+
+According to the WSDL file, Google offers three functions: @{code}doGoogleSearch@{body}, @{code}doGetCachedPage@{body}, and @{code}doSpellingSuggestion@{body}. These do exactly what they sound like: perform a Google search and return the results programmatically, get access to the cached version of a page from the last time Google saw it, and offer spelling suggestions for commonly misspelled search words.
+
+The @{code}doGoogleSearch@{body} function takes a number of parameters of various types. Note that while the WSDL file can tell you what the arguments are called and what datatype they are, it can't tell you what they mean or how to use them. It could theoretically tell you the acceptable range of values for each parameter, if only specific values were allowed, but Google's WSDL file is not that detailed. @{code}WSDL.Proxy@{body} can't work magic; it can only give you the information provided in the WSDL file.
+
+Here is a brief synopsis of all the parameters to the @{code}doGoogleSearch@{body} function:
+
+* @{code}key@{body} - Your Google API key, which you received when you signed up for Google web services.
+
+* @{code}q@{body} - The search word or phrase you're looking for. The syntax is exactly the same as Google's web form, so if you know any advanced search syntax or tricks, they all work here as well.
+
+* @{code}start@{body} - The index of the result to start on. Like the interactive web version of Google, this function returns 10 results at a time. If you wanted to get the second "page" of results, you would set @{code}start@{body} to 10.
+
+* @{code}maxResults@{body} - The number of results to return. Currently capped at 10, although you can specify fewer if you are only interested in a few results and want to save a little bandwidth.
+
+* @{code}filter@{body} - If @{code}True@{body}, Google will filter out duplicate pages from the results.
+
+* @{code}restrict@{body} - Set this to @{code}country@{body} plus a country code to get results only from a particular country. Example: @{code}countryUK@{body} to search pages in the United Kingdom. You can also specify @{code}linux@{body}, @{code}mac@{body}, or @{code}bsd@{body} to search a Google-defined set of technical sites, or @{code}unclesam@{body} to search sites about the United States government.
+
+* @{code}safeSearch@{body} - If @{code}True@{body}, Google will filter out porn sites.
+
+* @{code}lr@{body} ("language restrict") - Set this to a language code to get results only in a particular language.
+
+* @{code}ie@{body} and @{code}oe@{body} ("input encoding" and "output encoding") - Deprecated, both must be @{code}utf-8@{body}.
+
+@{b}Example 12.13. Searching Google@{ub}
+
+@{code}
+
+>>> from SOAPpy import WSDL
+>>> server = WSDL.Proxy('/path/to/your/GoogleSearch.wsdl')
+>>> key = 'YOUR_GOOGLE_API_KEY'
+>>> results = server.doGoogleSearch(key, 'mark', 0, 10, False, "",
+... False, "", "utf-8", "utf-8")
+>>> len(results.resultElements)
+10
+>>> results.resultElements[0].URL
+'http://diveintomark.org/'
+>>> results.resultElements[0].title
+'dive into mark'
+
+@{body}
+
+After setting up the @{code}WSDL.Proxy@{body} object, you can call @{code}server.doGoogleSearch@{body} with all ten parameters. Remember to use your own Google API key that you received when you signed up for Google web services.
+
+There's a lot of information returned, but let's look at the actual search results first. They're stored in @{code}results.resultElements@{body}, and you can access them just like a normal Python list.
+
+Each element in the @{code}resultElements@{body} is an object that has a @{code}URL@{body}, @{code}title@{body}, @{code}snippet@{body}, and other useful attributes. At this point you can use normal Python introspection techniques like @{b}@{code}dir(results.resultElements[0])@{body}@{ub} to see the available attributes. Or you can introspect through the WSDL proxy object and look through the function's @{code}outparams@{body}. Each technique will give you the same information.
+
+The @{code}results@{body} object contains more than the actual search results. It also contains information about the search itself, such as how long it took and how many results were found (even though only 10 were returned). The Google web interface shows this information, and you can access it programmatically too.
+
+@{b}Example 12.14. Accessing Secondary Information From Google@{ub}
+
+@{code}
+
+>>> results.searchTime
+0.224919
+>>> results.estimatedTotalResultsCount
+29800000
+>>> results.directoryCategories
+[:
+{'fullViewableName':
+'Top/Arts/Literature/World_Literature/American/19th_Century/Twain,_Mark',
+'specialEncoding': ''}]
+>>> results.directoryCategories[0].fullViewableName
+'Top/Arts/Literature/World_Literature/American/19th_Century/Twain,_Mark'
+
+@{body}
+
+This search took 0.224919 seconds. That does not include the time spent sending and receiving the actual SOAP XML documents. It's just the time that Google spent processing your request once it received it.
+
+In total, there were approximately 30 million results. You can access them 10 at a time by changing the @{code}start@{body} parameter and calling @{code}server.doGoogleSearch@{body} again.
+
+For some queries, Google also returns a list of related categories in the Google Directory. You can append these URLs to http://directory.google.com/ to construct the link to the directory category page.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S8 "12.8. Troubleshooting SOAP Web Services"
+@TITLE "12.8. Troubleshooting SOAP Web Services"
+@NEXT "S9"
+@PREV "S7"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}12.8. Troubleshooting SOAP Web Services @{ub}
+
+Of course, the world of SOAP web services is not all happiness and light. Sometimes things go wrong.
+
+As you've seen throughout this chapter, SOAP involves several layers. There's the HTTP layer, since SOAP is sending XML documents to, and receiving XML documents from, an HTTP server. So all the debugging techniques you learned in Chapter 11, @{i}HTTP Web Services@{ui} come into play here. You can @{b}@{code}import httplib@{body}@{ub} and then set @{b}@{code}httplib.HTTPConnection.debuglevel = 1@{body}@{ub} to see the underlying HTTP traffic.
+
+Beyond the underlying HTTP layer, there are a number of things that can go wrong. SOAPpy does an admirable job hiding the SOAP syntax from you, but that also means it can be difficult to determine where the problem is when things don't work.
+
+Here are a few examples of common mistakes that I've made in using SOAP web services, and the errors they generated.
+
+@{b}Example 12.15. Calling a Method With an Incorrectly Configured Proxy@{ub}
+
+@{code}
+
+>>> from SOAPpy import SOAPProxy
+>>> url = 'http://services.xmethods.net:80/soap/servlet/rpcrouter'
+>>> server = SOAPProxy(url)
+>>> server.getTemp('27502')
+
+Traceback (most recent call last):
+File "", line 1, in ?
+File "c:\\python23\\Lib\\site-packages\\SOAPpy\\Client.py", line 453, in __call__
+return self.__r_call(*args, **kw)
+File "c:\\python23\\Lib\\site-packages\\SOAPpy\\Client.py", line 475, in __r_call
+self.__hd, self.__ma)
+File "c:\\python23\\Lib\\site-packages\\SOAPpy\\Client.py", line 389, in __call
+raise p
+SOAPpy.Types.faultType:
+
+@{body}
+
+Did you spot the mistake? You're creating a @{code}SOAPProxy@{body} manually, and you've correctly specified the service URL, but you haven't specified the namespace. Since multiple services may be routed through the same service URL, the namespace is essential to determine which service you're trying to talk to, and therefore which method you're really calling.
+
+The server responds by sending a SOAP Fault, which SOAPpy turns into a Python exception of type @{code}SOAPpy.Types.faultType@{body}. All errors returned from any SOAP server will always be SOAP Faults, so you can easily catch this exception. In this case, the human-readable part of the SOAP Fault gives a clue to the problem: the method element is not namespaced, because the original @{code}SOAPProxy@{body} object was not configured with a service namespace.
+
+Misconfiguring the basic elements of the SOAP service is one of the problems that WSDL aims to solve. The WSDL file contains the service URL and namespace, so you can't get it wrong. Of course, there are still other things you can get wrong.
+
+@{b}Example 12.16. Calling a Method With the Wrong Arguments@{ub}
+
+@{code}
+
+>>> wsdlFile = 'http://www.xmethods.net/sd/2001/TemperatureService.wsdl'
+>>> server = WSDL.Proxy(wsdlFile)
+>>> temperature = server.getTemp(27502)
+
+Traceback (most recent call last):
+File "", line 1, in ?
+File "c:\\python23\\Lib\\site-packages\\SOAPpy\\Client.py", line 453, in __call__
+return self.__r_call(*args, **kw)
+File "c:\\python23\\Lib\\site-packages\\SOAPpy\\Client.py", line 475, in __r_call
+self.__hd, self.__ma)
+File "c:\\python23\\Lib\\site-packages\\SOAPpy\\Client.py", line 389, in __call
+raise p
+SOAPpy.Types.faultType:
+
+@{body}
+
+Did you spot the mistake? It's a subtle one: you're calling @{code}server.getTemp@{body} with an integer instead of a string. As you saw from introspecting the WSDL file, the @{code}getTemp()@{body} SOAP function takes a single argument, @{code}zipcode@{body}, which must be a string. @{code}WSDL.Proxy@{body} will @{i}not@{ui} coerce datatypes for you; you need to pass the exact datatypes that the server expects.
+
+Again, the server returns a SOAP Fault, and the human-readable part of the error gives a clue as to the problem: you're calling a @{code}getTemp@{body} function with an integer value, but there is no function defined with that name that takes an integer. In theory, SOAP allows you to @{i}overload@{ui} functions, so you could have two functions in the same SOAP service with the same name and the same number of arguments, but the arguments were of different datatypes. This is why it's important to match the datatypes exactly, and why @{code}WSDL.Proxy@{body} doesn't coerce datatypes for you. If it did, you could end up calling a completely different function! Good luck debugging that one. It's much easier to be picky about datatypes and fail as quickly as possible if you get them wrong.
+
+It's also possible to write Python code that expects a different number of return values than the remote function actually returns.
+
+@{b}Example 12.17. Calling a Method and Expecting the Wrong Number of Return Values@{ub}
+
+@{code}
+
+>>> wsdlFile = 'http://www.xmethods.net/sd/2001/TemperatureService.wsdl'
+>>> server = WSDL.Proxy(wsdlFile)
+>>> (city, temperature) = server.getTemp(27502)
+Traceback (most recent call last):
+File "", line 1, in ?
+TypeError: unpack non-sequence
+
+@{body}
+
+Did you spot the mistake? @{code}server.getTemp@{body} only returns one value, a float, but you've written code that assumes you're getting two values and trying to assign them to two different variables. Note that this does not fail with a SOAP fault. As far as the remote server is concerned, nothing went wrong at all. The error only occurred @{i}after@{ui} the SOAP transaction was complete, @{code}WSDL.Proxy@{body} returned a float, and your local Python interpreter tried to accomodate your request to split it into two different variables. Since the function only returned one value, you get a Python exception trying to split it, not a SOAP Fault.
+
+What about Google's web service? The most common problem I've had with it is that I forget to set the application key properly.
+
+@{b}Example 12.18. Calling a Method With An Application-Specific Error@{ub}
+
+@{code}
+
+>>> from SOAPpy import WSDL
+>>> server = WSDL.Proxy(r'/path/to/local/GoogleSearch.wsdl')
+>>> results = server.doGoogleSearch('foo', 'mark', 0, 10, False, "",
+... False, "", "utf-8", "utf-8")
+:
+{'stackTrace':
+'com.google.soap.search.GoogleSearchFault: Invalid authorization key: foo
+at com.google.soap.search.QueryLimits.lookUpAndLoadFromINSIfNeedBe(
+QueryLimits.java:220)
+at com.google.soap.search.QueryLimits.validateKey(QueryLimits.java:127)
+at com.google.soap.search.GoogleSearchService.doPublicMethodChecks(
+GoogleSearchService.java:825)
+at com.google.soap.search.GoogleSearchService.doGoogleSearch(
+GoogleSearchService.java:121)
+at sun.reflect.GeneratedMethodAccessor13.invoke(Unknown Source)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
+at java.lang.reflect.Method.invoke(Unknown Source)
+at org.apache.soap.server.RPCRouter.invoke(RPCRouter.java:146)
+at org.apache.soap.providers.RPCJavaProvider.invoke(
+RPCJavaProvider.java:129)
+at org.apache.soap.server.http.RPCRouterServlet.doPost(
+RPCRouterServlet.java:288)
+at javax.servlet.http.HttpServlet.service(HttpServlet.java:760)
+at javax.servlet.http.HttpServlet.service(HttpServlet.java:853)
+at com.google.gse.HttpConnection.runServlet(HttpConnection.java:237)
+at com.google.gse.HttpConnection.run(HttpConnection.java:195)
+at com.google.gse.DispatchQueue$WorkerThread.run(DispatchQueue.java:201)
+Caused by: com.google.soap.search.UserKeyInvalidException: Key was of wrong size.
+at com.google.soap.search.UserKey.(UserKey.java:59)
+at com.google.soap.search.QueryLimits.lookUpAndLoadFromINSIfNeedBe(
+QueryLimits.java:217)
+... 14 more
+'}>
+Traceback (most recent call last):
+File "", line 1, in ?
+File "c:\\python23\\Lib\\site-packages\\SOAPpy\\Client.py", line 453, in __call__
+return self.__r_call(*args, **kw)
+File "c:\\python23\\Lib\\site-packages\\SOAPpy\\Client.py", line 475, in __r_call
+self.__hd, self.__ma)
+File "c:\\python23\\Lib\\site-packages\\SOAPpy\\Client.py", line 389, in __call
+raise p
+SOAPpy.Types.faultType: :
+{'stackTrace':
+'com.google.soap.search.GoogleSearchFault: Invalid authorization key: foo
+at com.google.soap.search.QueryLimits.lookUpAndLoadFromINSIfNeedBe(
+QueryLimits.java:220)
+at com.google.soap.search.QueryLimits.validateKey(QueryLimits.java:127)
+at com.google.soap.search.GoogleSearchService.doPublicMethodChecks(
+GoogleSearchService.java:825)
+at com.google.soap.search.GoogleSearchService.doGoogleSearch(
+GoogleSearchService.java:121)
+at sun.reflect.GeneratedMethodAccessor13.invoke(Unknown Source)
+at sun.reflect.DelegatingMethodAccessorImpl.invoke(Unknown Source)
+at java.lang.reflect.Method.invoke(Unknown Source)
+at org.apache.soap.server.RPCRouter.invoke(RPCRouter.java:146)
+at org.apache.soap.providers.RPCJavaProvider.invoke(
+RPCJavaProvider.java:129)
+at org.apache.soap.server.http.RPCRouterServlet.doPost(
+RPCRouterServlet.java:288)
+at javax.servlet.http.HttpServlet.service(HttpServlet.java:760)
+at javax.servlet.http.HttpServlet.service(HttpServlet.java:853)
+at com.google.gse.HttpConnection.runServlet(HttpConnection.java:237)
+at com.google.gse.HttpConnection.run(HttpConnection.java:195)
+at com.google.gse.DispatchQueue$WorkerThread.run(DispatchQueue.java:201)
+Caused by: com.google.soap.search.UserKeyInvalidException: Key was of wrong size.
+at com.google.soap.search.UserKey.(UserKey.java:59)
+at com.google.soap.search.QueryLimits.lookUpAndLoadFromINSIfNeedBe(
+QueryLimits.java:217)
+... 14 more
+'}>
+
+@{body}
+
+Can you spot the mistake? There's nothing wrong with the calling syntax, or the number of arguments, or the datatypes. The problem is application-specific: the first argument is supposed to be my application key, but @{code}foo@{body} is not a valid Google key.
+
+The Google server responds with a SOAP Fault and an incredibly long error message, which includes a complete Java stack trace. Remember that @{i}all@{ui} SOAP errors are signified by SOAP Faults: errors in configuration, errors in function arguments, and application-specific errors like this. Buried in there somewhere is the crucial piece of information: @{code}Invalid authorization key: foo@{body}.
+
+@{b}Further Reading on Troubleshooting SOAP@{ub}
+
+* New developments for SOAPpy steps through trying to connect to another SOAP service that doesn't quite work as advertised.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S9 "12.9. Summary"
+@TITLE "12.9. Summary"
+@NEXT "MAIN"
+@PREV "S8"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}12.9. Summary @{ub}
+
+SOAP web services are very complicated. The specification is very ambitious and tries to cover many different use cases for web services. This chapter has touched on some of the simpler use cases.
+
+Before diving into the next chapter, make sure you're comfortable doing all of these things:
+
+* Connecting to a SOAP server and calling remote methods
+
+* Loading a WSDL file and introspecting remote methods
+
+* Debugging SOAP calls with wire traces
+
+* Troubleshooting common SOAP-related errors
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

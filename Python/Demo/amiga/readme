@@ -1,0 +1,8 @@
+amiga/ - Amiga-specific demos
+=============================
+
+  amiga_info.py   Print sys/os/amiga basics and path converters.
+
+Run:
+
+  Python Demo/amiga/amiga_info.py

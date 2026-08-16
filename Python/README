@@ -1,0 +1,145 @@
+
+                                PYTHON 2.7.18
+                                  FOR AMIGA
+
+                              amigazen project
+
+
+           Original Amiga port (through 2.0) by Irmen de Jong.
+    Updated to Python 2.7.18 by amigazen project (continuing that work).
+         (Original Python by Guido van Rossum and many others)
+
+
+                   Read the file Help/DISCL_and_COPYRIGHT !
+
+   It contains the disclaimer for this software, and copyright notices.
+
+
+	Quick start (no installer)
+	~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	1. Copy this entire drawer anywhere on your hard disk (or a large
+	   floppy volume).  Keep the files together.
+
+	2. Double-click the Python icon, or from a Shell type the full
+	   path to Python (or add this drawer to your PATH).
+
+	3. Libraries live next to the binary:
+
+		lib/python27.zip
+		lib/lib-dynload/
+		lib/site-python/
+
+	   No ASSIGN is required when you run Python from this drawer.
+
+	4. Optional convenience (S:User-Startup):
+
+		ASSIGN Python: <path to this drawer>
+		PATH Python: ADD
+
+	   Then you can type "Python" from any Shell, and set project
+	   icons' Default Tool to Python:Python.
+
+
+	Contents of this drawer
+	~~~~~~~~~~~~~~~~~~~~~~~
+
+	Python              Interpreter (Workbench + Shell)
+	Python.help         AmigaDOS Help text for the Python command
+	RunTest.py          Regression test launcher
+	lib/                Standard library zip, extensions, site-python
+	Help/               Guides and Amiga module notes
+	  AmigaPython.guide Port documentation (AmigaGuide)
+	  DiveIntoPython/   "Dive Into Python" tutorial (AmigaGuide, GFDL)
+	  Amiga/            Amiga module notes (reST)
+	  DISCL_and_COPYRIGHT  Disclaimer and licenses
+	  CHANGES           Amiga port change history
+	Demo/               Example scripts (see Demo/readme)
+	Icons/              Extra / NewIcon suggestions
+
+
+	Documentation map
+	~~~~~~~~~~~~~~~~~
+
+	* Shell:   Help Python   (or open Python.help)
+	* Guide:   Help/AmigaPython.guide
+	* Tutorial: Help/DiveIntoPython/DiveIntoPython.guide
+	* Language / library reference (upstream):
+	  https://docs.python.org/2.7/
+	* amigazen project:
+	  https://github.com/amigazen/amigapython/
+	  http://www.amigazen.com/amigapython/
+
+
+	Workbench
+	~~~~~~~~~
+
+	* Double-click Python for an interactive console window.
+	* Project icons: set Default Tool to this Python binary (or
+	  Python:Python if you made the ASSIGN).  The project file is
+	  passed as the script.
+	* Close the console with the window close gadget or Ctrl+C.
+
+
+	Shell examples
+	~~~~~~~~~~~~~~
+
+		Python
+		Python script.py
+		Python -c "print 'hello'"
+		Python -?
+		Python -c "import test.pystone; test.pystone.main()"
+
+
+	Tests and demos
+	~~~~~~~~~~~~~~~
+
+	* RunTest.py starts the regression suite (needs the test package
+	  inside lib/python27.zip).  Some tests skip on Amiga; start a
+	  TCP stack before socket tests; usergroup.library for pwd/grp.
+	* Demo/ holds Amiga-checked example scripts (see Demo/readme).
+	  Try: Python Demo/scripts/beer.py
+	       Python Demo/amiga/amiga_info.py
+
+
+
+	Troubleshooting
+	~~~~~~~~~~~~~~~
+
+	* "Python libraries not found"
+	  Keep lib/ next to the Python binary, or ASSIGN Python: to this
+	  drawer.
+
+	* "Couldn't open bsdsocket.library"
+	  Start a TCP stack that provides bsdsocket.library (e.g. Roadshow).
+	  I-Net225 is not supported.
+
+	* Math co-processor / CPU messages
+	  Use a binary matching your CPU (68020+).  Soft-float builds do
+	  not need an FPU.
+
+	* Crashes on deep recursion
+	  Increase the stack size on the Python icon or Shell Stack.
+
+	* PIPE: / os.popen oddities
+	  Replace the default l:queue-handler (e.g. HWGQueue from Aminet).
+
+	See Docs/AmigaPython.guide for more detail.
+
+
+	What's new (short)
+	~~~~~~~~~~~~~~~~~~
+
+	This is Python 2.7.18 for AmigaOS, continuing the classic AmigaPython
+	2.0 line.  See Docs/NEWS and CHANGES.  Amiga-specific modules and
+	notes are under Docs/Amiga/.
+
+
+	Thanks
+	~~~~~~
+
+	Guido van Rossum; Irmen de Jong; Mike Meyer, Kent Polk, Lyster E.
+	Wick, Marc Christiansen, Bablos, Adam Chodorowski; and everyone who
+	used classic AmigaPython.
+
+	amigazen project continues that line for Python 2.7.18.

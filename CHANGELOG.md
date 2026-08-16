@@ -53,7 +53,7 @@ Builtin `_io`, GUI/libs modules, and Library Reference–style Amiga docs.
 
 ### Changed
 
-- Amiga documentation rewritten to Library Reference–style reST (`Source/Amiga_Misc/Docs`, `Python/docs/amiga`)
+- Amiga documentation rewritten to Library Reference–style reST (`Source/Amiga_Misc/Docs`, `Python/Docs/Amiga`)
 - Docs and indexes updated for `site-python`, Dos-on-`amiga`, ASL / catalog / icon layout
 
 ### Removed
@@ -81,7 +81,7 @@ ASL / catalogs / icons, Dos helpers, site-python bootstrap, pyexpat, classic doc
 
 ### Changed
 
-- Classic documentation updated for AmigaPython 2.7.18 (`Python/docs`, `Amiga_Misc`, `README.AMIGA`, Embed, `CHANGES`, installer, `RunTest`, cheatsheet)
+- Classic documentation updated for AmigaPython 2.7.18 (`Python/Docs`, `Amiga_Misc`, `README.AMIGA`, Embed, `CHANGES`, `RunTest`, cheatsheet)
 - Contact / branding cleaned of private emails and 1.6/2.0-only wording
 
 ### Removed
@@ -175,7 +175,7 @@ Historic Aminet package: [dev/lang/Python20](https://www.aminet.net/package/dev/
 ## Links
 
 - Repository: https://github.com/amigazen/amigapython/
-- Docs (Amiga modules): `Python/docs/amiga/`, `Source/Amiga_Misc/Docs/`
+- Docs (Amiga modules): `Python/Docs/Amiga/`, `Source/Amiga_Misc/Docs/`
 - Upstream Python 2.7: https://docs.python.org/2.7/
 
 [Unreleased]: https://github.com/amigazen/amigapython/compare/7689479...HEAD

@@ -1,0 +1,323 @@
+@database AmigaPython.guide
+@Width 76
+@Remark $VER: AmigaPython.guide 2.7.18 (16.8.2026)
+@Remark AmigaPython 2.7.18 for classic AmigaOS - amigazen project
+@Remark Original Amiga port through 2.0 by Irmen de Jong.
+
+@Node Main "AmigaPython 2.7.18"
+@Next "Intro"
+
+AmigaPython 2.7.18
+~~~~~~~~~~~~~~~~~~
+
+Python for classic AmigaOS (68020+), based on the final Python 2 release.
+
+Original Amiga port (through 2.0): Irmen de Jong
+Updated to 2.7.18: amigazen project
+
+ @{" Introduction        " Link "Intro"}
+ @{" Requirements        " Link "Requirements"}
+ @{" Copy anywhere       " Link "CopyAnywhere"}
+ @{" Shell usage         " Link "Shell"}
+ @{" Workbench usage     " Link "Workbench"}
+ @{" Libraries           " Link "Libraries"}
+ @{" Amiga modules       " Link "AmigaModules"}
+ @{" Networking          " Link "Networking"}
+ @{" Documentation       " Link "Documentation"}
+ @{" Troubleshooting     " Link "Troubleshooting"}
+ @{" License             " Link "License"}
+ @{" Thanks              " Link "Thanks"}
+
+@EndNode
+
+
+@Node Intro "Introduction"
+@Next "Requirements"
+@Prev "Main"
+@Toc "Main"
+
+INTRODUCTION
+
+AmigaPython is a port of Python to classic AmigaOS.  This release is
+Python 2.7.18 - the last Python 2 version from the Python Software
+Foundation - continuing Irmen de Jong's AmigaPython line from Aminet.
+
+This drawer is a complete, standalone release.  There is no installer
+script.  Copy the drawer to your hard disk and run the Python program.
+
+Language and library reference (upstream):
+  https://docs.python.org/2.7/
+
+amigazen project:
+  https://github.com/amigazen/amigapython/
+  http://www.amigazen.com/amigapython/
+
+@EndNode
+
+
+@Node Requirements "Requirements"
+@Next "CopyAnywhere"
+@Prev "Intro"
+@Toc "Main"
+
+REQUIREMENTS
+
+ * Kickstart / AmigaOS 3.1 or higher 
+ * 68020-class CPU or better (match the binary you received)
+ * Enough RAM and stack for imports (raise stack if deep recursion fails)
+ * Hard disk strongly recommended (library zip is large)
+
+Optional:
+
+ * bsdsocket.library (TCP stack such as Roadshow) for networking
+ * usergroup.library for pwd / grp / crypt style APIs
+
+I-Net225 is not supported.
+
+@EndNode
+
+
+@Node CopyAnywhere "Copy anywhere"
+@Next "Shell"
+@Prev "Requirements"
+@Toc "Main"
+
+COPY ANYWHERE
+
+1. Unpack or copy this entire Python drawer to any volume.
+2. Keep the layout intact - especially lib/ next to the Python binary.
+3. Double-click Python, or run it from a Shell by full path.
+
+No ASSIGN is required when the binary and lib/ stay together.
+
+Optional convenience in S:User-Startup:
+
+  ASSIGN Python: Work:Python
+  PATH Python: ADD
+
+(Replace Work:Python with your real path.)
+
+Then you can type "Python" from any Shell and use Default Tool
+Python:Python on project icons.
+
+@EndNode
+
+
+@Node Shell "Shell usage"
+@Next "Workbench"
+@Prev "CopyAnywhere"
+@Toc "Main"
+
+SHELL USAGE
+
+  Python
+      Interactive interpreter.
+
+  Python script.py
+      Run a script.  Arguments after the script go to sys.argv.
+
+  Python -c "print 'hello'"
+      Run a one-liner.
+
+  Python -?
+      Short usage / options hint.
+
+  Python -c "import test.pystone; test.pystone.main()"
+      Simple speed benchmark.
+
+Environment variables (optional):
+
+  PYTHONHOME    Override prefix
+  PYTHONPATH    Semicolon-separated extra module directories
+  PYTHONCASEOK  Relax import filename case matching
+
+Help text for this command: Python.help (also "Help Python" if Help:
+can see it).
+
+@EndNode
+
+
+@Node Workbench "Workbench usage"
+@Next "Libraries"
+@Prev "Shell"
+@Toc "Main"
+
+WORKBENCH USAGE
+
+ * Double-click the Python icon for a CON: console window.
+ * Close with the window close gadget or Ctrl+C.
+ * Project icons: set Default Tool to this Python binary, or to
+   Python:Python if you created the ASSIGN.  The project file is
+   passed as the script to run.
+ * Tooltypes on the tool icon can add arguments.  Special names:
+     PYTHONSCRIPT=path
+     PYSCRIPTARG=arg
+ * Do not unlock Workbench's own locks; leave startup locks alone.
+
+If Python cannot find lib/python27.zip beside the binary and Python:
+is not assigned, you get an error requester explaining what to fix.
+
+@EndNode
+
+
+@Node Libraries "Libraries"
+@Next "AmigaModules"
+@Prev "Workbench"
+@Toc "Main"
+
+LIBRARIES
+
+Release layout (next to the Python binary):
+
+  lib/python27.zip     Standard library (zipimport)
+  lib/lib-dynload/     Built-in extension modules (.so-style)
+  lib/site-python/     Amiga-only pure-Python helpers
+
+getpath looks next to the executable first, then falls back to an
+optional Python: assign.  Keep this drawer intact when copying.
+
+Put your own Amiga-only modules in lib/site-python (or a directory on
+PYTHONPATH).  Do not patch portable stdlib modules lightly.
+
+@EndNode
+
+
+@Node AmigaModules "Amiga modules"
+@Next "Networking"
+@Prev "Libraries"
+@Toc "Main"
+
+AMIGA MODULES
+
+The builtin "amiga" module is the Amiga stand-in for Unix "posix" and
+is used by "os".  Extra helpers (Dos, ASL, catalogs, icons, path
+converters) are documented in Help/Amiga/*.rst.
+
+Site-python shims (examples):
+
+  arexx, asl, catalog, icon, dos, amigavars, intuition, ...
+
+Import portable code via "os" / "os.path".  Use "import amiga" only
+when you need Amiga-specific APIs.
+
+See Help/Amiga/readme for the reST document index.
+
+@EndNode
+
+
+@Node Networking "Networking"
+@Next "Documentation"
+@Prev "AmigaModules"
+@Toc "Main"
+
+NETWORKING
+
+Socket modules need bsdsocket.library from a modern TCP stack
+(Roadshow and similar).  Start the stack before running network demos
+or socket tests.
+
+I-Net225 is not supported.
+
+pwd / grp / crypt may need usergroup.library.
+
+Demo scripts: Demo/ (see Demo/readme).  Offline samples under
+Demo/scripts/ and Demo/amiga/; TCP demos under Demo/sockets/ and
+Demo/chatserver.py.
+
+@EndNode
+
+
+@Node Documentation "Documentation"
+@Next "Troubleshooting"
+@Prev "Networking"
+@Toc "Main"
+
+DOCUMENTATION
+
+In this drawer:
+
+  README                     Quick start (plain text)
+  Python.help                AmigaDOS Help for the command
+  Help/AmigaPython.guide     This guide
+  Help/DiveIntoPython/       Dive Into Python (AmigaGuide, GFDL)
+  Help/Amiga/                Amiga module notes (reST)
+  Help/NEWS                  Changes since Python 2.0
+  Help/cheatsheet            Short command notes
+  Help/DISCL_and_COPYRIGHT   Disclaimer and licenses
+
+Dive Into Python is a general Python 2 tutorial.  Its install chapters
+describe other platforms; for Amiga setup use this guide and README.
+
+Upstream docs: https://docs.python.org/2.7/
+
+@EndNode
+
+
+@Node Troubleshooting "Troubleshooting"
+@Next "License"
+@Prev "Documentation"
+@Toc "Main"
+
+TROUBLESHOOTING
+
+Libraries not found
+  Keep lib/ beside Python, or ASSIGN Python: to this drawer.
+
+bsdsocket.library / usergroup.library errors
+  Start a TCP stack; install usergroup if you need those APIs.
+
+Math co-processor required
+  Use a soft-float build, or a binary matching your FPU.
+
+Crashes on complex / recursive code
+  Increase stack on the icon or Shell "Stack" command.
+
+PIPE: / os.popen oddities
+  Replace buggy l:queue-handler (e.g. HWGQueue from Aminet).
+
+Workbench project freezes the machine
+  Use a current AmigaPython build.  Project launch must not Lock()
+  the project file while Workbench still owns startup locks; current
+  releases open via CurrentDir(wa_Lock) + leaf name.
+
+Report Amiga-specific bugs via amigazen project.
+
+@EndNode
+
+
+@Node License "License"
+@Next "Thanks"
+@Prev "Troubleshooting"
+@Toc "Main"
+
+LICENSE
+
+Read DISCL_and_COPYRIGHT in this drawer.
+
+ * Python core: Python Software Foundation / historical CWI, CNRI,
+   BeOpen terms (see Help/LICENSE).
+ * Amiga port: classic disclaimer from Irmen de Jong; updates from
+   amigazen project on the same "as is" basis.
+ * Dive Into Python: GNU Free Documentation License (see
+   Help/DiveIntoPython/).
+
+USE AT YOUR OWN RISK.
+
+@EndNode
+
+
+@Node Thanks "Thanks"
+@Prev "License"
+@Toc "Main"
+
+THANKS
+
+Guido van Rossum - Python
+Irmen de Jong - original AmigaPython through 2.0
+Mike Meyer, Kent Polk, Lyster E. Wick, Marc Christiansen, Bablos,
+  Adam Chodorowski - suggestions and contributions
+Everyone who used and tested classic AmigaPython
+
+amigazen project continues the line for Python 2.7.18.
+
+@EndNode

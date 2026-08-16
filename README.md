@@ -43,7 +43,7 @@ Official upstream docs: https://docs.python.org/2.7/
 
 ## What’s new in Python 2.x (2.0 → 2.7.18)
 
-Relative to the classic AmigaPython **2.0** baseline, upstream Python 2 gained roughly a decade of language and library work. Highlights (see also `Python/docs/NEWS` and https://docs.python.org/2.7/whatsnew/):
+Relative to the classic AmigaPython **2.0** baseline, upstream Python 2 gained roughly a decade of language and library work. Highlights (see also `Python/Help/NEWS` and https://docs.python.org/2.7/whatsnew/):
 
 ### Language
 
@@ -80,7 +80,7 @@ Improvements beyond “stock 2.7 dropped on Amiga”:
 | Networking | **bsdsocket.library** (Roadshow and friends); I-Net225 unsupported |
 | I/O | Builtin **`_io`** so `io` / `tempfile` work (Amiga-friendly text path when Unicode is off) |
 | Packaging | `zipimport` + `lib/python27.zip`-style stdlib; `_socket` as a LoadSeg plugin |
-| Docs | Amiga modules in Library Reference–style reST (`Source/Amiga_Misc/Docs`, `Python/docs/amiga`) |
+| Docs | Amiga modules in Library Reference–style reST (`Source/Amiga_Misc/Docs`, `Python/Help/Amiga`); end-user AmigaGuide in `Python/Help/` |
 
 ### Amiga modules and APIs
 
@@ -93,6 +93,14 @@ Improvements beyond “stock 2.7 dropped on Amiga”:
 | site-python | OS4-style shims: `arexx`, `asl`, `catalog`, `icon`, `amigavars`, … |
 | ARexx | `arexx` / `_arexx` high-level support retained and updated |
 | Tests | AmigaTests coverage for Amiga extras and related builtins |
+
+### Standalone release drawer
+
+The shippable end-user product is the `Python/` drawer: copy it anywhere and run.
+No installer script. Libraries live in `lib/` next to the binary. Optional
+`ASSIGN Python:` is only a convenience. Docs include `Python.help`,
+`Help/AmigaPython.guide`, and `Help/DiveIntoPython/` (GFDL AmigaGuide of
+Dive Into Python). See `Python/README` and `BUILD.md`.
 
 ## About ToolKit
 
@@ -203,7 +211,7 @@ These are the important gaps relative to a “full” desktop CPython 2.7 — mo
 - **I-Net225** networking is unsupported; use modern **bsdsocket** (Roadshow, UAE net, …)
 - `pip` / binary wheels are not a supported distribution story on classic 68k the way they are on OS4 CPython 3
 
-If a pure-Python stdlib module imports a missing C accelerator, that feature fails even though the `.py` file may be on the tree. Prefer AmigaTests and the Amiga docs under `Python/docs/amiga/` for what is actually exercised.
+If a pure-Python stdlib module imports a missing C accelerator, that feature fails even though the `.py` file may be on the tree. Prefer AmigaTests and the Amiga docs under `Python/Help/Amiga/` for what is actually exercised.
 
 ### Why is the codec / `str.encode` story incomplete?
 

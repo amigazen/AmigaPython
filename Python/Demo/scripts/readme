@@ -1,0 +1,23 @@
+scripts/ - offline scripts for AmigaPython 2.7
+==============================================
+
+These run without a network stack and without Unix-only modules.
+
+  beer.py         99 bottles of beer
+  fact.py         Factorize integers
+  makedir.py      Create nested drawers (Amiga paths OK)
+  markov.py       Markov-chain text generator
+  pi.py           Digits of pi (CPU-heavy; raise stack if needed)
+  pp.py           Simple perl-like -n/-p/-e filter
+  primes.py       Print primes
+  unbirthday.py   Days since birth (interactive)
+
+Removed for 2.7/Amiga: regex-based tools, mpzpi, morse/audiodev,
+lpwatch, script/pty, mkrcs/symlink, MAIL/from, NNTP newslist, which.
+
+Examples:
+
+  Python beer.py
+  Python primes.py
+  Python makedir.py RAM:T/My/Nested/Drawer
+  Python pi.py

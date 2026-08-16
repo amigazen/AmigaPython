@@ -1,0 +1,758 @@
+@DATABASE "DIP07.guide"
+@$VER: DIP07.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "7. Regular Expressions"
+@TITLE "7. Regular Expressions"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}7. Regular Expressions@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}Module re is available. The old regex/regsub modules are gone (as in upstream 2.5+).@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 7.1. Diving In " LINK "S1"}
+@{" 7.2. Case Study: Street Addresses " LINK "S2"}
+@{" 7.3. Case Study: Roman Numerals " LINK "S3"}
+@{" 7.4. Using the {n,m} Syntax " LINK "S4"}
+@{" 7.5. Verbose Regular Expressions " LINK "S5"}
+@{" 7.6. Case study: Parsing Phone Numbers " LINK "S6"}
+@{" 7.7. Summary " LINK "S7"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 7. Regular Expressions
+
+Regular expressions are a powerful and standardized way of searching, replacing, and parsing text with complex patterns of characters. If you've used regular expressions in other languages (like Perl), the syntax will be very familiar, and you get by just reading the summary of the @{code}re@{body} module to get an overview of the available functions and their arguments.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "7.1. Diving In"
+@TITLE "7.1. Diving In"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}7.1. Diving In @{ub}
+
+Strings have methods for searching (@{code}index@{body}, @{code}find@{body}, and @{code}count@{body}), replacing (@{code}replace@{body}), and parsing (@{code}split@{body}), but they are limited to the simplest of cases. The search methods look for a single, hard-coded substring, and they are always case-sensitive. To do case-insensitive searches of a string @{code}s@{body}, you must call @{code}s.lower()@{body} or @{code}s.upper()@{body} and make sure your search strings are the appropriate case to match. The @{code}replace@{body} and @{code}split@{body} methods have the same limitations.
+
+If what you're trying to do can be accomplished with string functions, you should use them. They're fast and simple and easy to read, and there's a lot to be said for fast, simple, readable code. But if you find yourself using a lot of different string functions with @{code}if@{body} statements to handle special cases, or if you're combining them with @{code}split@{body} and @{code}join@{body} and list comprehensions in weird unreadable ways, you may need to move up to regular expressions.
+
+Although the regular expression syntax is tight and unlike normal code, the result can end up being @{i}more@{ui} readable than a hand-rolled solution that uses a long chain of string functions. There are even ways of embedding comments within regular expressions to make them practically self-documenting.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "7.2. Case Study: Street Addresses"
+@TITLE "7.2. Case Study: Street Addresses"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}7.2. Case Study: Street Addresses @{ub}
+
+This series of examples was inspired by a real-life problem I had in my day job several years ago, when I needed to scrub and standardize street addresses exported from a legacy system before importing them into a newer system. (See, I don't just make this stuff up; it's actually useful.) This example shows how I approached the problem.
+
+@{b}Example 7.1. Matching at the End of a String@{ub}
+
+@{code}
+
+>>> s = '100 NORTH MAIN ROAD'
+>>> s.replace('ROAD', 'RD.')
+'100 NORTH MAIN RD.'
+>>> s = '100 NORTH BROAD ROAD'
+>>> s.replace('ROAD', 'RD.')
+'100 NORTH BRD. RD.'
+>>> s[:-4] + s[-4:].replace('ROAD', 'RD.')
+'100 NORTH BROAD RD.'
+>>> import re
+>>> re.sub('ROAD$', 'RD.', s)
+'100 NORTH BROAD RD.'
+@{body}
+
+My goal is to standardize a street address so that @{code}'ROAD'@{body} is always abbreviated as @{code}'RD.'@{body}. At first glance, I thought this was simple enough that I could just use the string method @{code}replace@{body}. After all, all the data was already uppercase, so case mismatches would not be a problem. And the search string, @{code}'ROAD'@{body}, was a constant. And in this deceptively simple example, @{code}s.replace@{body} does indeed work.
+
+Life, unfortunately, is full of counterexamples, and I quickly discovered this one. The problem here is that @{code}'ROAD'@{body} appears twice in the address, once as part of the street name @{code}'BROAD'@{body} and once as its own word. The @{code}replace@{body} method sees these two occurrences and blindly replaces both of them; meanwhile, I see my addresses getting destroyed.
+
+To solve the problem of addresses with more than one @{code}'ROAD'@{body} substring, you could resort to something like this: only search and replace @{code}'ROAD'@{body} in the last four characters of the address (@{code}s[-4:]@{body}), and leave the string alone (@{code}s[:-4]@{body}). But you can see that this is already getting unwieldy. For example, the pattern is dependent on the length of the string you're replacing (if you were replacing @{code}'STREET'@{body} with @{code}'ST.'@{body}, you would need to use @{code}s[:-6]@{body} and @{code}s[-6:].replace(...)@{body}). Would you like to come back in six months and debug this? I know I wouldn't.
+
+It's time to move up to regular expressions. In Python, all functionality related to regular expressions is contained in the @{code}re@{body} module.
+
+Take a look at the first parameter: @{code}'ROAD$'@{body}. This is a simple regular expression that matches @{code}'ROAD'@{body} only when it occurs at the end of a string. The @{code}$@{body} means "end of the string". (There is a corresponding character, the caret @{code}^@{body}, which means "beginning of the string".)
+
+Using the @{code}re.sub@{body} function, you search the string @{code}s@{body} for the regular expression @{code}'ROAD$'@{body} and replace it with @{code}'RD.'@{body}. This matches the @{code}ROAD@{body} at the end of the string @{code}s@{body}, but does @{i}not@{ui} match the @{code}ROAD@{body} that's part of the word @{code}BROAD@{body}, because that's in the middle of @{code}s@{body}.
+
+Continuing with my story of scrubbing addresses, I soon discovered that the previous example, matching @{code}'ROAD'@{body} at the end of the address, was not good enough, because not all addresses included a street designation at all; some just ended with the street name. Most of the time, I got away with it, but if the street name was @{code}'BROAD'@{body}, then the regular expression would match @{code}'ROAD'@{body} at the end of the string as part of the word @{code}'BROAD'@{body}, which is not what I wanted.
+
+@{b}Example 7.2. Matching Whole Words@{ub}
+
+@{code}
+
+>>> s = '100 BROAD'
+>>> re.sub('ROAD$', 'RD.', s)
+'100 BRD.'
+>>> re.sub('\\\\bROAD$', 'RD.', s)
+'100 BROAD'
+>>> re.sub(r'\\bROAD$', 'RD.', s)
+'100 BROAD'
+>>> s = '100 BROAD ROAD APT. 3'
+>>> re.sub(r'\\bROAD$', 'RD.', s)
+'100 BROAD ROAD APT. 3'
+>>> re.sub(r'\\bROAD\\b', 'RD.', s)
+'100 BROAD RD. APT 3'
+@{body}
+
+What I @{i}really@{ui} wanted was to match @{code}'ROAD'@{body} when it was at the end of the string @{i}and@{ui} it was its own whole word, not a part of some larger word. To express this in a regular expression, you use @{code}\\b@{body}, which means "a word boundary must occur right here". In Python, this is complicated by the fact that the @{code}'\\'@{body} character in a string must itself be escaped. This is sometimes referred to as the backslash plague, and it is one reason why regular expressions are easier in Perl than in Python. On the down side, Perl mixes regular expressions with other syntax, so if you have a bug, it may be hard to tell whether it's a bug in syntax or a bug in your regular expression.
+
+To work around the backslash plague, you can use what is called a raw string, by prefixing the string with the letter @{code}r@{body}. This tells Python that nothing in this string should be escaped; @{code}'\\t'@{body} is a tab character, but @{code}r'\\t'@{body} is really the backslash character @{code}\\@{body} followed by the letter @{code}t@{body}. I recommend always using raw strings when dealing with regular expressions; otherwise, things get too confusing too quickly (and regular expressions get confusing quickly enough all by themselves).
+
+@{i}*sigh*@{ui} Unfortunately, I soon found more cases that contradicted my logic. In this case, the street address contained the word @{code}'ROAD'@{body} as a whole word by itself, but it wasn't at the end, because the address had an apartment number after the street designation. Because @{code}'ROAD'@{body} isn't at the very end of the string, it doesn't match, so the entire call to @{code}re.sub@{body} ends up replacing nothing at all, and you get the original string back, which is not what you want.
+
+To solve this problem, I removed the @{code}$@{body} character and added another @{code}\\b@{body}. Now the regular expression reads "match @{code}'ROAD'@{body} when it's a whole word by itself anywhere in the string," whether at the end, the beginning, or somewhere in the middle.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "7.3. Case Study: Roman Numerals"
+@TITLE "7.3. Case Study: Roman Numerals"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}7.3. Case Study: Roman Numerals @{ub}
+
+You've most likely seen Roman numerals, even if you didn't recognize them. You may have seen them in copyrights of old movies and television shows ("Copyright @{code}MCMXLVI@{body} " instead of "Copyright @{code}1946@{body} "), or on the dedication walls of libraries or universities ("established @{code}MDCCCLXXXVIII@{body} " instead of "established @{code}1888@{body} "). You may also have seen them in outlines and bibliographical references. It's a system of representing numbers that really does date back to the ancient Roman empire (hence the name).
+
+In Roman numerals, there are seven characters that are repeated and combined in various ways to represent numbers.
+
+* @{code}I@{body} = @{code}1@{body}
+
+* @{code}V@{body} = @{code}5@{body}
+
+* @{code}X@{body} = @{code}10@{body}
+
+* @{code}L@{body} = @{code}50@{body}
+
+* @{code}C@{body} = @{code}100@{body}
+
+* @{code}D@{body} = @{code}500@{body}
+
+* @{code}M@{body} = @{code}1000@{body}
+
+The following are some general rules for constructing Roman numerals:
+
+* Characters are additive. @{code}I@{body} is @{code}1@{body}, @{code}II@{body} is @{code}2@{body}, and @{code}III@{body} is @{code}3@{body}. @{code}VI@{body} is @{code}6@{body} (literally, "@{code}5@{body} and @{code}1@{body} "), @{code}VII@{body} is @{code}7@{body}, and @{code}VIII@{body} is @{code}8@{body}.
+
+* The tens characters (@{code}I@{body}, @{code}X@{body}, @{code}C@{body}, and @{code}M@{body}) can be repeated up to three times. At @{code}4@{body}, you need to subtract from the next highest fives character. You can't represent @{code}4@{body} as @{code}IIII@{body}; instead, it is represented as @{code}IV@{body} ("@{code}1@{body} less than @{code}5@{body} "). The number @{code}40@{body} is written as @{code}XL@{body} (@{code}10@{body} less than @{code}50@{body}), @{code}41@{body} as @{code}XLI@{body}, @{code}42@{body} as @{code}XLII@{body}, @{code}43@{body} as @{code}XLIII@{body}, and then @{code}44@{body} as @{code}XLIV@{body} (@{code}10@{body} less than @{code}50@{body}, then @{code}1@{body} less than @{code}5@{body}).
+
+* Similarly, at @{code}9@{body}, you need to subtract from the next highest tens character: @{code}8@{body} is @{code}VIII@{body}, but @{code}9@{body} is @{code}IX@{body} (@{code}1@{body} less than @{code}10@{body}), not @{code}VIIII@{body} (since the @{code}I@{body} character can not be repeated four times). The number @{code}90@{body} is @{code}XC@{body}, @{code}900@{body} is @{code}CM@{body}.
+
+* The fives characters can not be repeated. The number @{code}10@{body} is always represented as @{code}X@{body}, never as @{code}VV@{body}. The number @{code}100@{body} is always @{code}C@{body}, never @{code}LL@{body}.
+
+* Roman numerals are always written highest to lowest, and read left to right, so the order the of characters matters very much. @{code}DC@{body} is @{code}600@{body}; @{code}CD@{body} is a completely different number (@{code}400@{body}, @{code}100@{body} less than @{code}500@{body}). @{code}CI@{body} is @{code}101@{body}; @{code}IC@{body} is not even a valid Roman numeral (because you can't subtract @{code}1@{body} directly from @{code}100@{body}; you would need to write it as @{code}XCIX@{body}, for @{code}10@{body} less than @{code}100@{body}, then @{code}1@{body} less than @{code}10@{body}).
+
+@{b}7.3.1. Checking for Thousands @{ub}
+
+What would it take to validate that an arbitrary string is a valid Roman numeral? Let's take it one digit at a time. Since Roman numerals are always written highest to lowest, let's start with the highest: the thousands place. For numbers 1000 and higher, the thousands are represented by a series of @{code}M@{body} characters.
+
+@{b}Example 7.3. Checking for Thousands@{ub}
+
+@{code}
+
+>>> import re
+>>> pattern = '^M?M?M?$'
+>>> re.search(pattern, 'M')
+
+>>> re.search(pattern, 'MM')
+
+>>> re.search(pattern, 'MMM')
+
+>>> re.search(pattern, 'MMMM')
+>>> re.search(pattern, '')
+
+@{body}
+
+This pattern has three parts:
+
+* @{code}^@{body} to match what follows only at the beginning of the string. If this were not specified, the pattern would match no matter where the @{code}M@{body} characters were, which is not what you want. You want to make sure that the @{code}M@{body} characters, if they're there, are at the beginning of the string.
+
+* @{code}M?@{body} to optionally match a single @{code}M@{body} character. Since this is repeated three times, you're matching anywhere from zero to three @{code}M@{body} characters in a row.
+
+* @{code}$@{body} to match what precedes only at the end of the string. When combined with the @{code}^@{body} character at the beginning, this means that the pattern must match the entire string, with no other characters before or after the @{code}M@{body} characters.
+
+The essence of the @{code}re@{body} module is the @{code}search@{body} function, that takes a regular expression (@{code}pattern@{body}) and a string (@{code}'M'@{body}) to try to match against the regular expression. If a match is found, @{code}search@{body} returns an object which has various methods to describe the match; if no match is found, @{code}search@{body} returns @{code}None@{body}, the Python null value. All you care about at the moment is whether the pattern matches, which you can tell by just looking at the return value of @{code}search@{body}. @{code}'M'@{body} matches this regular expression, because the first optional @{code}M@{body} matches and the second and third optional @{code}M@{body} characters are ignored.
+
+@{code}'MM'@{body} matches because the first and second optional @{code}M@{body} characters match and the third @{code}M@{body} is ignored.
+
+@{code}'MMM'@{body} matches because all three @{code}M@{body} characters match.
+
+@{code}'MMMM'@{body} does not match. All three @{code}M@{body} characters match, but then the regular expression insists on the string ending (because of the @{code}$@{body} character), and the string doesn't end yet (because of the fourth @{code}M@{body}). So @{code}search@{body} returns @{code}None@{body}.
+
+Interestingly, an empty string also matches this regular expression, since all the @{code}M@{body} characters are optional.
+
+@{b}7.3.2. Checking for Hundreds @{ub}
+
+The hundreds place is more difficult than the thousands, because there are several mutually exclusive ways it could be expressed, depending on its value.
+
+* @{code}100@{body} = @{code}C@{body}
+
+* @{code}200@{body} = @{code}CC@{body}
+
+* @{code}300@{body} = @{code}CCC@{body}
+
+* @{code}400@{body} = @{code}CD@{body}
+
+* @{code}500@{body} = @{code}D@{body}
+
+* @{code}600@{body} = @{code}DC@{body}
+
+* @{code}700@{body} = @{code}DCC@{body}
+
+* @{code}800@{body} = @{code}DCCC@{body}
+
+* @{code}900@{body} = @{code}CM@{body}
+
+So there are four possible patterns:
+
+* @{code}CM@{body}
+
+* @{code}CD@{body}
+
+* Zero to three @{code}C@{body} characters (zero if the hundreds place is 0)
+
+* @{code}D@{body}, followed by zero to three @{code}C@{body} characters
+
+The last two patterns can be combined:
+
+* an optional @{code}D@{body}, followed by zero to three @{code}C@{body} characters
+
+This example shows how to validate the hundreds place of a Roman numeral.
+
+@{b}Example 7.4. Checking for Hundreds@{ub}
+
+@{code}
+
+>>> import re
+>>> pattern = '^M?M?M?(CM|CD|D?C?C?C?)$'
+>>> re.search(pattern, 'MCM')
+
+>>> re.search(pattern, 'MD')
+
+>>> re.search(pattern, 'MMMCCC')
+
+>>> re.search(pattern, 'MCMC')
+>>> re.search(pattern, '')
+
+@{body}
+
+This pattern starts out the same as the previous one, checking for the beginning of the string (@{code}^@{body}), then the thousands place (@{code}M?M?M?@{body}). Then it has the new part, in parentheses, which defines a set of three mutually exclusive patterns, separated by vertical bars: @{code}CM@{body}, @{code}CD@{body}, and @{code}D?C?C?C?@{body} (which is an optional @{code}D@{body} followed by zero to three optional @{code}C@{body} characters). The regular expression parser checks for each of these patterns in order (from left to right), takes the first one that matches, and ignores the rest.
+
+@{code}'MCM'@{body} matches because the first @{code}M@{body} matches, the second and third @{code}M@{body} characters are ignored, and the @{code}CM@{body} matches (so the @{code}CD@{body} and @{code}D?C?C?C?@{body} patterns are never even considered). @{code}MCM@{body} is the Roman numeral representation of @{code}1900@{body}.
+
+@{code}'MD'@{body} matches because the first @{code}M@{body} matches, the second and third @{code}M@{body} characters are ignored, and the @{code}D?C?C?C?@{body} pattern matches @{code}D@{body} (each of the three @{code}C@{body} characters are optional and are ignored). @{code}MD@{body} is the Roman numeral representation of @{code}1500@{body}.
+
+@{code}'MMMCCC'@{body} matches because all three @{code}M@{body} characters match, and the @{code}D?C?C?C?@{body} pattern matches @{code}CCC@{body} (the @{code}D@{body} is optional and is ignored). @{code}MMMCCC@{body} is the Roman numeral representation of @{code}3300@{body}.
+
+@{code}'MCMC'@{body} does not match. The first @{code}M@{body} matches, the second and third @{code}M@{body} characters are ignored, and the @{code}CM@{body} matches, but then the @{code}$@{body} does not match because you're not at the end of the string yet (you still have an unmatched @{code}C@{body} character). The @{code}C@{body} does @{i}not@{ui} match as part of the @{code}D?C?C?C?@{body} pattern, because the mutually exclusive @{code}CM@{body} pattern has already matched.
+
+Interestingly, an empty string still matches this pattern, because all the @{code}M@{body} characters are optional and ignored, and the empty string matches the @{code}D?C?C?C?@{body} pattern where all the characters are optional and ignored.
+
+Whew! See how quickly regular expressions can get nasty? And you've only covered the thousands and hundreds places of Roman numerals. But if you followed all that, the tens and ones places are easy, because they're exactly the same pattern. But let's look at another way to express the pattern.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "7.4. Using the {n,m} Syntax"
+@TITLE "7.4. Using the {n,m} Syntax"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}7.4. Using the @{code}{n,m}@{body} Syntax @{ub}
+
+In the previous section, you were dealing with a pattern where the same character could be repeated up to three times. There is another way to express this in regular expressions, which some people find more readable. First look at the method we already used in the previous example.
+
+@{b}Example 7.5. The Old Way: Every Character Optional@{ub}
+
+@{code}
+
+>>> import re
+>>> pattern = '^M?M?M?$'
+>>> re.search(pattern, 'M')
+
+>>> pattern = '^M?M?M?$'
+>>> re.search(pattern, 'MM')
+
+>>> pattern = '^M?M?M?$'
+>>> re.search(pattern, 'MMM')
+
+>>> re.search(pattern, 'MMMM')
+>>>
+
+@{body}
+
+This matches the start of the string, and then the first optional @{code}M@{body}, but not the second and third @{code}M@{body} (but that's okay because they're optional), and then the end of the string.
+
+This matches the start of the string, and then the first and second optional @{code}M@{body}, but not the third @{code}M@{body} (but that's okay because it's optional), and then the end of the string.
+
+This matches the start of the string, and then all three optional @{code}M@{body}, and then the end of the string.
+
+This matches the start of the string, and then all three optional @{code}M@{body}, but then does not match the the end of the string (because there is still one unmatched @{code}M@{body}), so the pattern does not match and returns @{code}None@{body}.
+
+@{b}Example 7.6. The New Way: From @{code}n@{body} o @{code}m@{body}@{ub}
+
+@{code}
+
+>>> pattern = '^M{0,3}$'
+>>> re.search(pattern, 'M')
+
+>>> re.search(pattern, 'MM')
+
+>>> re.search(pattern, 'MMM')
+
+>>> re.search(pattern, 'MMMM')
+>>>
+
+@{body}
+
+This pattern says: "Match the start of the string, then anywhere from zero to three @{code}M@{body} characters, then the end of the string." The 0 and 3 can be any numbers; if you want to match at least one but no more than three @{code}M@{body} characters, you could say @{code}M{1,3}@{body}.
+
+This matches the start of the string, then one @{code}M@{body} out of a possible three, then the end of the string.
+
+This matches the start of the string, then two @{code}M@{body} out of a possible three, then the end of the string.
+
+This matches the start of the string, then three @{code}M@{body} out of a possible three, then the end of the string.
+
+This matches the start of the string, then three @{code}M@{body} out of a possible three, but then @{i}does not match@{ui} the end of the string. The regular expression allows for up to only three @{code}M@{body} characters before the end of the string, but you have four, so the pattern does not match and returns @{code}None@{body}.
+
+There is no way to programmatically determine that two regular expressions are equivalent. The best you can do is write a lot of test cases to make sure they behave the same way on all relevant inputs. You'll talk more about writing test cases later in this book.
+
+@{b}7.4.1. Checking for Tens and Ones @{ub}
+
+Now let's expand the Roman numeral regular expression to cover the tens and ones place. This example shows the check for tens.
+
+@{b}Example 7.7. Checking for Tens@{ub}
+
+@{code}
+
+>>> pattern = '^M?M?M?M?(CM|CD|D?C?C?C?)(XC|XL|L?X?X?X?)$'
+>>> re.search(pattern, 'MCMXL')
+
+>>> re.search(pattern, 'MCML')
+
+>>> re.search(pattern, 'MCMLX')
+
+>>> re.search(pattern, 'MCMLXXX')
+
+>>> re.search(pattern, 'MCMLXXXX')
+>>>
+
+@{body}
+
+This matches the start of the string, then the first optional @{code}M@{body}, then @{code}CM@{body}, then @{code}XL@{body}, then the end of the string. Remember, the @{code}(A|B|C)@{body} syntax means "match exactly one of A, B, or C". You match @{code}XL@{body}, so you ignore the @{code}XC@{body} and @{code}L?X?X?X?@{body} choices, and then move on to the end of the string. @{code}MCML@{body} is the Roman numeral representation of @{code}1940@{body}.
+
+This matches the start of the string, then the first optional @{code}M@{body}, then @{code}CM@{body}, then @{code}L?X?X?X?@{body}. Of the @{code}L?X?X?X?@{body}, it matches the @{code}L@{body} and skips all three optional @{code}X@{body} characters. Then you move to the end of the string. @{code}MCML@{body} is the Roman numeral representation of @{code}1950@{body}.
+
+This matches the start of the string, then the first optional @{code}M@{body}, then @{code}CM@{body}, then the optional @{code}L@{body} and the first optional @{code}X@{body}, skips the second and third optional @{code}X@{body}, then the end of the string. @{code}MCMLX@{body} is the Roman numeral representation of @{code}1960@{body}.
+
+This matches the start of the string, then the first optional @{code}M@{body}, then @{code}CM@{body}, then the optional @{code}L@{body} and all three optional @{code}X@{body} characters, then the end of the string. @{code}MCMLXXX@{body} is the Roman numeral representation of @{code}1980@{body}.
+
+This matches the start of the string, then the first optional @{code}M@{body}, then @{code}CM@{body}, then the optional @{code}L@{body} and all three optional @{code}X@{body} characters, then @{i}fails to match@{ui} the end of the string because there is still one more @{code}X@{body} unaccounted for. So the entire pattern fails to match, and returns @{code}None@{body}. @{code}MCMLXXXX@{body} is not a valid Roman numeral.
+
+The expression for the ones place follows the same pattern. I'll spare you the details and show you the end result.
+
+@{code}
+
+>>> pattern = '^M?M?M?M?(CM|CD|D?C?C?C?)(XC|XL|L?X?X?X?)(IX|IV|V?I?I?I?)$'
+
+@{body}
+
+So what does that look like using this alternate @{code}{n,m}@{body} syntax? This example shows the new syntax.
+
+@{b}Example 7.8. Validating Roman Numerals with @{code}{n,m}@{body}@{ub}
+
+@{code}
+
+>>> pattern = '^M{0,4}(CM|CD|D?C{0,3})(XC|XL|L?X{0,3})(IX|IV|V?I{0,3})$'
+>>> re.search(pattern, 'MDLV')
+
+>>> re.search(pattern, 'MMDCLXVI')
+
+>>> re.search(pattern, 'MMMMDCCCLXXXVIII')
+
+>>> re.search(pattern, 'I')
+
+@{body}
+
+This matches the start of the string, then one of a possible four @{code}M@{body} characters, then @{code}D?C{0,3}@{body}. Of that, it matches the optional @{code}D@{body} and zero of three possible @{code}C@{body} characters. Moving on, it matches @{code}L?X{0,3}@{body} by matching the optional @{code}L@{body} and zero of three possible @{code}X@{body} characters. Then it matches @{code}V?I{0,3}@{body} by matching the optional V and zero of three possible @{code}I@{body} characters, and finally the end of the string. @{code}MDLV@{body} is the Roman numeral representation of @{code}1555@{body}.
+
+This matches the start of the string, then two of a possible four @{code}M@{body} characters, then the @{code}D?C{0,3}@{body} with a @{code}D@{body} and one of three possible @{code}C@{body} characters; then @{code}L?X{0,3}@{body} with an @{code}L@{body} and one of three possible @{code}X@{body} characters; then @{code}V?I{0,3}@{body} with a @{code}V@{body} and one of three possible @{code}I@{body} characters; then the end of the string. @{code}MMDCLXVI@{body} is the Roman numeral representation of @{code}2666@{body}.
+
+This matches the start of the string, then four out of four @{code}M@{body} characters, then @{code}D?C{0,3}@{body} with a @{code}D@{body} and three out of three @{code}C@{body} characters; then @{code}L?X{0,3}@{body} with an @{code}L@{body} and three out of three @{code}X@{body} characters; then @{code}V?I{0,3}@{body} with a @{code}V@{body} and three out of three @{code}I@{body} characters; then the end of the string. @{code}MMMMDCCCLXXXVIII@{body} is the Roman numeral representation of @{code}3888@{body}, and it's the longest Roman numeral you can write without extended syntax.
+
+Watch closely. (I feel like a magician. "Watch closely, kids, I'm going to pull a rabbit out of my hat.") This matches the start of the string, then zero out of four @{code}M@{body}, then matches @{code}D?C{0,3}@{body} by skipping the optional @{code}D@{body} and matching zero out of three @{code}C@{body}, then matches @{code}L?X{0,3}@{body} by skipping the optional @{code}L@{body} and matching zero out of three @{code}X@{body}, then matches @{code}V?I{0,3}@{body} by skipping the optional @{code}V@{body} and matching one out of three @{code}I@{body}. Then the end of the string. Whoa.
+
+If you followed all that and understood it on the first try, you're doing better than I did. Now imagine trying to understand someone else's regular expressions, in the middle of a critical function of a large program. Or even imagine coming back to your own regular expressions a few months later. I've done it, and it's not a pretty sight.
+
+In the next section you'll explore an alternate syntax that can help keep your expressions maintainable.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "7.5. Verbose Regular Expressions"
+@TITLE "7.5. Verbose Regular Expressions"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}7.5. Verbose Regular Expressions @{ub}
+
+So far you've just been dealing with what I'll call "compact" regular expressions. As you've seen, they are difficult to read, and even if you figure out what one does, that's no guarantee that you'll be able to understand it six months later. What you really need is inline documentation.
+
+Python allows you to do this with something called @{i}verbose regular expressions@{ui}. A verbose regular expression is different from a compact regular expression in two ways:
+
+* Whitespace is ignored. Spaces, tabs, and carriage returns are not matched as spaces, tabs, and carriage returns. They're not matched at all. (If you want to match a space in a verbose regular expression, you'll need to escape it by putting a backslash in front of it.)
+
+* Comments are ignored. A comment in a verbose regular expression is just like a comment in Python code: it starts with a @{code}#@{body} character and goes until the end of the line. In this case it's a comment within a multi-line string instead of within your source code, but it works the same way.
+
+This will be more clear with an example. Let's revisit the compact regular expression you've been working with, and make it a verbose regular expression. This example shows how.
+
+@{b}Example 7.9. Regular Expressions with Inline Comments@{ub}
+
+@{code}
+
+>>> pattern = """
+^ # beginning of string
+M{0,4} # thousands - 0 to 4 M's
+(CM|CD|D?C{0,3}) # hundreds - 900 (CM), 400 (CD), 0-300 (0 to 3 C's),
+# or 500-800 (D, followed by 0 to 3 C's)
+(XC|XL|L?X{0,3}) # tens - 90 (XC), 40 (XL), 0-30 (0 to 3 X's),
+# or 50-80 (L, followed by 0 to 3 X's)
+(IX|IV|V?I{0,3}) # ones - 9 (IX), 4 (IV), 0-3 (0 to 3 I's),
+# or 5-8 (V, followed by 0 to 3 I's)
+$ # end of string
+"""
+>>> re.search(pattern, 'M', re.VERBOSE)
+
+>>> re.search(pattern, 'MCMLXXXIX', re.VERBOSE)
+
+>>> re.search(pattern, 'MMMMDCCCLXXXVIII', re.VERBOSE)
+
+>>> re.search(pattern, 'M')
+
+@{body}
+
+The most important thing to remember when using verbose regular expressions is that you need to pass an extra argument when working with them: @{code}re.VERBOSE@{body} is a constant defined in the @{code}re@{body} module that signals that the pattern should be treated as a verbose regular expression. As you can see, this pattern has quite a bit of whitespace (all of which is ignored), and several comments (all of which are ignored). Once you ignore the whitespace and the comments, this is exactly the same regular expression as you saw in the previous section, but it's a lot more readable.
+
+This matches the start of the string, then one of a possible four @{code}M@{body}, then @{code}CM@{body}, then @{code}L@{body} and three of a possible three @{code}X@{body}, then @{code}IX@{body}, then the end of the string.
+
+This matches the start of the string, then four of a possible four @{code}M@{body}, then @{code}D@{body} and three of a possible three @{code}C@{body}, then @{code}L@{body} and three of a possible three @{code}X@{body}, then @{code}V@{body} and three of a possible three @{code}I@{body}, then the end of the string.
+
+This does not match. Why? Because it doesn't have the @{code}re.VERBOSE@{body} flag, so the @{code}re.search@{body} function is treating the pattern as a compact regular expression, with significant whitespace and literal hash marks. Python can't auto-detect whether a regular expression is verbose or not. Python assumes every regular expression is compact unless you explicitly state that it is verbose.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "7.6. Case study: Parsing Phone Numbers"
+@TITLE "7.6. Case study: Parsing Phone Numbers"
+@NEXT "S7"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}7.6. Case study: Parsing Phone Numbers @{ub}
+
+So far you've concentrated on matching whole patterns. Either the pattern matches, or it doesn't. But regular expressions are much more powerful than that. When a regular expression @{i}does@{ui} match, you can pick out specific pieces of it. You can find out what matched where.
+
+This example came from another real-world problem I encountered, again from a previous day job. The problem: parsing an American phone number. The client wanted to be able to enter the number free-form (in a single field), but then wanted to store the area code, trunk, number, and optionally an extension separately in the company's database. I scoured the Web and found many examples of regular expressions that purported to do this, but none of them were permissive enough.
+
+Here are the phone numbers I needed to be able to accept:
+
+* @{code}800-555-1212@{body}
+
+* @{code}800 555 1212@{body}
+
+* @{code}800.555.1212@{body}
+
+* @{code}(800) 555-1212@{body}
+
+* @{code}1-800-555-1212@{body}
+
+* @{code}800-555-1212-1234@{body}
+
+* @{code}800-555-1212x1234@{body}
+
+* @{code}800-555-1212 ext. 1234@{body}
+
+* @{code}work 1-(800) 555.1212 #1234@{body}
+
+Quite a variety! In each of these cases, I need to know that the area code was @{code}800@{body}, the trunk was @{code}555@{body}, and the rest of the phone number was @{code}1212@{body}. For those with an extension, I need to know that the extension was @{code}1234@{body}.
+
+Let's work through developing a solution for phone number parsing. This example shows the first step.
+
+@{b}Example 7.10. Finding Numbers@{ub}
+
+@{code}
+
+>>> phonePattern = re.compile(r'^(\\d{3})-(\\d{3})-(\\d{4})$')
+>>> phonePattern.search('800-555-1212').groups()
+('800', '555', '1212')
+>>> phonePattern.search('800-555-1212-1234')
+>>>
+
+@{body}
+
+Always read regular expressions from left to right. This one matches the beginning of the string, and then @{code}(\\d{3})@{body}. What's @{code}\\d{3}@{body}? Well, the @{code}{3}@{body} means "match exactly three numeric digits"; it's a variation on the @{code}{n,m} syntax@{body} you saw earlier. @{code}\\d@{body} means "any numeric digit" (@{code}0@{body} through @{code}9@{body}). Putting it in parentheses means "match exactly three numeric digits, @{i}and then remember them as a group that I can ask for later@{ui} ". Then match a literal hyphen. Then match another group of exactly three digits. Then another literal hyphen. Then another group of exactly four digits. Then match the end of the string.
+
+To get access to the groups that the regular expression parser remembered along the way, use the @{code}groups()@{body} method on the object that the @{code}search@{body} function returns. It will return a tuple of however many groups were defined in the regular expression. In this case, you defined three groups, one with three digits, one with three digits, and one with four digits.
+
+This regular expression is not the final answer, because it doesn't handle a phone number with an extension on the end. For that, you'll need to expand the regular expression.
+
+@{b}Example 7.11. Finding the Extension@{ub}
+
+@{code}
+
+>>> phonePattern = re.compile(r'^(\\d{3})-(\\d{3})-(\\d{4})-(\\d+)$')
+>>> phonePattern.search('800-555-1212-1234').groups()
+('800', '555', '1212', '1234')
+>>> phonePattern.search('800 555 1212 1234')
+>>>
+>>> phonePattern.search('800-555-1212')
+>>>
+
+@{body}
+
+This regular expression is almost identical to the previous one. Just as before, you match the beginning of the string, then a remembered group of three digits, then a hyphen, then a remembered group of three digits, then a hyphen, then a remembered group of four digits. What's new is that you then match another hyphen, and a remembered group of one or more digits, then the end of the string.
+
+The @{code}groups()@{body} method now returns a tuple of four elements, since the regular expression now defines four groups to remember.
+
+Unfortunately, this regular expression is not the final answer either, because it assumes that the different parts of the phone number are separated by hyphens. What if they're separated by spaces, or commas, or dots? You need a more general solution to match several different types of separators.
+
+Oops! Not only does this regular expression not do everything you want, it's actually a step backwards, because now you can't parse phone numbers @{i}without@{ui} an extension. That's not what you wanted at all; if the extension is there, you want to know what it is, but if it's not there, you still want to know what the different parts of the main number are.
+
+The next example shows the regular expression to handle separators between the different parts of the phone number.
+
+@{b}Example 7.12. Handling Different Separators@{ub}
+
+@{code}
+
+>>> phonePattern = re.compile(r'^(\\d{3})\\D+(\\d{3})\\D+(\\d{4})\\D+(\\d+)$')
+>>> phonePattern.search('800 555 1212 1234').groups()
+('800', '555', '1212', '1234')
+>>> phonePattern.search('800-555-1212-1234').groups()
+('800', '555', '1212', '1234')
+>>> phonePattern.search('80055512121234')
+>>>
+>>> phonePattern.search('800-555-1212')
+>>>
+
+@{body}
+
+Hang on to your hat. You're matching the beginning of the string, then a group of three digits, then @{code}\\D+@{body}. What the heck is that? Well, @{code}\\D@{body} matches any character @{i}except@{ui} a numeric digit, and @{code}+@{body} means "1 or more". So @{code}\\D+@{body} matches one or more characters that are not digits. This is what you're using instead of a literal hyphen, to try to match different separators.
+
+Using @{code}\\D+@{body} instead of @{code}-@{body} means you can now match phone numbers where the parts are separated by spaces instead of hyphens.
+
+Of course, phone numbers separated by hyphens still work too.
+
+Unfortunately, this is still not the final answer, because it assumes that there is a separator at all. What if the phone number is entered without any spaces or hyphens at all?
+
+Oops! This still hasn't fixed the problem of requiring extensions. Now you have two problems, but you can solve both of them with the same technique.
+
+The next example shows the regular expression for handling phone numbers @{i}without@{ui} separators.
+
+@{b}Example 7.13. Handling Numbers Without Separators@{ub}
+
+@{code}
+
+>>> phonePattern = re.compile(r'^(\\d{3})\\D*(\\d{3})\\D*(\\d{4})\\D*(\\d*)$')
+>>> phonePattern.search('80055512121234').groups()
+('800', '555', '1212', '1234')
+>>> phonePattern.search('800.555.1212 x1234').groups()
+('800', '555', '1212', '1234')
+>>> phonePattern.search('800-555-1212').groups()
+('800', '555', '1212', '')
+>>> phonePattern.search('(800)5551212 x1234')
+>>>
+
+@{body}
+
+The only change you've made since that last step is changing all the @{code}+@{body} to @{code}*@{body}. Instead of @{code}\\D+@{body} between the parts of the phone number, you now match on @{code}\\D*@{body}. Remember that @{code}+@{body} means "1 or more"? Well, @{code}*@{body} means "zero or more". So now you should be able to parse phone numbers even when there is no separator character at all.
+
+Lo and behold, it actually works. Why? You matched the beginning of the string, then a remembered group of three digits (@{code}800@{body}), then zero non-numeric characters, then a remembered group of three digits (@{code}555@{body}), then zero non-numeric characters, then a remembered group of four digits (@{code}1212@{body}), then zero non-numeric characters, then a remembered group of an arbitrary number of digits (@{code}1234@{body}), then the end of the string.
+
+Other variations work now too: dots instead of hyphens, and both a space and an @{code}x@{body} before the extension.
+
+Finally, you've solved the other long-standing problem: extensions are optional again. If no extension is found, the @{code}groups()@{body} method still returns a tuple of four elements, but the fourth element is just an empty string.
+
+I hate to be the bearer of bad news, but you're not finished yet. What's the problem here? There's an extra character before the area code, but the regular expression assumes that the area code is the first thing at the beginning of the string. No problem, you can use the same technique of "zero or more non-numeric characters" to skip over the leading characters before the area code.
+
+The next example shows how to handle leading characters in phone numbers.
+
+@{b}Example 7.14. Handling Leading Characters@{ub}
+
+@{code}
+
+>>> phonePattern = re.compile(r'^\\D*(\\d{3})\\D*(\\d{3})\\D*(\\d{4})\\D*(\\d*)$')
+>>> phonePattern.search('(800)5551212 ext. 1234').groups()
+('800', '555', '1212', '1234')
+>>> phonePattern.search('800-555-1212').groups()
+('800', '555', '1212', '')
+>>> phonePattern.search('work 1-(800) 555.1212 #1234')
+>>>
+
+@{body}
+
+This is the same as in the previous example, except now you're matching @{code}\\D*@{body}, zero or more non-numeric characters, before the first remembered group (the area code). Notice that you're not remembering these non-numeric characters (they're not in parentheses). If you find them, you'll just skip over them and then start remembering the area code whenever you get to it.
+
+You can successfully parse the phone number, even with the leading left parenthesis before the area code. (The right parenthesis after the area code is already handled; it's treated as a non-numeric separator and matched by the @{code}\\D*@{body} after the first remembered group.)
+
+Just a sanity check to make sure you haven't broken anything that used to work. Since the leading characters are entirely optional, this matches the beginning of the string, then zero non-numeric characters, then a remembered group of three digits (@{code}800@{body}), then one non-numeric character (the hyphen), then a remembered group of three digits (@{code}555@{body}), then one non-numeric character (the hyphen), then a remembered group of four digits (@{code}1212@{body}), then zero non-numeric characters, then a remembered group of zero digits, then the end of the string.
+
+This is where regular expressions make me want to gouge my eyes out with a blunt object. Why doesn't this phone number match? Because there's a @{code}1@{body} before the area code, but you assumed that all the leading characters before the area code were non-numeric characters (@{code}\\D*@{body}). Aargh.
+
+Let's back up for a second. So far the regular expressions have all matched from the beginning of the string. But now you see that there may be an indeterminate amount of stuff at the beginning of the string that you want to ignore. Rather than trying to match it all just so you can skip over it, let's take a different approach: don't explicitly match the beginning of the string at all. This approach is shown in the next example.
+
+@{b}Example 7.15. Phone Number, Wherever I May Find Ye@{ub}
+
+@{code}
+
+>>> phonePattern = re.compile(r'(\\d{3})\\D*(\\d{3})\\D*(\\d{4})\\D*(\\d*)$')
+>>> phonePattern.search('work 1-(800) 555.1212 #1234').groups()
+('800', '555', '1212', '1234')
+>>> phonePattern.search('800-555-1212')
+('800', '555', '1212', '')
+>>> phonePattern.search('80055512121234')
+('800', '555', '1212', '1234')
+
+@{body}
+
+Note the lack of @{code}^@{body} in this regular expression. You are not matching the beginning of the string anymore. There's nothing that says you need to match the entire input with your regular expression. The regular expression engine will do the hard work of figuring out where the input string starts to match, and go from there.
+
+Now you can successfully parse a phone number that includes leading characters and a leading digit, plus any number of any kind of separators around each part of the phone number.
+
+Sanity check. this still works.
+
+That still works too.
+
+See how quickly a regular expression can get out of control? Take a quick glance at any of the previous iterations. Can you tell the difference between one and the next?
+
+While you still understand the final answer (and it is the final answer; if you've discovered a case it doesn't handle, I don't want to know about it), let's write it out as a verbose regular expression, before you forget why you made the choices you made.
+
+@{b}Example 7.16. Parsing Phone Numbers (Final Version)@{ub}
+
+@{code}
+
+>>> phonePattern = re.compile(r'''
+# don't match beginning of string, number can start anywhere
+(\\d{3}) # area code is 3 digits (e.g. '800')
+\\D* # optional separator is any number of non-digits
+(\\d{3}) # trunk is 3 digits (e.g. '555')
+\\D* # optional separator
+(\\d{4}) # rest of number is 4 digits (e.g. '1212')
+\\D* # optional separator
+(\\d*) # extension is optional and can be any number of digits
+$ # end of string
+''', re.VERBOSE)
+>>> phonePattern.search('work 1-(800) 555.1212 #1234').groups()
+('800', '555', '1212', '1234')
+>>> phonePattern.search('800-555-1212')
+('800', '555', '1212', '')
+
+@{body}
+
+Other than being spread out over multiple lines, this is exactly the same regular expression as the last step, so it's no surprise that it parses the same inputs.
+
+Final sanity check. Yes, this still works. You're done.
+
+@{b}Further Reading on Regular Expressions@{ub}
+
+* Regular Expression HOWTO teaches about regular expressions and how to use them in Python.
+
+* @{i}Python Library Reference@{ui} summarizes the @{code}re@{body} module.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S7 "7.7. Summary"
+@TITLE "7.7. Summary"
+@NEXT "MAIN"
+@PREV "S6"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}7.7. Summary @{ub}
+
+This is just the tiniest tip of the iceberg of what regular expressions can do. In other words, even though you're completely overwhelmed by them now, believe me, you ain't seen nothing yet.
+
+You should now be familiar with the following techniques:
+
+* @{code}^@{body} matches the beginning of a string.
+
+* @{code}$@{body} matches the end of a string.
+
+* @{code}\\b@{body} matches a word boundary.
+
+* @{code}\\d@{body} matches any numeric digit.
+
+* @{code}\\D@{body} matches any non-numeric character.
+
+* @{code}x?@{body} matches an optional @{code}x@{body} character (in other words, it matches an @{code}x@{body} zero or one times).
+
+* @{code}x*@{body} matches @{code}x@{body} zero or more times.
+
+* @{code}x+@{body} matches @{code}x@{body} one or more times.
+
+* @{code}x{n,m}@{body} matches an @{code}x@{body} character at least @{code}n@{body} times, but not more than @{code}m@{body} times.
+
+* @{code}(a|b|c)@{body} matches either @{code}a@{body} or @{code}b@{body} or @{code}c@{body}.
+
+* @{code}(x)@{body} in general is a @{i}remembered group@{ui}. You can get the value of what matched by using the @{code}groups()@{body} method of the object returned by @{code}re.search@{body}.
+
+Regular expressions are extremely powerful, but they are not the correct solution for every problem. You should learn enough about them to know when they are appropriate, when they will solve your problems, and when they will cause more problems than they solve.
+
+Some people, when confronted with a problem, think "I know, I'll use regular expressions." Now they have two problems.
+
+--Jamie Zawinski, in comp.emacs.xemacs
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

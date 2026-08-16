@@ -14,8 +14,8 @@ Documentation
 -------------
 
 * Language and library: https://docs.python.org/2.7/
-* Amiga module docs: this directory, also shipped under
-  ``Python/Docs/Amiga`` in the release drawer.
+* Amiga module docs: this directory (``Docs/Amiga``), also mirrored
+  under ``Source/Amiga_Misc/Docs`` in the source tree.
 
 
 Module search path
@@ -27,10 +27,11 @@ Module search path
 * ``PYTHONPATH`` is a **semicolon**-separated list of directories.
 * The script directory (or ``''``) is inserted at the front.
 * ``site.py`` is imported by default (disable with ``-S``).
-* On Amiga, ``site`` adds ``Lib/site-python`` and ``Lib/site-packages``.
+* On Amiga, ``site`` adds ``lib/site-python`` (release) or
+  ``Lib/site-python`` (source tree) and ``site-packages``.
 
 Amiga-specific Python modules (``arexx``, ``asl``, ``catalog``, ``icon``,
-``_amigados``, …) live in ``Lib/site-python``.
+``_amigados``, ...) live in ``lib/site-python`` next to ``python27.zip``.
 
 
 Import case sensitivity
@@ -74,7 +75,8 @@ Workbench startup
 * Tooltypes become argv entries (one tooltype = one argument).
 * Multiselect Python + script runs the script; script tooltypes append.
 * Magic tooltypes: ``PYTHONSCRIPT=...``, ``PYSCRIPTARG=...``.
-* Default tool for scripts: ``Python:Python``.
+* Default tool for scripts: the ``Python`` binary in this drawer
+  (or ``Python:Python`` if you ASSIGN Python: to the drawer).
 * Icon-only ``-c`` scripts are supported (tooltype ``-c`` plus next
   tooltype = code).
 
@@ -83,7 +85,7 @@ Library files
 -------------
 
 Do not change the portable behaviour of standard library modules.  Put
-Amiga-only modules in ``Lib/site-python``.
+Amiga-only modules in ``lib/site-python``.
 
 
 Building / sources

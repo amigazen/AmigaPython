@@ -1,0 +1,25 @@
+Dive Into Python 5.4 (AmigaGuide edition)
+========================================
+
+Copyright (C) 2000, 2001, 2002, 2003, 2004 Mark Pilgrim.
+
+Modified AmigaGuide edition for AmigaPython 2.7.18 (amigazen project).
+
+GNU Free Documentation License 1.1+ (no Invariant Sections, no
+Front-Cover / Back-Cover Texts). See COPYING.GFDL and DIPG.guide.
+
+Open DiveIntoPython.guide in AmigaGuide / MultiView.
+
+Uses AmigaGuide features: @DATABASE, @$VER, @(C), @AUTHOR, @MASTER,
+@SMARTWRAP, @HELP, @INDEX, per-chapter MAIN contents, section nodes
+with @NEXT/@PREV, @{b}/@{i}/@{code} attributes, and AmigaPython note
+sidebars where desktop install/platform text does not apply.
+
+  Help/AmigaPython.guide
+  README (release drawer root)
+
+Original: http://diveintopython.org/
+
+Regenerate:
+  python3 Source/Tools/amiga/html2amigaguide.py \
+    path/to/diveintopython.html Python/Help/DiveIntoPython

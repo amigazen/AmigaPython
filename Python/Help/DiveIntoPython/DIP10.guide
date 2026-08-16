@@ -1,0 +1,902 @@
+@DATABASE "DIP10.guide"
+@$VER: DIP10.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "10. Scripts and Streams"
+@TITLE "10. Scripts and Streams"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}10. Scripts and Streams@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}Shell stdin/stdout are fine. Workbench uses CON:. os.popen / PIPE: may need a fixed l:queue-handler (AmigaPython.guide).@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 10.1. Abstracting input sources " LINK "S1"}
+@{" 10.2. Standard input, output, and error " LINK "S2"}
+@{" 10.3. Caching node lookups " LINK "S3"}
+@{" 10.4. Finding direct children of a node " LINK "S4"}
+@{" 10.5. Creating separate handlers by node type " LINK "S5"}
+@{" 10.6. Handling command-line arguments " LINK "S6"}
+@{" 10.7. Putting it all together " LINK "S7"}
+@{" 10.8. Summary " LINK "S8"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 10. Scripts and Streams
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "10.1. Abstracting input sources"
+@TITLE "10.1. Abstracting input sources"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}10.1. Abstracting input sources @{ub}
+
+One of Python's greatest strengths is its dynamic binding, and one powerful use of dynamic binding is the @{i}file-like object@{ui}.
+
+Many functions which require an input source could simply take a filename, go open the file for reading, read it, and close it when they're done. But they don't. Instead, they take a @{i}file-like object@{ui}.
+
+In the simplest case, a @{i}file-like object@{ui} is any object with a @{code}read@{body} method with an optional @{code}size@{body} parameter, which returns a string. When called with no @{code}size@{body} parameter, it reads everything there is to read from the input source and returns all the data as a single string. When called with a @{code}size@{body} parameter, it reads that much from the input source and returns that much data; when called again, it picks up where it left off and returns the next chunk of data.
+
+This is how reading from real files works; the difference is that you're not limiting yourself to real files. The input source could be anything: a file on disk, a web page, even a hard-coded string. As long as you pass a file-like object to the function, and the function simply calls the object's @{code}read@{body} method, the function can handle any kind of input source without specific code to handle each kind.
+
+In case you were wondering how this relates to XML processing, @{code}minidom.parse@{body} is one such function which can take a file-like object.
+
+@{b}Example 10.1. Parsing XML from a file @{ub}
+
+@{code}
+
+>>> from xml.dom import minidom
+>>> fsock = open('binary.xml')
+>>> xmldoc = minidom.parse(fsock)
+>>> fsock.close()
+>>> print xmldoc.toxml()
+
+0
+1
+
+\\
+
+@{body}
+
+First, you open the file on disk. This gives you a file object.
+
+You pass the file object to @{code}minidom.parse@{body}, which calls the @{code}read@{body} method of @{code}fsock@{body} and reads the XML document from the file on disk.
+
+Be sure to call the @{code}close@{body} method of the file object after you're done with it. @{code}minidom.parse@{body} will not do this for you.
+
+Calling the @{code}toxml()@{body} method on the returned XML document prints out the entire thing.
+
+Well, that all seems like a colossal waste of time. After all, you've already seen that @{code}minidom.parse@{body} can simply take the filename and do all the opening and closing nonsense automatically. And it's true that if you know you're just going to be parsing a local file, you can pass the filename and @{code}minidom.parse@{body} is smart enough to Do The Right Thing?. But notice how similar -- and easy -- it is to parse an XML document straight from the Internet.
+
+@{b}Example 10.2. Parsing XML from a URL@{ub}
+
+@{code}
+
+>>> import urllib
+>>> usock = urllib.urlopen('http://slashdot.org/slashdot.rdf')
+>>> xmldoc = minidom.parse(usock)
+>>> usock.close()
+>>> print xmldoc.toxml()
+
+Slashdot
+http://slashdot.org/
+News for nerds, stuff that matters
+
+Slashdot
+http://images.slashdot.org/topics/topicslashdot.gif
+http://slashdot.org/
+
+To HDTV or Not to HDTV?
+http://slashdot.org/article.pl?sid=01/12/28/0421241
+
+[...snip...]
+@{body}
+
+As you saw in a previous chapter, @{code}urlopen@{body} takes a web page URL and returns a file-like object. Most importantly, this object has a @{code}read@{body} method which returns the HTML source of the web page.
+
+Now you pass the file-like object to @{code}minidom.parse@{body}, which obediently calls the @{code}read@{body} method of the object and parses the XML data that the @{code}read@{body} method returns. The fact that this XML data is now coming straight from a web page is completely irrelevant. @{code}minidom.parse@{body} doesn't know about web pages, and it doesn't care about web pages; it just knows about file-like objects.
+
+As soon as you're done with it, be sure to close the file-like object that @{code}urlopen@{body} gives you.
+
+By the way, this URL is real, and it really is XML. It's an XML representation of the current headlines on Slashdot, a technical news and gossip site.
+
+@{b}Example 10.3. Parsing XML from a string (the easy but inflexible way) @{ub}
+
+@{code}
+
+>>> contents = "01"
+>>> xmldoc = minidom.parseString(contents)
+>>> print xmldoc.toxml()
+
+01
+@{body}
+
+@{code}minidom@{body} has a method, @{code}parseString@{body}, which takes an entire XML document as a string and parses it. You can use this instead of @{code}minidom.parse@{body} if you know you already have your entire XML document in a string.
+
+OK, so you can use the @{code}minidom.parse@{body} function for parsing both local files and remote URLs, but for parsing strings, you use... a different function. That means that if you want to be able to take input from a file, a URL, or a string, you'll need special logic to check whether it's a string, and call the @{code}parseString@{body} function instead. How unsatisfying.
+
+If there were a way to turn a string into a file-like object, then you could simply pass this object to @{code}minidom.parse@{body}. And in fact, there is a module specifically designed for doing just that: @{code}StringIO@{body}.
+
+@{b}Example 10.4. Introducing @{code}StringIO@{body}@{ub}
+
+@{code}
+
+>>> contents = "01"
+>>> import StringIO
+>>> ssock = StringIO.StringIO(contents)
+>>> ssock.read()
+"01"
+>>> ssock.read()
+''
+>>> ssock.seek(0)
+>>> ssock.read(15)
+'>> ssock.read(15)
+"d='bit'>0>> ssock.read()
+'>1'
+>>> ssock.close()
+@{body}
+
+The @{code}StringIO@{body} module contains a single class, also called @{code}StringIO@{body}, which allows you to turn a string into a file-like object. The @{code}StringIO@{body} class takes the string as a parameter when creating an instance.
+
+Now you have a file-like object, and you can do all sorts of file-like things with it. Like @{code}read@{body}, which returns the original string.
+
+Calling @{code}read@{body} again returns an empty string. This is how real file objects work too; once you read the entire file, you can't read any more without explicitly seeking to the beginning of the file. The @{code}StringIO@{body} object works the same way.
+
+You can explicitly seek to the beginning of the string, just like seeking through a file, by using the @{code}seek@{body} method of the @{code}StringIO@{body} object.
+
+You can also read the string in chunks, by passing a @{code}size@{body} parameter to the @{code}read@{body} method.
+
+At any time, @{code}read@{body} will return the rest of the string that you haven't read yet. All of this is exactly how file objects work; hence the term @{i}file-like object@{ui}.
+
+@{b}Example 10.5. Parsing XML from a string (the file-like object way) @{ub}
+
+@{code}
+
+>>> contents = "01"
+>>> ssock = StringIO.StringIO(contents)
+>>> xmldoc = minidom.parse(ssock)
+>>> ssock.close()
+>>> print xmldoc.toxml()
+
+01
+@{body}
+
+Now you can pass the file-like object (really a @{code}StringIO@{body}) to @{code}minidom.parse@{body}, which will call the object's @{code}read@{body} method and happily parse away, never knowing that its input came from a hard-coded string.
+
+So now you know how to use a single function, @{code}minidom.parse@{body}, to parse an XML document stored on a web page, in a local file, or in a hard-coded string. For a web page, you use @{code}urlopen@{body} to get a file-like object; for a local file, you use @{code}open@{body}; and for a string, you use @{code}StringIO@{body}. Now let's take it one step further and generalize @{i}these@{ui} differences as well.
+
+@{b}Example 10.6. @{code}openAnything@{body}@{ub}
+
+@{code}
+
+def openAnything(source):
+# try to open with urllib (if source is http, ftp, or file URL)
+import urllib
+try:
+return urllib.urlopen(source)
+except (IOError, OSError):
+pass
+
+# try to open with native open function (if source is pathname)
+try:
+return open(source)
+except (IOError, OSError):
+pass
+
+# treat source as string
+import StringIO
+return StringIO.StringIO(str(source))
+@{body}
+
+The @{code}openAnything@{body} function takes a single parameter, @{code}source@{body}, and returns a file-like object. @{code}source@{body} is a string of some sort; it can either be a URL (like @{code}'http://slashdot.org/slashdot.rdf'@{body}), a full or partial pathname to a local file (like @{code}'binary.xml'@{body}), or a string that contains actual XML data to be parsed.
+
+First, you see if @{code}source@{body} is a URL. You do this through brute force: you try to open it as a URL and silently ignore errors caused by trying to open something which is not a URL. This is actually elegant in the sense that, if @{code}urllib@{body} ever supports new types of URLs in the future, you will also support them without recoding. If @{code}urllib@{body} is able to open @{code}source@{body}, then the @{code}return@{body} kicks you out of the function immediately and the following @{code}try@{body} statements never execute.
+
+On the other hand, if @{code}urllib@{body} yelled at you and told you that @{code}source@{body} wasn't a valid URL, you assume it's a path to a file on disk and try to open it. Again, you don't do anything fancy to check whether @{code}source@{body} is a valid filename or not (the rules for valid filenames vary wildly between different platforms anyway, so you'd probably get them wrong anyway). Instead, you just blindly open the file, and silently trap any errors.
+
+By this point, you need to assume that @{code}source@{body} is a string that has hard-coded data in it (since nothing else worked), so you use @{code}StringIO@{body} to create a file-like object out of it and return that. (In fact, since you're using the @{code}str@{body} function, @{code}source@{body} doesn't even need to be a string; it could be any object, and you'll use its string representation, as defined by its @{code}__str__@{body} special method.)
+
+Now you can use this @{code}openAnything@{body} function in conjunction with @{code}minidom.parse@{body} to make a function that takes a @{code}source@{body} that refers to an XML document somehow (either as a URL, or a local filename, or a hard-coded XML document in a string) and parses it.
+
+@{b}Example 10.7. Using @{code}openAnything@{body} in @{code}kgp.py@{body}@{ub}
+
+@{code}
+
+class KantGenerator:
+def _load(self, source):
+sock = toolbox.openAnything(source)
+xmldoc = minidom.parse(sock).documentElement
+sock.close()
+return xmldoc
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "10.2. Standard input, output, and error"
+@TITLE "10.2. Standard input, output, and error"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}10.2. Standard input, output, and error @{ub}
+
+UNIX users are already familiar with the concept of standard input, standard output, and standard error. This section is for the rest of you.
+
+Standard output and standard error (commonly abbreviated @{code}stdout@{body} and @{code}stderr@{body}) are pipes that are built into every UNIX system. When you @{code}print@{body} something, it goes to the @{code}stdout@{body} pipe; when your program crashes and prints out debugging information (like a traceback in Python), it goes to the @{code}stderr@{body} pipe. Both of these pipes are ordinarily just connected to the terminal window where you are working, so when a program prints, you see the output, and when a program crashes, you see the debugging information. (If you're working on a system with a window-based Python IDE, @{code}stdout@{body} and @{code}stderr@{body} default to your "Interactive Window".)
+
+@{b}Example 10.8. Introducing @{code}stdout@{body} and @{code}stderr@{body}@{ub}
+
+@{code}
+
+>>> for i in range(3):
+... print 'Dive in'
+Dive in
+Dive in
+Dive in
+>>> import sys
+>>> for i in range(3):
+... sys.stdout.write('Dive in')
+Dive inDive inDive in
+>>> for i in range(3):
+... sys.stderr.write('Dive in')
+Dive inDive inDive in
+@{body}
+
+As you saw in Example 6.9, "Simple Counters", you can use Python's built-in @{code}range@{body} function to build simple counter loops that repeat something a set number of times.
+
+@{code}stdout@{body} is a file-like object; calling its @{code}write@{body} function will print out whatever string you give it. In fact, this is what the @{code}print@{body} function really does; it adds a carriage return to the end of the string you're printing, and calls @{code}sys.stdout.write@{body}.
+
+In the simplest case, @{code}stdout@{body} and @{code}stderr@{body} send their output to the same place: the Python IDE (if you're in one), or the terminal (if you're running Python from the command line). Like @{code}stdout@{body}, @{code}stderr@{body} does not add carriage returns for you; if you want them, add them yourself.
+
+@{code}stdout@{body} and @{code}stderr@{body} are both file-like objects, like the ones you discussed in Section 10.1, "Abstracting input sources", but they are both write-only. They have no @{code}read@{body} method, only @{code}write@{body}. Still, they are file-like objects, and you can assign any other file- or file-like object to them to redirect their output.
+
+@{b}Example 10.9. Redirecting output@{ub}
+
+@{code}
+
+[you\@localhost kgp]$ python stdout.py
+Dive in
+[you\@localhost kgp]$ cat out.log
+This message will be logged instead of displayed
+@{body}
+
+(On Windows, you can use @{code}type@{body} instead of @{code}cat@{body} to display the contents of a file.)
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+#stdout.py
+import sys
+
+print 'Dive in'
+saveout = sys.stdout
+fsock = open('out.log', 'w')
+sys.stdout = fsock
+print 'This message will be logged instead of displayed'
+sys.stdout = saveout
+fsock.close()
+
+@{body}
+
+This will print to the IDE "Interactive Window" (or the terminal, if running the script from the command line).
+
+Always save @{code}stdout@{body} before redirecting it, so you can set it back to normal later.
+
+Open a file for writing. If the file doesn't exist, it will be created. If the file does exist, it will be overwritten.
+
+Redirect all further output to the new file you just opened.
+
+This will be "printed" to the log file only; it will not be visible in the IDE window or on the screen.
+
+Set @{code}stdout@{body} back to the way it was before you mucked with it.
+
+Close the log file.
+
+Redirecting @{code}stderr@{body} works exactly the same way, using @{code}sys.stderr@{body} instead of @{code}sys.stdout@{body}.
+
+@{b}Example 10.10. Redirecting error information@{ub}
+
+@{code}
+
+[you\@localhost kgp]$ python stderr.py
+[you\@localhost kgp]$ cat error.log
+Traceback (most recent line last):
+File "stderr.py", line 5, in ?
+raise Exception, 'this error will be logged'
+Exception: this error will be logged
+@{body}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+#stderr.py
+import sys
+
+fsock = open('error.log', 'w')
+sys.stderr = fsock
+raise Exception, 'this error will be logged'
+
+@{body}
+
+Open the log file where you want to store debugging information.
+
+Redirect standard error by assigning the file object of the newly-opened log file to @{code}stderr@{body}.
+
+Raise an exception. Note from the screen output that this does @{i}not@{ui} print anything on screen. All the normal traceback information has been written to @{code}error.log@{body}.
+
+Also note that you're not explicitly closing your log file, nor are you setting @{code}stderr@{body} back to its original value. This is fine, since once the program crashes (because of the exception), Python will clean up and close the file for us, and it doesn't make any difference that @{code}stderr@{body} is never restored, since, as I mentioned, the program crashes and Python ends. Restoring the original is more important for @{code}stdout@{body}, if you expect to go do other stuff within the same script afterwards.
+
+Since it is so common to write error messages to standard error, there is a shorthand syntax that can be used instead of going through the hassle of redirecting it outright.
+
+@{b}Example 10.11. Printing to @{code}stderr@{body}@{ub}
+
+@{code}
+
+>>> print 'entering function'
+entering function
+>>> import sys
+>>> print >> sys.stderr, 'entering function'
+entering function
+
+@{body}
+
+This shorthand syntax of the @{code}print@{body} statement can be used to write to any open file, or file-like object. In this case, you can redirect a single @{code}print@{body} statement to @{code}stderr@{body} without affecting subsequent @{code}print@{body} statements.
+
+Standard input, on the other hand, is a read-only file object, and it represents the data flowing into the program from some previous program. This will likely not make much sense to classic Mac OS users, or even Windows users unless you were ever fluent on the MS-DOS command line. The way it works is that you can construct a chain of commands in a single line, so that one program's output becomes the input for the next program in the chain. The first program simply outputs to standard output (without doing any special redirecting itself, just doing normal @{code}print@{body} statements or whatever), and the next program reads from standard input, and the operating system takes care of connecting one program's output to the next program's input.
+
+@{b}Example 10.12. Chaining commands@{ub}
+
+@{code}
+
+[you\@localhost kgp]$ python kgp.py -g binary.xml
+01100111
+[you\@localhost kgp]$ cat binary.xml
+
+0
+1
+
+\\
+
+[you\@localhost kgp]$ cat binary.xml | python kgp.py -g -
+10110001
+@{body}
+
+As you saw in Section 9.1, "Diving in", this will print a string of eight random bits, @{code}0@{body} or @{code}1@{body}.
+
+This simply prints out the entire contents of @{code}binary.xml@{body}. (Windows users should use @{code}type@{body} instead of @{code}cat@{body}.)
+
+This prints the contents of @{code}binary.xml@{body}, but the "@{code}|@{body} " character, called the "pipe" character, means that the contents will not be printed to the screen. Instead, they will become the standard input of the next command, which in this case calls your Python script.
+
+Instead of specifying a module (like @{code}binary.xml@{body}), you specify "@{code}-@{body} ", which causes your script to load the grammar from standard input instead of from a specific file on disk. (More on how this happens in the next example.) So the effect is the same as the first syntax, where you specified the grammar filename directly, but think of the expansion possibilities here. Instead of simply doing @{code}cat binary.xml@{body}, you could run a script that dynamically generates the grammar, then you can pipe it into your script. It could come from anywhere: a database, or some grammar-generating meta-script, or whatever. The point is that you don't need to change your @{code}kgp.py@{body} script at all to incorporate any of this functionality. All you need to do is be able to take grammar files from standard input, and you can separate all the other logic into another program.
+
+So how does the script "know" to read from standard input when the grammar file is "@{code}-@{body} "? It's not magic; it's just code.
+
+@{b}Example 10.13. Reading from standard input in @{code}kgp.py@{body}@{ub}
+
+@{code}
+
+def openAnything(source):
+if source == "-":
+import sys
+return sys.stdin
+
+# try to open with urllib (if source is http, ftp, or file URL)
+import urllib
+try:
+
+[... snip ...]
+@{body}
+
+This is the @{code}openAnything@{body} function from @{code}toolbox.py@{body}, which you previously examined in Section 10.1, "Abstracting input sources". All you've done is add three lines of code at the beginning of the function to check if the source is "@{code}-@{body} "; if so, you return @{code}sys.stdin@{body}. Really, that's it! Remember, @{code}stdin@{body} is a file-like object with a @{code}read@{body} method, so the rest of the code (in @{code}kgp.py@{body}, where you call @{code}openAnything@{body}) doesn't change a bit.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "10.3. Caching node lookups"
+@TITLE "10.3. Caching node lookups"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}10.3. Caching node lookups @{ub}
+
+@{code}kgp.py@{body} employs several tricks which may or may not be useful to you in your XML processing. The first one takes advantage of the consistent structure of the input documents to build a cache of nodes.
+
+A grammar file defines a series of @{code}ref@{body} elements. Each @{code}ref@{body} contains one or more @{code}p@{body} elements, which can contain a lot of different things, including @{code}xref@{body} s. Whenever you encounter an @{code}xref@{body}, you look for a corresponding @{code}ref@{body} element with the same @{code}id@{body} attribute, and choose one of the @{code}ref@{body} element's children and parse it. (You'll see how this random choice is made in the next section.)
+
+This is how you build up the grammar: define @{code}ref@{body} elements for the smallest pieces, then define @{code}ref@{body} elements which "include" the first @{code}ref@{body} elements by using @{code}xref@{body}, and so forth. Then you parse the "largest" reference and follow each @{code}xref@{body}, and eventually output real text. The text you output depends on the (random) decisions you make each time you fill in an @{code}xref@{body}, so the output is different each time.
+
+This is all very flexible, but there is one downside: performance. When you find an @{code}xref@{body} and need to find the corresponding @{code}ref@{body} element, you have a problem. The @{code}xref@{body} has an @{code}id@{body} attribute, and you want to find the @{code}ref@{body} element that has that same @{code}id@{body} attribute, but there is no easy way to do that. The slow way to do it would be to get the entire list of @{code}ref@{body} elements each time, then manually loop through and look at each @{code}id@{body} attribute. The fast way is to do that once and build a cache, in the form of a dictionary.
+
+@{b}Example 10.14. @{code}loadGrammar@{body}@{ub}
+
+@{code}
+
+def loadGrammar(self, grammar):
+self.grammar = self._load(grammar)
+self.refs = {}
+for ref in self.grammar.getElementsByTagName("ref"):
+self.refs[ref.attributes["id"].value] = ref
+@{body}
+
+Start by creating an empty dictionary, @{code}self.refs@{body}.
+
+As you saw in Section 9.5, "Searching for elements", @{code}getElementsByTagName@{body} returns a list of all the elements of a particular name. You easily can get a list of all the @{code}ref@{body} elements, then simply loop through that list.
+
+As you saw in Section 9.6, "Accessing element attributes", you can access individual attributes of an element by name, using standard dictionary syntax. So the keys of the @{code}self.refs@{body} dictionary will be the values of the @{code}id@{body} attribute of each @{code}ref@{body} element.
+
+The values of the @{code}self.refs@{body} dictionary will be the @{code}ref@{body} elements themselves. As you saw in Section 9.3, "Parsing XML", each element, each node, each comment, each piece of text in a parsed XML document is an object.
+
+Once you build this cache, whenever you come across an @{code}xref@{body} and need to find the @{code}ref@{body} element with the same @{code}id@{body} attribute, you can simply look it up in @{code}self.refs@{body}.
+
+@{b}Example 10.15. Using the @{code}ref@{body} element cache @{ub}
+
+@{code}
+
+def do_xref(self, node):
+id = node.attributes["id"].value
+self.parse(self.randomChildElement(self.refs[id]))
+@{body}
+
+You'll explore the @{code}randomChildElement@{body} function in the next section.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "10.4. Finding direct children of a node"
+@TITLE "10.4. Finding direct children of a node"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}10.4. Finding direct children of a node @{ub}
+
+Another useful techique when parsing XML documents is finding all the direct child elements of a particular element. For instance, in the grammar files, a @{code}ref@{body} element can have several @{code}p@{body} elements, each of which can contain many things, including other @{code}p@{body} elements. You want to find just the @{code}p@{body} elements that are children of the @{code}ref@{body}, not @{code}p@{body} elements that are children of other @{code}p@{body} elements.
+
+You might think you could simply use @{code}getElementsByTagName@{body} for this, but you can't. @{code}getElementsByTagName@{body} searches recursively and returns a single list for all the elements it finds. Since @{code}p@{body} elements can contain other @{code}p@{body} elements, you can't use @{code}getElementsByTagName@{body}, because it would return nested @{code}p@{body} elements that you don't want. To find only direct child elements, you'll need to do it yourself.
+
+@{b}Example 10.16. Finding direct child elements@{ub}
+
+@{code}
+
+def randomChildElement(self, node):
+choices = [e for e in node.childNodes
+if e.nodeType == e.ELEMENT_NODE]
+chosen = random.choice(choices)
+return chosen
+@{body}
+
+As you saw in Example 9.9, "Getting child nodes", the @{code}childNodes@{body} attribute returns a list of all the child nodes of an element.
+
+However, as you saw in Example 9.11, "Child nodes can be text", the list returned by @{code}childNodes@{body} contains all different types of nodes, including text nodes. That's not what you're looking for here. You only want the children that are elements.
+
+Each node has a @{code}nodeType@{body} attribute, which can be @{code}ELEMENT_NODE@{body}, @{code}TEXT_NODE@{body}, @{code}COMMENT_NODE@{body}, or any number of other values. The complete list of possible values is in the @{code}__init__.py@{body} file in the @{code}xml.dom@{body} package. (See Section 9.2, "Packages" for more on packages.) But you're just interested in nodes that are elements, so you can filter the list to only include those nodes whose @{code}nodeType@{body} is @{code}ELEMENT_NODE@{body}.
+
+Once you have a list of actual elements, choosing a random one is easy. Python comes with a module called @{code}random@{body} which includes several useful functions. The @{code}random.choice@{body} function takes a list of any number of items and returns a random item. For example, if the @{code}ref@{body} elements contains several @{code}p@{body} elements, then @{code}choices@{body} would be a list of @{code}p@{body} elements, and @{code}chosen@{body} would end up being assigned exactly one of them, selected at random.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "10.5. Creating separate handlers by node type"
+@TITLE "10.5. Creating separate handlers by node type"
+@NEXT "S6"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}10.5. Creating separate handlers by node type @{ub}
+
+The third useful XML processing tip involves separating your code into logical functions, based on node types and element names. Parsed XML documents are made up of various types of nodes, each represented by a Python object. The root level of the document itself is represented by a @{code}Document@{body} object. The @{code}Document@{body} then contains one or more @{code}Element@{body} objects (for actual XML tags), each of which may contain other @{code}Element@{body} objects, @{code}Text@{body} objects (for bits of text), or @{code}Comment@{body} objects (for embedded comments). Python makes it easy to write a dispatcher to separate the logic for each node type.
+
+@{b}Example 10.17. Class names of parsed XML objects @{ub}
+
+@{code}
+
+>>> from xml.dom import minidom
+>>> xmldoc = minidom.parse('kant.xml')
+>>> xmldoc
+
+>>> xmldoc.__class__
+
+>>> xmldoc.__class__.__name__
+'Document'
+@{body}
+
+Assume for a moment that @{code}kant.xml@{body} is in the current directory.
+
+As you saw in Section 9.2, "Packages", the object returned by parsing an XML document is a @{code}Document@{body} object, as defined in the @{code}minidom.py@{body} in the @{code}xml.dom@{body} package. As you saw in Section 5.4, "Instantiating Classes", @{code}__class__@{body} is built-in attribute of every Python object.
+
+Furthermore, @{code}__name__@{body} is a built-in attribute of every Python class, and it is a string. This string is not mysterious; it's the same as the class name you type when you define a class yourself. (See Section 5.3, "Defining Classes".)
+
+Fine, so now you can get the class name of any particular XML node (since each XML node is represented as a Python object). How can you use this to your advantage to separate the logic of parsing each node type? The answer is @{code}getattr@{body}, which you first saw in Section 4.4, "Getting Object References With getattr".
+
+@{b}Example 10.18. @{code}parse@{body}, a generic XML node dispatcher @{ub}
+
+@{code}
+
+def parse(self, node):
+parseMethod = getattr(self, "parse_%s" % node.__class__.__name__)
+parseMethod(node)
+@{body}
+
+First off, notice that you're constructing a larger string based on the class name of the node you were passed (in the @{code}node@{body} argument). So if you're passed a @{code}Document@{body} node, you're constructing the string @{code}'parse_Document'@{body}, and so forth.
+
+Now you can treat that string as a function name, and get a reference to the function itself using @{code}getattr@{body}
+
+Finally, you can call that function and pass the node itself as an argument. The next example shows the definitions of each of these functions.
+
+@{b}Example 10.19. Functions called by the @{code}parse@{body} dispatcher @{ub}
+
+@{code}
+
+def parse_Document(self, node):
+self.parse(node.documentElement)
+
+def parse_Text(self, node):
+text = node.data
+if self.capitalizeNextWord:
+self.pieces.append(text[0].upper())
+self.pieces.append(text[1:])
+self.capitalizeNextWord = 0
+else:
+self.pieces.append(text)
+
+def parse_Comment(self, node):
+pass
+
+def parse_Element(self, node):
+handlerMethod = getattr(self, "do_%s" % node.tagName)
+handlerMethod(node)
+@{body}
+
+@{code}parse_Document@{body} is only ever called once, since there is only one @{code}Document@{body} node in an XML document, and only one @{code}Document@{body} object in the parsed XML representation. It simply turns around and parses the root element of the grammar file.
+
+@{code}parse_Text@{body} is called on nodes that represent bits of text. The function itself does some special processing to handle automatic capitalization of the first word of a sentence, but otherwise simply appends the represented text to a list.
+
+@{code}parse_Comment@{body} is just a @{code}pass@{body}, since you don't care about embedded comments in the grammar files. Note, however, that you still need to define the function and explicitly make it do nothing. If the function did not exist, the generic @{code}parse@{body} function would fail as soon as it stumbled on a comment, because it would try to find the non-existent @{code}parse_Comment@{body} function. Defining a separate function for every node type, even ones you don't use, allows the generic @{code}parse@{body} function to stay simple and dumb.
+
+The @{code}parse_Element@{body} method is actually itself a dispatcher, based on the name of the element's tag. The basic idea is the same: take what distinguishes elements from each other (their tag names) and dispatch to a separate function for each of them. You construct a string like @{code}'do_xref'@{body} (for an @{code}@{body} tag), find a function of that name, and call it. And so forth for each of the other tag names that might be found in the course of parsing a grammar file (@{code}@{body} tags, @{code}@{body} tags).
+
+In this example, the dispatch functions @{code}parse@{body} and @{code}parse_Element@{body} simply find other methods in the same class. If your processing is very complex (or you have many different tag names), you could break up your code into separate modules, and use dynamic importing to import each module and call whatever functions you needed. Dynamic importing will be discussed in Chapter 16, @{i}Functional Programming@{ui}.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S6 "10.6. Handling command-line arguments"
+@TITLE "10.6. Handling command-line arguments"
+@NEXT "S7"
+@PREV "S5"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}10.6. Handling command-line arguments @{ub}
+
+Python fully supports creating programs that can be run on the command line, complete with command-line arguments and either short- or long-style flags to specify various options. None of this is XML-specific, but this script makes good use of command-line processing, so it seemed like a good time to mention it.
+
+It's difficult to talk about command-line processing without understanding how command-line arguments are exposed to your Python program, so let's write a simple program to see them.
+
+@{b}Example 10.20. Introducing @{code}sys.argv@{body}@{ub}
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+#argecho.py
+import sys
+
+for arg in sys.argv:
+print arg
+@{body}
+
+Each command-line argument passed to the program will be in @{code}sys.argv@{body}, which is just a list. Here you are printing each argument on a separate line.
+
+@{b}Example 10.21. The contents of @{code}sys.argv@{body}@{ub}
+
+@{code}
+
+[you\@localhost py]$ python argecho.py
+argecho.py
+[you\@localhost py]$ python argecho.py abc def
+argecho.py
+abc
+def
+[you\@localhost py]$ python argecho.py --help
+argecho.py
+--help
+[you\@localhost py]$ python argecho.py -m kant.xml
+argecho.py
+-m
+kant.xml
+@{body}
+
+The first thing to know about @{code}sys.argv@{body} is that it contains the name of the script you're calling. You will actually use this knowledge to your advantage later, in Chapter 16, @{i}Functional Programming@{ui}. Don't worry about it for now.
+
+Command-line arguments are separated by spaces, and each shows up as a separate element in the @{code}sys.argv@{body} list.
+
+Command-line flags, like @{code}--help@{body}, also show up as their own element in the @{code}sys.argv@{body} list.
+
+To make things even more interesting, some command-line flags themselves take arguments. For instance, here you have a flag (@{code}-m@{body}) which takes an argument (@{code}kant.xml@{body}). Both the flag itself and the flag's argument are simply sequential elements in the @{code}sys.argv@{body} list. No attempt is made to associate one with the other; all you get is a list.
+
+So as you can see, you certainly have all the information passed on the command line, but then again, it doesn't look like it's going to be all that easy to actually use it. For simple programs that only take a single argument and have no flags, you can simply use @{code}sys.argv[1]@{body} to access the argument. There's no shame in this; I do it all the time. For more complex programs, you need the @{code}getopt@{body} module.
+
+@{b}Example 10.22. Introducing @{code}getopt@{body}@{ub}
+
+@{code}
+
+def main(argv):
+grammar = "kant.xml"
+try:
+opts, args = getopt.getopt(argv, "hg:d", ["help", "grammar="])
+except getopt.GetoptError:
+usage()
+sys.exit(2)
+
+...
+
+if __name__ == "__main__":
+main(sys.argv[1:])
+@{body}
+
+First off, look at the bottom of the example and notice that you're calling the @{code}main@{body} function with @{code}sys.argv[1:]@{body}. Remember, @{code}sys.argv[0]@{body} is the name of the script that you're running; you don't care about that for command-line processing, so you chop it off and pass the rest of the list.
+
+This is where all the interesting processing happens. The @{code}getopt@{body} function of the @{code}getopt@{body} module takes three parameters: the argument list (which you got from @{code}sys.argv[1:]@{body}), a string containing all the possible single-character command-line flags that this program accepts, and a list of longer command-line flags that are equivalent to the single-character versions. This is quite confusing at first glance, and is explained in more detail below.
+
+If anything goes wrong trying to parse these command-line flags, @{code}getopt@{body} will raise an exception, which you catch. You told @{code}getopt@{body} all the flags you understand, so this probably means that the end user passed some command-line flag that you don't understand.
+
+As is standard practice in the UNIX world, when the script is passed flags it doesn't understand, you print out a summary of proper usage and exit gracefully. Note that I haven't shown the @{code}usage@{body} function here. You would still need to code that somewhere and have it print out the appropriate summary; it's not automatic.
+
+So what are all those parameters you pass to the @{code}getopt@{body} function? Well, the first one is simply the raw list of command-line flags and arguments (not including the first element, the script name, which you already chopped off before calling the @{code}main@{body} function). The second is the list of short command-line flags that the script accepts.
+
+@{b}@{code}"hg:d"@{body}@{ub}
+
+@{code}-h@{body} print usage summary @{code}-g ...@{body} use specified grammar file or URL @{code}-d@{body} show debugging information while parsing
+
+The first and third flags are simply standalone flags; you specify them or you don't, and they do things (print help) or change state (turn on debugging). However, the second flag (@{code}-g@{body}) @{i}must@{ui} be followed by an argument, which is the name of the grammar file to read from. In fact it can be a filename or a web address, and you don't know which yet (you'll figure it out later), but you know it has to be @{i}something@{ui}. So you tell @{code}getopt@{body} this by putting a colon after the @{code}g@{body} in that second parameter to the @{code}getopt@{body} function.
+
+To further complicate things, the script accepts either short flags (like @{code}-h@{body}) or long flags (like @{code}--help@{body}), and you want them to do the same thing. This is what the third parameter to @{code}getopt@{body} is for, to specify a list of the long flags that correspond to the short flags you specified in the second parameter.
+
+@{b}@{code}["help", "grammar="]@{body}@{ub}
+
+@{code}--help@{body} print usage summary @{code}--grammar ...@{body} use specified grammar file or URL
+
+Three things of note here:
+
+* All long flags are preceded by two dashes on the command line, but you don't include those dashes when calling @{code}getopt@{body}. They are understood.
+
+* The @{code}--grammar@{body} flag must always be followed by an additional argument, just like the @{code}-g@{body} flag. This is notated by an equals sign, @{code}"grammar="@{body}.
+
+* The list of long flags is shorter than the list of short flags, because the @{code}-d@{body} flag does not have a corresponding long version. This is fine; only @{code}-d@{body} will turn on debugging. But the order of short and long flags needs to be the same, so you'll need to specify all the short flags that @{i}do@{ui} have corresponding long flags first, then all the rest of the short flags.
+
+Confused yet? Let's look at the actual code and see if it makes sense in context.
+
+@{b}Example 10.23. Handling command-line arguments in @{code}kgp.py@{body}@{ub}
+
+@{code}
+
+def main(argv):
+grammar = "kant.xml"
+try:
+opts, args = getopt.getopt(argv, "hg:d", ["help", "grammar="])
+except getopt.GetoptError:
+usage()
+sys.exit(2)
+for opt, arg in opts:
+if opt in ("-h", "--help"):
+usage()
+sys.exit()
+elif opt == '-d':
+global _debug
+_debug = 1
+elif opt in ("-g", "--grammar"):
+grammar = arg
+
+source = "".join(args)
+
+k = KantGenerator(grammar, source)
+print k.output()
+@{body}
+
+The @{code}grammar@{body} variable will keep track of the grammar file you're using. You initialize it here in case it's not specified on the command line (using either the @{code}-g@{body} or the @{code}--grammar@{body} flag).
+
+The @{code}opts@{body} variable that you get back from @{code}getopt@{body} contains a list of tuples: @{code}flag@{body} and @{code}argument@{body}. If the flag doesn't take an argument, then @{code}arg@{body} will simply be @{code}None@{body}. This makes it easier to loop through the flags.
+
+@{code}getopt@{body} validates that the command-line flags are acceptable, but it doesn't do any sort of conversion between short and long flags. If you specify the @{code}-h@{body} flag, @{code}opt@{body} will contain @{code}"-h"@{body}; if you specify the @{code}--help@{body} flag, @{code}opt@{body} will contain @{code}"--help"@{body}. So you need to check for both.
+
+Remember, the @{code}-d@{body} flag didn't have a corresponding long flag, so you only need to check for the short form. If you find it, you set a global variable that you'll refer to later to print out debugging information. (I used this during the development of the script. What, you thought all these examples worked on the first try?)
+
+If you find a grammar file, either with a @{code}-g@{body} flag or a @{code}--grammar@{body} flag, you save the argument that followed it (stored in @{code}arg@{body}) into the @{code}grammar@{body} variable, overwriting the default that you initialized at the top of the @{code}main@{body} function.
+
+That's it. You've looped through and dealt with all the command-line flags. That means that anything left must be command-line arguments. These come back from the @{code}getopt@{body} function in the @{code}args@{body} variable. In this case, you're treating them as source material for the parser. If there are no command-line arguments specified, @{code}args@{body} will be an empty list, and @{code}source@{body} will end up as the empty string.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S7 "10.7. Putting it all together"
+@TITLE "10.7. Putting it all together"
+@NEXT "S8"
+@PREV "S6"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}10.7. Putting it all together @{ub}
+
+You've covered a lot of ground. Let's step back and see how all the pieces fit together.
+
+To start with, this is a script that takes its arguments on the command line, using the @{code}getopt@{body} module.
+
+@{code}
+
+def main(argv):
+...
+try:
+opts, args = getopt.getopt(argv, "hg:d", ["help", "grammar="])
+except getopt.GetoptError:
+...
+for opt, arg in opts:
+...
+@{body}
+
+You create a new instance of the @{code}KantGenerator@{body} class, and pass it the grammar file and source that may or may not have been specified on the command line.
+
+@{code}
+
+k = KantGenerator(grammar, source)
+@{body}
+
+The @{code}KantGenerator@{body} instance automatically loads the grammar, which is an XML file. You use your custom @{code}openAnything@{body} function to open the file (which could be stored in a local file or a remote web server), then use the built-in @{code}minidom@{body} parsing functions to parse the XML into a tree of Python objects.
+
+@{code}
+
+def _load(self, source):
+sock = toolbox.openAnything(source)
+xmldoc = minidom.parse(sock).documentElement
+sock.close()
+@{body}
+
+Oh, and along the way, you take advantage of your knowledge of the structure of the XML document to set up a little cache of references, which are just elements in the XML document.
+
+@{code}
+
+def loadGrammar(self, grammar):
+for ref in self.grammar.getElementsByTagName("ref"):
+self.refs[ref.attributes["id"].value] = ref
+@{body}
+
+If you specified some source material on the command line, you use that; otherwise you rip through the grammar looking for the "top-level" reference (that isn't referenced by anything else) and use that as a starting point.
+
+@{code}
+
+def getDefaultSource(self):
+xrefs = {}
+for xref in self.grammar.getElementsByTagName("xref"):
+xrefs[xref.attributes["id"].value] = 1
+xrefs = xrefs.keys()
+standaloneXrefs = [e for e in self.refs.keys() if e not in xrefs]
+return '' % random.choice(standaloneXrefs)
+@{body}
+
+Now you rip through the source material. The source material is also XML, and you parse it one node at a time. To keep the code separated and more maintainable, you use separate handlers for each node type.
+
+@{code}
+
+def parse_Element(self, node):
+handlerMethod = getattr(self, "do_%s" % node.tagName)
+handlerMethod(node)
+@{body}
+
+You bounce through the grammar, parsing all the children of each @{code}p@{body} element,
+
+@{code}
+
+def do_p(self, node):
+...
+if doit:
+for child in node.childNodes: self.parse(child)
+@{body}
+
+replacing @{code}choice@{body} elements with a random child,
+
+@{code}
+
+def do_choice(self, node):
+self.parse(self.randomChildElement(node))
+@{body}
+
+and replacing @{code}xref@{body} elements with a random child of the corresponding @{code}ref@{body} element, which you previously cached.
+
+@{code}
+
+def do_xref(self, node):
+id = node.attributes["id"].value
+self.parse(self.randomChildElement(self.refs[id]))
+@{body}
+
+Eventually, you parse your way down to plain text,
+
+@{code}
+
+def parse_Text(self, node):
+text = node.data
+...
+self.pieces.append(text)
+@{body}
+
+which you print out.
+
+@{code}
+
+def main(argv):
+...
+k = KantGenerator(grammar, source)
+print k.output()
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S8 "10.8. Summary"
+@TITLE "10.8. Summary"
+@NEXT "MAIN"
+@PREV "S7"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}10.8. Summary @{ub}
+
+Python comes with powerful libraries for parsing and manipulating XML documents. The @{code}minidom@{body} takes an XML file and parses it into Python objects, providing for random access to arbitrary elements. Furthermore, this chapter shows how Python can be used to create a "real" standalone command-line script, complete with command-line flags, command-line arguments, error handling, even the ability to take input from the piped result of a previous program.
+
+Before moving on to the next chapter, you should be comfortable doing all of these things:
+
+* Chaining programs with standard input and output
+
+* Defining dynamic dispatchers with @{code}getattr@{body}.
+
+* Using command-line flags and validating them with @{code}getopt@{body}
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

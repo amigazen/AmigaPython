@@ -73,6 +73,65 @@ This creates a test binary called Python27 in the Source folder.
 make -f vmakefile clean
 ```
 
-## How To Release
+## Workbench vs Shell
 
-The build system is not yet complete and does not include a distribution build. 
+- **Shell / CLI:** stdin/stdout/stderr stay on the shell console (unchanged).
+- **Workbench (icon double-click):** PosixLib has no SAS/C `__stdiowin`. The
+  binary opens one `CON:.../CLOSE/SMART` (no WAIT — window closes when the
+  FH is closed), clears all `PRF_CLOSE*` flags, and Closes the FH once on
+  exit. Link with `-lposix` before `-lvc` (see `aos68k_posix`) so vclib
+  fclose does not Close the same CON BPTR for each of stdin/stdout/stderr.
+  Needs `lib/python27.zip` beside the tool (copy-anywhere) or optional
+  `Assign Python:`. Quit via the CON close gadget or Ctrl+C.
+- **Workbench + project icon** (Default Tool = Python): after the same
+  console setup, `sm_ArgList[1]` is the script. The port uses
+  `CurrentDir(wa_Lock)` + leaf `wa_Name` (no Lock of the project path while
+  Workbench still owns startup locks). Extension need not be `.py`.
+
+See `Source/Amiga/wbconsole.c` and RKR M DOS CON-Handler notes.
+
+After a successful build in `Source/`:
+
+```
+make -f vmakefile release
+```
+
+This copies **public binary release artifacts** into the sibling `Python/`
+drawer. AmigaDOS paths use `/Python` (parent). Do **not** pass those paths
+into `Python27` — PosixLib treats `/` as volume root, not parent.
+
+| From `Source/` | To `Python/` |
+|----------------|--------------|
+| `Python27` (stripped release link) | `Python` |
+| `lib/lib-dynload/_socket.module` | `lib/lib-dynload/_socket.module` |
+| `Lib/site-python/#?.py` | `lib/site-python/` |
+| `Lib/` via `mkpythonzip` -> `python27.zip`, then Copy | `lib/python27.zip` |
+
+`python27.zip` is the zipimported stdlib (excludes `test/`, `plat-*`, idle/tk, and other non-Amiga packages). LoadSeg plugins stay outside the zip under `lib/lib-dynload/`.
+
+### Standalone release drawer (`Python/`)
+
+`Python/` is the copy-anywhere end-user product (no installer script):
+
+| Path | Role |
+|------|------|
+| `Python` | Interpreter binary |
+| `Python.help` | AmigaDOS Help text |
+| `lib/` | `python27.zip`, `lib-dynload/`, `site-python/` |
+| `Help/AmigaPython.guide` | Port guide (AmigaGuide) |
+| `Help/DiveIntoPython/` | Dive Into Python (AmigaGuide, GFDL) |
+| `Help/Amiga/` | Amiga module notes (reST) |
+| `Demo/` | Amiga-checked example scripts |
+| `Demo/`, `Icons/` | Examples and icon extras |
+| `README`, `DISCL_and_COPYRIGHT` | Quick start and licenses |
+
+Regenerate Dive Into Python guides on a host with Python 3:
+
+```
+python3 Source/Tools/amiga/html2amigaguide.py \
+  path/to/diveintopython.html Python/Help/DiveIntoPython
+```
+
+It does **not** copy `Python27_Debug`, object trees (`build-vbcc`), or documentation from the build. Docs, demos, and icons under `Python/` are maintained in-tree.
+
+`release` depends on `Python27` and `plugins`, so those targets are built first if missing.

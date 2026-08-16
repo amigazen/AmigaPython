@@ -1,0 +1,913 @@
+@DATABASE "DIP14.guide"
+@$VER: DIP14.guide 5.4-amiga (16.8.2026)
+@(C) Copyright 2000-2004 Mark Pilgrim. AmigaGuide edition for AmigaPython (amigazen project).
+@AUTHOR Mark Pilgrim; AmigaGuide conversion amigazen project
+@MASTER http://diveintopython.org/
+@SMARTWRAP
+@WIDTH 76
+@TAB 4
+@HELP DiveIntoPython.guide/AmigaNote
+@INDEX DiveIntoPython.guide/MAIN
+@REM Modified AmigaGuide for AmigaPython 2.7.18. GFDL 1.1+.
+
+@NODE MAIN "14. Test-First Programming"
+@TITLE "14. Test-First Programming"
+@NEXT "S0"
+@TOC "MAIN"
+
+@{b}14. Test-First Programming@{ub}
+
+@{b}AmigaPython note@{ub}
+
+@{i}Test-first ideas apply; expect long runtimes on classic Amiga.@{ui}
+
+Sections:
+
+@{" Intro " LINK "S0"}
+@{" 14.1. roman.py, stage 1 " LINK "S1"}
+@{" 14.2. roman.py, stage 2 " LINK "S2"}
+@{" 14.3. roman.py, stage 3 " LINK "S3"}
+@{" 14.4. roman.py, stage 4 " LINK "S4"}
+@{" 14.5. roman.py, stage 5 " LINK "S5"}
+
+@{" Contents (book) " LINK "DiveIntoPython.guide/MAIN"}
+@{" AmigaPython.guide " LINK "AmigaPython.guide/MAIN"}
+
+@ENDNODE
+
+@NODE S0 "Intro"
+@TITLE "Intro"
+@NEXT "S1"
+@PREV "MAIN"
+@TOC "MAIN"
+@SMARTWRAP
+
+Chapter 14. Test-First Programming
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S1 "14.1. roman.py, stage 1"
+@TITLE "14.1. roman.py, stage 1"
+@NEXT "S2"
+@PREV "S0"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}14.1. @{code}roman.py@{body}, stage 1 @{ub}
+
+Now that the unit tests are complete, it's time to start writing the code that the test cases are attempting to test. You're going to do this in stages, so you can see all the unit tests fail, then watch them pass one by one as you fill in the gaps in @{code}roman.py@{body}.
+
+@{b}Example 14.1. @{code}roman1.py@{body}@{ub}
+
+This file is available in @{code}py/roman/stage1/@{body} in the examples directory.
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+"""Convert to and from Roman numerals"""
+
+#Define exceptions
+class RomanError(Exception): pass
+class OutOfRangeError(RomanError): pass
+class NotIntegerError(RomanError): pass
+class InvalidRomanNumeralError(RomanError): pass
+
+def toRoman(n):
+"""convert integer to Roman numeral"""
+pass
+
+def fromRoman(s):
+"""convert Roman numeral to integer"""
+pass
+
+@{body}
+
+This is how you define your own custom exceptions in Python. Exceptions are classes, and you create your own by subclassing existing exceptions. It is strongly recommended (but not required) that you subclass @{code}Exception@{body}, which is the base class that all built-in exceptions inherit from. Here I am defining @{code}RomanError@{body} (inherited from @{code}Exception@{body}) to act as the base class for all my other custom exceptions to follow. This is a matter of style; I could just as easily have inherited each individual exception from the @{code}Exception@{body} class directly.
+
+The @{code}OutOfRangeError@{body} and @{code}NotIntegerError@{body} exceptions will eventually be used by @{code}toRoman@{body} to flag various forms of invalid input, as specified in @{code}ToRomanBadInput@{body}.
+
+The @{code}InvalidRomanNumeralError@{body} exception will eventually be used by @{code}fromRoman@{body} to flag invalid input, as specified in @{code}FromRomanBadInput@{body}.
+
+At this stage, you want to define the API of each of your functions, but you don't want to code them yet, so you stub them out using the Python reserved word @{code}pass@{body}.
+
+Now for the big moment (drum roll please): you're finally going to run the unit test against this stubby little module. At this point, every test case should fail. In fact, if any test case passes in stage 1, you should go back to @{code}romantest.py@{body} and re-evaluate why you coded a test so useless that it passes with do-nothing functions.
+
+Run @{code}romantest1.py@{body} with the @{code}-v@{body} command-line option, which will give more verbose output so you can see exactly what's going on as each test case runs. With any luck, your output should look like this:
+
+@{b}Example 14.2. Output of @{code}romantest1.py@{body} against @{code}roman1.py@{body}@{ub}
+
+@{code}
+fromRoman should only accept uppercase input ... ERROR
+toRoman should always return uppercase ... ERROR
+fromRoman should fail with malformed antecedents ... FAIL
+fromRoman should fail with repeated pairs of numerals ... FAIL
+fromRoman should fail with too many repeated numerals ... FAIL
+fromRoman should give known result with known input ... FAIL
+toRoman should give known result with known input ... FAIL
+fromRoman(toRoman(n))==n for all n ... FAIL
+toRoman should fail with non-integer input ... FAIL
+toRoman should fail with negative input ... FAIL
+toRoman should fail with large input ... FAIL
+toRoman should fail with 0 input ... FAIL
+
+======================================================================
+ERROR: fromRoman should only accept uppercase input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 154, in testFromRomanCase
+roman1.fromRoman(numeral.upper())
+AttributeError: 'None' object has no attribute 'upper'
+======================================================================
+ERROR: toRoman should always return uppercase
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 148, in testToRomanCase
+self.assertEqual(numeral, numeral.upper())
+AttributeError: 'None' object has no attribute 'upper'
+======================================================================
+FAIL: fromRoman should fail with malformed antecedents
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 133, in testMalformedAntecedent
+self.assertRaises(roman1.InvalidRomanNumeralError, roman1.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with repeated pairs of numerals
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 127, in testRepeatedPairs
+self.assertRaises(roman1.InvalidRomanNumeralError, roman1.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with too many repeated numerals
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 122, in testTooManyRepeatedNumerals
+self.assertRaises(roman1.InvalidRomanNumeralError, roman1.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should give known result with known input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 99, in testFromRomanKnownValues
+self.assertEqual(integer, result)
+File "c:\\python21\\lib\\unittest.py", line 273, in failUnlessEqual
+raise self.failureException, (msg or '%s != %s' % (first, second))
+AssertionError: 1 != None
+======================================================================
+FAIL: toRoman should give known result with known input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 93, in testToRomanKnownValues
+self.assertEqual(numeral, result)
+File "c:\\python21\\lib\\unittest.py", line 273, in failUnlessEqual
+raise self.failureException, (msg or '%s != %s' % (first, second))
+AssertionError: I != None
+======================================================================
+FAIL: fromRoman(toRoman(n))==n for all n
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 141, in testSanity
+self.assertEqual(integer, result)
+File "c:\\python21\\lib\\unittest.py", line 273, in failUnlessEqual
+raise self.failureException, (msg or '%s != %s' % (first, second))
+AssertionError: 1 != None
+======================================================================
+FAIL: toRoman should fail with non-integer input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 116, in testNonInteger
+self.assertRaises(roman1.NotIntegerError, roman1.toRoman, 0.5)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: NotIntegerError
+======================================================================
+FAIL: toRoman should fail with negative input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 112, in testNegative
+self.assertRaises(roman1.OutOfRangeError, roman1.toRoman, -1)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: OutOfRangeError
+======================================================================
+FAIL: toRoman should fail with large input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 104, in testTooLarge
+self.assertRaises(roman1.OutOfRangeError, roman1.toRoman, 4000)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: OutOfRangeError
+======================================================================
+FAIL: toRoman should fail with 0 input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage1\\romantest1.py", line 108, in testZero
+self.assertRaises(roman1.OutOfRangeError, roman1.toRoman, 0)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: OutOfRangeError
+----------------------------------------------------------------------
+Ran 12 tests in 0.040s
+
+FAILED (failures=10, errors=2)
+@{body}
+
+Running the script runs @{code}unittest.main()@{body}, which runs each test case, which is to say each method defined in each class within @{code}romantest.py@{body}. For each test case, it prints out the @{code}doc string@{body} of the method and whether that test passed or failed. As expected, none of the test cases passed.
+
+For each failed test case, @{code}unittest@{body} displays the trace information showing exactly what happened. In this case, the call to @{code}assertRaises@{body} (also called @{code}failUnlessRaises@{body}) raised an @{code}AssertionError@{body} because it was expecting @{code}toRoman@{body} to raise an @{code}OutOfRangeError@{body} and it didn't.
+
+After the detail, @{code}unittest@{body} displays a summary of how many tests were performed and how long it took.
+
+Overall, the unit test failed because at least one test case did not pass. When a test case doesn't pass, @{code}unittest@{body} distinguishes between failures and errors. A failure is a call to an @{code}assertXYZ@{body} method, like @{code}assertEqual@{body} or @{code}assertRaises@{body}, that fails because the asserted condition is not true or the expected exception was not raised. An error is any other sort of exception raised in the code you're testing or the unit test case itself. For instance, the @{code}testFromRomanCase@{body} method ("@{code}fromRoman@{body} should only accept uppercase input") was an error, because the call to @{code}numeral.upper()@{body} raised an @{code}AttributeError@{body} exception, because @{code}toRoman@{body} was supposed to return a string but didn't. But @{code}testZero@{body} ("@{code}toRoman@{body} should fail with 0 input") was a failure, because the call to @{code}fromRoman@{body} did not raise the @{code}InvalidRomanNumeral@{body} exception that @{code}assertRaises@{body} was looking for.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S2 "14.2. roman.py, stage 2"
+@TITLE "14.2. roman.py, stage 2"
+@NEXT "S3"
+@PREV "S1"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}14.2. @{code}roman.py@{body}, stage 2 @{ub}
+
+Now that you have the framework of the @{code}roman@{body} module laid out, it's time to start writing code and passing test cases.
+
+@{b}Example 14.3. @{code}roman2.py@{body}@{ub}
+
+This file is available in @{code}py/roman/stage2/@{body} in the examples directory.
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+"""Convert to and from Roman numerals"""
+
+#Define exceptions
+class RomanError(Exception): pass
+class OutOfRangeError(RomanError): pass
+class NotIntegerError(RomanError): pass
+class InvalidRomanNumeralError(RomanError): pass
+
+#Define digit mapping
+romanNumeralMap = (('M', 1000),
+('CM', 900),
+('D', 500),
+('CD', 400),
+('C', 100),
+('XC', 90),
+('L', 50),
+('XL', 40),
+('X', 10),
+('IX', 9),
+('V', 5),
+('IV', 4),
+('I', 1))
+
+def toRoman(n):
+"""convert integer to Roman numeral"""
+result = ""
+for numeral, integer in romanNumeralMap:
+while n >= integer:
+result += numeral
+n -= integer
+return result
+
+def fromRoman(s):
+"""convert Roman numeral to integer"""
+pass
+
+@{body}
+
+@{code}romanNumeralMap@{body} is a tuple of tuples which defines three things:
+
+* The character representations of the most basic Roman numerals. Note that this is not just the single-character Roman numerals; you're also defining two-character pairs like @{code}CM@{body} ("one hundred less than one thousand"); this will make the @{code}toRoman@{body} code simpler later.
+
+* The order of the Roman numerals. They are listed in descending value order, from @{code}M@{body} all the way down to @{code}I@{body}.
+
+* The value of each Roman numeral. Each inner tuple is a pair of @{code}(@{i}numeral@{ui}, @{i}value@{ui})@{body}.
+
+Here's where your rich data structure pays off, because you don't need any special logic to handle the subtraction rule. To convert to Roman numerals, you simply iterate through @{code}romanNumeralMap@{body} looking for the largest integer value less than or equal to the input. Once found, you add the Roman numeral representation to the end of the output, subtract the corresponding integer value from the input, lather, rinse, repeat.
+
+@{b}Example 14.4. How @{code}toRoman@{body} works @{ub}
+
+If you're not clear how @{code}toRoman@{body} works, add a @{code}print@{body} statement to the end of the @{code}while@{body} loop:
+
+@{code}
+
+while n >= integer:
+result += numeral
+n -= integer
+print 'subtracting', integer, 'from input, adding', numeral, 'to output'
+@{body}
+
+@{code}
+
+>>> import roman2
+>>> roman2.toRoman(1424)
+subtracting 1000 from input, adding M to output
+subtracting 400 from input, adding CD to output
+subtracting 10 from input, adding X to output
+subtracting 10 from input, adding X to output
+subtracting 4 from input, adding IV to output
+'MCDXXIV'
+
+@{body}
+
+So @{code}toRoman@{body} appears to work, at least in this manual spot check. But will it pass the unit testing? Well no, not entirely.
+
+@{b}Example 14.5. Output of @{code}romantest2.py@{body} against @{code}roman2.py@{body}@{ub}
+
+Remember to run @{code}romantest2.py@{body} with the @{code}-v@{body} command-line flag to enable verbose mode.
+
+@{code}
+fromRoman should only accept uppercase input ... FAIL
+toRoman should always return uppercase ... ok
+fromRoman should fail with malformed antecedents ... FAIL
+fromRoman should fail with repeated pairs of numerals ... FAIL
+fromRoman should fail with too many repeated numerals ... FAIL
+fromRoman should give known result with known input ... FAIL
+toRoman should give known result with known input ... ok
+fromRoman(toRoman(n))==n for all n ... FAIL
+toRoman should fail with non-integer input ... FAIL
+toRoman should fail with negative input ... FAIL
+toRoman should fail with large input ... FAIL
+toRoman should fail with 0 input ... FAIL
+@{body}
+
+@{code}toRoman@{body} does, in fact, always return uppercase, because @{code}romanNumeralMap@{body} defines the Roman numeral representations as uppercase. So this test passes already.
+
+Here's the big news: this version of the @{code}toRoman@{body} function passes the known values test. Remember, it's not comprehensive, but it does put the function through its paces with a variety of good inputs, including inputs that produce every single-character Roman numeral, the largest possible input (@{code}3999@{body}), and the input that produces the longest possible Roman numeral (@{code}3888@{body}). At this point, you can be reasonably confident that the function works for any good input value you could throw at it.
+
+However, the function does not "work" for bad values; it fails every single bad input test. That makes sense, because you didn't include any checks for bad input. Those test cases look for specific exceptions to be raised (via @{code}assertRaises@{body}), and you're never raising them. You'll do that in the next stage.
+
+Here's the rest of the output of the unit test, listing the details of all the failures. You're down to 10.
+
+@{code}
+
+======================================================================
+FAIL: fromRoman should only accept uppercase input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage2\\romantest2.py", line 156, in testFromRomanCase
+roman2.fromRoman, numeral.lower())
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with malformed antecedents
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage2\\romantest2.py", line 133, in testMalformedAntecedent
+self.assertRaises(roman2.InvalidRomanNumeralError, roman2.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with repeated pairs of numerals
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage2\\romantest2.py", line 127, in testRepeatedPairs
+self.assertRaises(roman2.InvalidRomanNumeralError, roman2.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with too many repeated numerals
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage2\\romantest2.py", line 122, in testTooManyRepeatedNumerals
+self.assertRaises(roman2.InvalidRomanNumeralError, roman2.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should give known result with known input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage2\\romantest2.py", line 99, in testFromRomanKnownValues
+self.assertEqual(integer, result)
+File "c:\\python21\\lib\\unittest.py", line 273, in failUnlessEqual
+raise self.failureException, (msg or '%s != %s' % (first, second))
+AssertionError: 1 != None
+======================================================================
+FAIL: fromRoman(toRoman(n))==n for all n
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage2\\romantest2.py", line 141, in testSanity
+self.assertEqual(integer, result)
+File "c:\\python21\\lib\\unittest.py", line 273, in failUnlessEqual
+raise self.failureException, (msg or '%s != %s' % (first, second))
+AssertionError: 1 != None
+======================================================================
+FAIL: toRoman should fail with non-integer input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage2\\romantest2.py", line 116, in testNonInteger
+self.assertRaises(roman2.NotIntegerError, roman2.toRoman, 0.5)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: NotIntegerError
+======================================================================
+FAIL: toRoman should fail with negative input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage2\\romantest2.py", line 112, in testNegative
+self.assertRaises(roman2.OutOfRangeError, roman2.toRoman, -1)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: OutOfRangeError
+======================================================================
+FAIL: toRoman should fail with large input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage2\\romantest2.py", line 104, in testTooLarge
+self.assertRaises(roman2.OutOfRangeError, roman2.toRoman, 4000)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: OutOfRangeError
+======================================================================
+FAIL: toRoman should fail with 0 input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage2\\romantest2.py", line 108, in testZero
+self.assertRaises(roman2.OutOfRangeError, roman2.toRoman, 0)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: OutOfRangeError
+----------------------------------------------------------------------
+Ran 12 tests in 0.320s
+
+FAILED (failures=10)
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S3 "14.3. roman.py, stage 3"
+@TITLE "14.3. roman.py, stage 3"
+@NEXT "S4"
+@PREV "S2"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}14.3. @{code}roman.py@{body}, stage 3 @{ub}
+
+Now that @{code}toRoman@{body} behaves correctly with good input (integers from @{code}1@{body} to @{code}3999@{body}), it's time to make it behave correctly with bad input (everything else).
+
+@{b}Example 14.6. @{code}roman3.py@{body}@{ub}
+
+This file is available in @{code}py/roman/stage3/@{body} in the examples directory.
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+"""Convert to and from Roman numerals"""
+
+#Define exceptions
+class RomanError(Exception): pass
+class OutOfRangeError(RomanError): pass
+class NotIntegerError(RomanError): pass
+class InvalidRomanNumeralError(RomanError): pass
+
+#Define digit mapping
+romanNumeralMap = (('M', 1000),
+('CM', 900),
+('D', 500),
+('CD', 400),
+('C', 100),
+('XC', 90),
+('L', 50),
+('XL', 40),
+('X', 10),
+('IX', 9),
+('V', 5),
+('IV', 4),
+('I', 1))
+
+def toRoman(n):
+"""convert integer to Roman numeral"""
+if not (0 n:
+raise NotIntegerError, "non-integers can not be converted"
+
+result = ""
+for numeral, integer in romanNumeralMap:
+while n >= integer:
+result += numeral
+n -= integer
+return result
+
+def fromRoman(s):
+"""convert Roman numeral to integer"""
+pass
+
+@{body}
+
+This is a nice Pythonic shortcut: multiple comparisons at once. This is equivalent to @{code}if not ((0 >> import roman3
+>>> roman3.toRoman(4000)
+Traceback (most recent call last):
+File "", line 1, in ?
+File "roman3.py", line 27, in toRoman
+raise OutOfRangeError, "number out of range (must be 1..3999)"
+OutOfRangeError: number out of range (must be 1..3999)
+>>> roman3.toRoman(1.5)
+Traceback (most recent call last):
+File "", line 1, in ?
+File "roman3.py", line 29, in toRoman
+raise NotIntegerError, "non-integers can not be converted"
+NotIntegerError: non-integers can not be converted
+
+@{body}
+
+@{b}Example 14.8. Output of @{code}romantest3.py@{body} against @{code}roman3.py@{body}@{ub}
+
+@{code}
+fromRoman should only accept uppercase input ... FAIL
+toRoman should always return uppercase ... ok
+fromRoman should fail with malformed antecedents ... FAIL
+fromRoman should fail with repeated pairs of numerals ... FAIL
+fromRoman should fail with too many repeated numerals ... FAIL
+fromRoman should give known result with known input ... FAIL
+toRoman should give known result with known input ... ok
+fromRoman(toRoman(n))==n for all n ... FAIL
+toRoman should fail with non-integer input ... ok
+toRoman should fail with negative input ... ok
+toRoman should fail with large input ... ok
+toRoman should fail with 0 input ... ok
+@{body}
+
+@{code}toRoman@{body} still passes the known values test, which is comforting. All the tests that passed in stage 2 still pass, so the latest code hasn't broken anything.
+
+More exciting is the fact that all of the bad input tests now pass. This test, @{code}testNonInteger@{body}, passes because of the @{code}int(n) <> n@{body} check. When a non-integer is passed to @{code}toRoman@{body}, the @{code}int(n) <> n@{body} check notices it and raises the @{code}NotIntegerError@{body} exception, which is what @{code}testNonInteger@{body} is looking for.
+
+This test, @{code}testNegative@{body}, passes because of the @{code}not (0 < n < 4000)@{body} check, which raises an @{code}OutOfRangeError@{body} exception, which is what @{code}testNegative@{body} is looking for.
+
+@{code}
+
+======================================================================
+FAIL: fromRoman should only accept uppercase input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage3\\romantest3.py", line 156, in testFromRomanCase
+roman3.fromRoman, numeral.lower())
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with malformed antecedents
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage3\\romantest3.py", line 133, in testMalformedAntecedent
+self.assertRaises(roman3.InvalidRomanNumeralError, roman3.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with repeated pairs of numerals
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage3\\romantest3.py", line 127, in testRepeatedPairs
+self.assertRaises(roman3.InvalidRomanNumeralError, roman3.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with too many repeated numerals
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage3\\romantest3.py", line 122, in testTooManyRepeatedNumerals
+self.assertRaises(roman3.InvalidRomanNumeralError, roman3.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should give known result with known input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage3\\romantest3.py", line 99, in testFromRomanKnownValues
+self.assertEqual(integer, result)
+File "c:\\python21\\lib\\unittest.py", line 273, in failUnlessEqual
+raise self.failureException, (msg or '%s != %s' % (first, second))
+AssertionError: 1 != None
+======================================================================
+FAIL: fromRoman(toRoman(n))==n for all n
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage3\\romantest3.py", line 141, in testSanity
+self.assertEqual(integer, result)
+File "c:\\python21\\lib\\unittest.py", line 273, in failUnlessEqual
+raise self.failureException, (msg or '%s != %s' % (first, second))
+AssertionError: 1 != None
+----------------------------------------------------------------------
+Ran 12 tests in 0.401s
+
+FAILED (failures=6)
+@{body}
+
+You're down to 6 failures, and all of them involve @{code}fromRoman@{body}: the known values test, the three separate bad input tests, the case check, and the sanity check. That means that @{code}toRoman@{body} has passed all the tests it can pass by itself. (It's involved in the sanity check, but that also requires that @{code}fromRoman@{body} be written, which it isn't yet.) Which means that you must stop coding @{code}toRoman@{body} now. No tweaking, no twiddling, no extra checks "just in case". Stop. Now. Back away from the keyboard.
+
+The most important thing that comprehensive unit testing can tell you is when to stop coding. When all the unit tests for a function pass, stop coding the function. When all the unit tests for an entire module pass, stop coding the module.
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S4 "14.4. roman.py, stage 4"
+@TITLE "14.4. roman.py, stage 4"
+@NEXT "S5"
+@PREV "S3"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}14.4. @{code}roman.py@{body}, stage 4 @{ub}
+
+Now that @{code}toRoman@{body} is done, it's time to start coding @{code}fromRoman@{body}. Thanks to the rich data structure that maps individual Roman numerals to integer values, this is no more difficult than the @{code}toRoman@{body} function.
+
+@{b}Example 14.9. @{code}roman4.py@{body}@{ub}
+
+This file is available in @{code}py/roman/stage4/@{body} in the examples directory.
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+"""Convert to and from Roman numerals"""
+
+#Define exceptions
+class RomanError(Exception): pass
+class OutOfRangeError(RomanError): pass
+class NotIntegerError(RomanError): pass
+class InvalidRomanNumeralError(RomanError): pass
+
+#Define digit mapping
+romanNumeralMap = (('M', 1000),
+('CM', 900),
+('D', 500),
+('CD', 400),
+('C', 100),
+('XC', 90),
+('L', 50),
+('XL', 40),
+('X', 10),
+('IX', 9),
+('V', 5),
+('IV', 4),
+('I', 1))
+
+# toRoman function omitted for clarity (it hasn't changed)
+
+def fromRoman(s):
+"""convert Roman numeral to integer"""
+result = 0
+index = 0
+for numeral, integer in romanNumeralMap:
+while s[index:index+len(numeral)] == numeral:
+result += integer
+index += len(numeral)
+return result
+
+@{body}
+
+The pattern here is the same as @{code}toRoman@{body}. You iterate through your Roman numeral data structure (a tuple of tuples), and instead of matching the highest integer values as often as possible, you match the "highest" Roman numeral character strings as often as possible.
+
+@{b}Example 14.10. How @{code}fromRoman@{body} works @{ub}
+
+If you're not clear how @{code}fromRoman@{body} works, add a @{code}print@{body} statement to the end of the @{code}while@{body} loop:
+
+@{code}
+
+while s[index:index+len(numeral)] == numeral:
+result += integer
+index += len(numeral)
+print 'found', numeral, 'of length', len(numeral), ', adding', integer
+@{body}
+
+@{code}
+
+>>> import roman4
+>>> roman4.fromRoman('MCMLXXII')
+found M , of length 1, adding 1000
+found CM , of length 2, adding 900
+found L , of length 1, adding 50
+found X , of length 1, adding 10
+found X , of length 1, adding 10
+found I , of length 1, adding 1
+found I , of length 1, adding 1
+1972
+@{body}
+
+@{b}Example 14.11. Output of @{code}romantest4.py@{body} against @{code}roman4.py@{body}@{ub}
+
+@{code}
+fromRoman should only accept uppercase input ... FAIL
+toRoman should always return uppercase ... ok
+fromRoman should fail with malformed antecedents ... FAIL
+fromRoman should fail with repeated pairs of numerals ... FAIL
+fromRoman should fail with too many repeated numerals ... FAIL
+fromRoman should give known result with known input ... ok
+toRoman should give known result with known input ... ok
+fromRoman(toRoman(n))==n for all n ... ok
+toRoman should fail with non-integer input ... ok
+toRoman should fail with negative input ... ok
+toRoman should fail with large input ... ok
+toRoman should fail with 0 input ... ok
+@{body}
+
+Two pieces of exciting news here. The first is that @{code}fromRoman@{body} works for good input, at least for all the known values you test.
+
+The second is that the sanity check also passed. Combined with the known values tests, you can be reasonably sure that both @{code}toRoman@{body} and @{code}fromRoman@{body} work properly for all possible good values. (This is not guaranteed; it is theoretically possible that @{code}toRoman@{body} has a bug that produces the wrong Roman numeral for some particular set of inputs, @{i}and@{ui} that @{code}fromRoman@{body} has a reciprocal bug that produces the same wrong integer values for exactly that set of Roman numerals that @{code}toRoman@{body} generated incorrectly. Depending on your application and your requirements, this possibility may bother you; if so, write more comprehensive test cases until it doesn't bother you.)
+
+@{code}
+
+======================================================================
+FAIL: fromRoman should only accept uppercase input
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage4\\romantest4.py", line 156, in testFromRomanCase
+roman4.fromRoman, numeral.lower())
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with malformed antecedents
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage4\\romantest4.py", line 133, in testMalformedAntecedent
+self.assertRaises(roman4.InvalidRomanNumeralError, roman4.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with repeated pairs of numerals
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage4\\romantest4.py", line 127, in testRepeatedPairs
+self.assertRaises(roman4.InvalidRomanNumeralError, roman4.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+======================================================================
+FAIL: fromRoman should fail with too many repeated numerals
+----------------------------------------------------------------------
+Traceback (most recent call last):
+File "C:\\docbook\\dip\\py\\roman\\stage4\\romantest4.py", line 122, in testTooManyRepeatedNumerals
+self.assertRaises(roman4.InvalidRomanNumeralError, roman4.fromRoman, s)
+File "c:\\python21\\lib\\unittest.py", line 266, in failUnlessRaises
+raise self.failureException, excName
+AssertionError: InvalidRomanNumeralError
+----------------------------------------------------------------------
+Ran 12 tests in 1.222s
+
+FAILED (failures=4)
+@{body}
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE
+
+@NODE S5 "14.5. roman.py, stage 5"
+@TITLE "14.5. roman.py, stage 5"
+@NEXT "MAIN"
+@PREV "S4"
+@TOC "MAIN"
+@SMARTWRAP
+
+@{b}14.5. @{code}roman.py@{body}, stage 5 @{ub}
+
+Now that @{code}fromRoman@{body} works properly with good input, it's time to fit in the last piece of the puzzle: making it work properly with bad input. That means finding a way to look at a string and determine if it's a valid Roman numeral. This is inherently more difficult than validating numeric input in @{code}toRoman@{body}, but you have a powerful tool at your disposal: regular expressions.
+
+If you're not familiar with regular expressions and didn't read Chapter 7, @{i}Regular Expressions@{ui}, now would be a good time.
+
+As you saw in Section 7.3, "Case Study: Roman Numerals", there are several simple rules for constructing a Roman numeral, using the letters @{code}M@{body}, @{code}D@{body}, @{code}C@{body}, @{code}L@{body}, @{code}X@{body}, @{code}V@{body}, and @{code}I@{body}. Let's review the rules:
+
+* Characters are additive. @{code}I@{body} is @{code}1@{body}, @{code}II@{body} is @{code}2@{body}, and @{code}III@{body} is @{code}3@{body}. @{code}VI@{body} is @{code}6@{body} (literally, "@{code}5@{body} and @{code}1@{body} "), @{code}VII@{body} is @{code}7@{body}, and @{code}VIII@{body} is @{code}8@{body}.
+
+* The tens characters (@{code}I@{body}, @{code}X@{body}, @{code}C@{body}, and @{code}M@{body}) can be repeated up to three times. At @{code}4@{body}, you need to subtract from the next highest fives character. You can't represent @{code}4@{body} as @{code}IIII@{body}; instead, it is represented as @{code}IV@{body} ("@{code}1@{body} less than @{code}5@{body} "). @{code}40@{body} is written as @{code}XL@{body} ("@{code}10@{body} less than @{code}50@{body} "), @{code}41@{body} as @{code}XLI@{body}, @{code}42@{body} as @{code}XLII@{body}, @{code}43@{body} as @{code}XLIII@{body}, and then @{code}44@{body} as @{code}XLIV@{body} ("@{code}10@{body} less than @{code}50@{body}, then @{code}1@{body} less than @{code}5@{body} ").
+
+* Similarly, at @{code}9@{body}, you need to subtract from the next highest tens character: @{code}8@{body} is @{code}VIII@{body}, but @{code}9@{body} is @{code}IX@{body} ("@{code}1@{body} less than @{code}10@{body} "), not @{code}VIIII@{body} (since the @{code}I@{body} character can not be repeated four times). @{code}90@{body} is @{code}XC@{body}, @{code}900@{body} is @{code}CM@{body}.
+
+* The fives characters can not be repeated. @{code}10@{body} is always represented as @{code}X@{body}, never as @{code}VV@{body}. @{code}100@{body} is always @{code}C@{body}, never @{code}LL@{body}.
+
+* Roman numerals are always written highest to lowest, and read left to right, so order of characters matters very much. @{code}DC@{body} is @{code}600@{body}; @{code}CD@{body} is a completely different number (@{code}400@{body}, "@{code}100@{body} less than @{code}500@{body} "). @{code}CI@{body} is @{code}101@{body}; @{code}IC@{body} is not even a valid Roman numeral (because you can't subtract @{code}1@{body} directly from @{code}100@{body}; you would need to write it as @{code}XCIX@{body}, "@{code}10@{body} less than @{code}100@{body}, then @{code}1@{body} less than @{code}10@{body} ").
+
+@{b}Example 14.12. @{code}roman5.py@{body}@{ub}
+
+This file is available in @{code}py/roman/stage5/@{body} in the examples directory.
+
+If you have not already done so, you can download this and other examples used in this book.
+
+@{code}
+
+"""Convert to and from Roman numerals"""
+import re
+
+#Define exceptions
+class RomanError(Exception): pass
+class OutOfRangeError(RomanError): pass
+class NotIntegerError(RomanError): pass
+class InvalidRomanNumeralError(RomanError): pass
+
+#Define digit mapping
+romanNumeralMap = (('M', 1000),
+('CM', 900),
+('D', 500),
+('CD', 400),
+('C', 100),
+('XC', 90),
+('L', 50),
+('XL', 40),
+('X', 10),
+('IX', 9),
+('V', 5),
+('IV', 4),
+('I', 1))
+
+def toRoman(n):
+"""convert integer to Roman numeral"""
+if not (0 n:
+raise NotIntegerError, "non-integers can not be converted"
+
+result = ""
+for numeral, integer in romanNumeralMap:
+while n >= integer:
+result += numeral
+n -= integer
+return result
+
+#Define pattern to detect valid Roman numerals
+romanNumeralPattern = '^M?M?M?(CM|CD|D?C?C?C?)(XC|XL|L?X?X?X?)(IX|IV|V?I?I?I?)$'
+
+def fromRoman(s):
+"""convert Roman numeral to integer"""
+if not re.search(romanNumeralPattern, s):
+raise InvalidRomanNumeralError, 'Invalid Roman numeral: %s' % s
+
+result = 0
+index = 0
+for numeral, integer in romanNumeralMap:
+while s[index:index+len(numeral)] == numeral:
+result += integer
+index += len(numeral)
+return result
+
+@{body}
+
+This is just a continuation of the pattern you discussed in Section 7.3, "Case Study: Roman Numerals". The tens places is either @{code}XC@{body} (@{code}90@{body}), @{code}XL@{body} (@{code}40@{body}), or an optional @{code}L@{body} followed by 0 to 3 optional @{code}X@{body} characters. The ones place is either @{code}IX@{body} (@{code}9@{body}), @{code}IV@{body} (@{code}4@{body}), or an optional @{code}V@{body} followed by 0 to 3 optional @{code}I@{body} characters.
+
+Having encoded all that logic into a regular expression, the code to check for invalid Roman numerals becomes trivial. If @{code}re.search@{body} returns an object, then the regular expression matched and the input is valid; otherwise, the input is invalid.
+
+At this point, you are allowed to be skeptical that that big ugly regular expression could possibly catch all the types of invalid Roman numerals. But don't take my word for it, look at the results:
+
+@{b}Example 14.13. Output of @{code}romantest5.py@{body} against @{code}roman5.py@{body}@{ub}
+
+@{code}
+
+fromRoman should only accept uppercase input ... ok
+toRoman should always return uppercase ... ok
+fromRoman should fail with malformed antecedents ... ok
+fromRoman should fail with repeated pairs of numerals ... ok
+fromRoman should fail with too many repeated numerals ... ok
+fromRoman should give known result with known input ... ok
+toRoman should give known result with known input ... ok
+fromRoman(toRoman(n))==n for all n ... ok
+toRoman should fail with non-integer input ... ok
+toRoman should fail with negative input ... ok
+toRoman should fail with large input ... ok
+toRoman should fail with 0 input ... ok
+
+----------------------------------------------------------------------
+Ran 12 tests in 2.864s
+
+OK
+@{body}
+
+One thing I didn't mention about regular expressions is that, by default, they are case-sensitive. Since the regular expression @{code}romanNumeralPattern@{body} was expressed in uppercase characters, the @{code}re.search@{body} check will reject any input that isn't completely uppercase. So the uppercase input test passes.
+
+More importantly, the bad input tests pass. For instance, the malformed antecedents test checks cases like @{code}MCMC@{body}. As you've seen, this does not match the regular expression, so @{code}fromRoman@{body} raises an @{code}InvalidRomanNumeralError@{body} exception, which is what the malformed antecedents test case is looking for, so the test passes.
+
+In fact, all the bad input tests pass. This regular expression catches everything you could think of when you made your test cases.
+
+And the anticlimax award of the year goes to the word "@{code}OK@{body} ", which is printed by the @{code}unittest@{body} module when all the tests pass.
+
+When all of your tests pass, stop coding.
+
+@{b}<a
+
+@{" Chapter contents " LINK "MAIN"}
+
+@ENDNODE

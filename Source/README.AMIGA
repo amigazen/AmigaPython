@@ -109,7 +109,7 @@ Notes
 -----
 
 Amiga-specific module documentation: Amiga_Misc/Docs/ (also shipped under
-Python/docs/amiga in the distribution tree).
+Python/Docs/amiga in the distribution tree).
 
 Builtin GUI / OS helpers:
   amiga          Dos, ASL, EasyRequest/CurrentTime/DisplayBeep, AvailMem, ...
