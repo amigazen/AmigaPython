@@ -6,10 +6,13 @@
 #include <fenv.h>
 #endif
 
+#ifdef _AMIGA
+#include "../Amiga/wbconsole.h"
 /* Amiga constructor function declarations */
 extern int WBArgParse_constructor(void);
 extern int dosio_init_constructor(void);
 extern int locale_lib_init_constructor(void);
+#endif
 
 int
 main(int argc, char **argv)
@@ -23,12 +26,25 @@ main(int argc, char **argv)
 	fedisableexcept(FE_OVERFLOW);
 #endif
 
-	/* Call Amiga constructor functions before Python initialization */
 #ifdef _AMIGA
+	/* Workbench: claim WBStartup (GetMsg) + open CON: before stdio use.
+	 * Shell: amiga_wb_prepare is a no-op and keeps argc/argv.
+	 */
 	locale_lib_init_constructor();
-	WBArgParse_constructor();
 	dosio_init_constructor();
+	if (amiga_wb_prepare(&argc, &argv) != 0) {
+		amiga_wb_cleanup();
+		return 20;
+	}
 #endif
 
-	return Py_Main(argc, argv);
+	{
+		int st;
+
+		st = Py_Main(argc, argv);
+#ifdef _AMIGA
+		amiga_wb_cleanup();
+#endif
+		return st;
+	}
 }

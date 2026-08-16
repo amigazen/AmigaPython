@@ -288,6 +288,7 @@ def getsitepackages():
         if sys.platform == 'amiga':
             # Classic AmigaPython: Amiga-specific .py modules live in
             # Lib/site-python (beside the stdlib Lib on sys.path).
+            # Release layout uses lib/site-python next to python27.zip.
             # Prefer paths next to Lib already on sys.path - sys.prefix alone
             # may be the repo root while Lib is Source/Lib.
             for p in sys.path:
@@ -297,8 +298,14 @@ def getsitepackages():
                 if base in ('Lib', 'lib'):
                     sitepackages.append(os.path.join(p, 'site-python'))
                     sitepackages.append(os.path.join(p, 'site-packages'))
+                elif base == 'python27.zip' or base.endswith('.zip'):
+                    parent = os.path.dirname(p)
+                    sitepackages.append(os.path.join(parent, 'site-python'))
+                    sitepackages.append(os.path.join(parent, 'site-packages'))
             sitepackages.append(os.path.join(prefix, "Lib", "site-python"))
             sitepackages.append(os.path.join(prefix, "Lib", "site-packages"))
+            sitepackages.append(os.path.join(prefix, "lib", "site-python"))
+            sitepackages.append(os.path.join(prefix, "lib", "site-packages"))
         elif sys.platform in ('os2emx', 'riscos'):
             sitepackages.append(os.path.join(prefix, "Lib", "site-packages"))
         elif os.sep == '/':

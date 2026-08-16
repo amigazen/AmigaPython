@@ -25,8 +25,9 @@ AMIGAPYTHONLIBNAM=amigapythonamitcp.lib
 AMIGAPYTHONLIB=$(ODIR)/Amiga/$(AMIGAPYTHONLIBNAM)
 
 # Link libraries. Do not add -lamiga here: +aos68k_posix already links
-# -lposix -lamiga. An earlier -lamiga pulls umask.o from amiga.lib and
-# then clashes with PosixLib's umask in posix.lib(prot.c).
+# -lposix -lvc -lamiga. PosixLib must precede -lvc so fclose/open from
+# posix.lib replace vclib (shared CON: BPTR must not be Close()'d thrice).
+# An earlier -lamiga pulls umask.o from amiga.lib and clashes with PosixLib.
 CLIBS=-lmieee build-vbcc/Modules/zlib/libz.a
 
 # Main objects
@@ -41,7 +42,7 @@ PYTHON_OBJECTS=$(ODIR)/Python/modsupport.o $(ODIR)/Python/pythonrun.o $(ODIR)/Py
 
 OBJECTS_OBJECTS=$(ODIR)/Objects/abstract.o $(ODIR)/Objects/fileobject.o $(ODIR)/Objects/floatobject.o $(ODIR)/Objects/bufferobject.o $(ODIR)/Objects/funcobject.o $(ODIR)/Objects/intobject.o $(ODIR)/Objects/listobject.o $(ODIR)/Objects/longobject.o $(ODIR)/Objects/dictobject.o $(ODIR)/Objects/methodobject.o $(ODIR)/Objects/moduleobject.o $(ODIR)/Objects/object.o $(ODIR)/Objects/rangeobject.o $(ODIR)/Objects/stringobject.o $(ODIR)/Objects/tupleobject.o $(ODIR)/Objects/typeobject.o $(ODIR)/Objects/classobject.o $(ODIR)/Objects/frameobject.o $(ODIR)/Objects/sliceobject.o $(ODIR)/Objects/complexobject.o $(ODIR)/Objects/cobject.o $(ODIR)/Objects/boolobject.o $(ODIR)/Objects/exceptions.o $(ODIR)/Objects/codeobject.o $(ODIR)/Objects/cellobject.o $(ODIR)/Objects/iterobject.o $(ODIR)/Objects/weakrefobject.o $(ODIR)/Objects/bytearrayobject.o $(ODIR)/Objects/bytes_methods.o $(ODIR)/Objects/capsule.o $(ODIR)/Objects/descrobject.o $(ODIR)/Objects/enumobject.o $(ODIR)/Objects/genobject.o $(ODIR)/Objects/memoryobject.o $(ODIR)/Objects/obmalloc.o $(ODIR)/Objects/setobject.o $(ODIR)/Objects/structseq.o
 
-AMIGA_OBJECTS=$(ODIR)/Amiga/envvars.o $(ODIR)/Amiga/fmod.o $(ODIR)/Amiga/rexxvars.o $(ODIR)/Amiga/crc32.o $(ODIR)/Amiga/amigalibs_calllib.o $(ODIR)/Amiga/wbargs.o $(ODIR)/Amiga/printuserfault.o $(ODIR)/Amiga/dosio_init.o $(ODIR)/Amiga/strftime.o $(ODIR)/Amiga/stackinit.o $(ODIR)/Amiga/CheckStack.o $(ODIR)/Amiga/vbcc_runtime.o $(ODIR)/Amiga/libcheck.o $(ODIR)/Amiga/io2errno.o $(ODIR)/Amiga/int64_ops.o $(ODIR)/Amiga/pyamiga_host.o
+AMIGA_OBJECTS=$(ODIR)/Amiga/envvars.o $(ODIR)/Amiga/fmod.o $(ODIR)/Amiga/rexxvars.o $(ODIR)/Amiga/crc32.o $(ODIR)/Amiga/amigalibs_calllib.o $(ODIR)/Amiga/wbargs.o $(ODIR)/Amiga/wbconsole.o $(ODIR)/Amiga/printuserfault.o $(ODIR)/Amiga/dosio_init.o $(ODIR)/Amiga/strftime.o $(ODIR)/Amiga/stackinit.o $(ODIR)/Amiga/CheckStack.o $(ODIR)/Amiga/vbcc_runtime.o $(ODIR)/Amiga/libcheck.o $(ODIR)/Amiga/io2errno.o $(ODIR)/Amiga/int64_ops.o $(ODIR)/Amiga/pyamiga_host.o
 
 # All objects together (link line). Build each subdirectory once via a
 # single phony target — do not list every .o as a rule target or make
@@ -51,6 +52,13 @@ OBJS_READY=$(OBJECTS) modules parser_dir python_dir objects_dir amiga_dir
 
 # Prepare variables for target 'clean'
 RM=Delete ALL
+CP=Copy
+# Public binary drawer: sibling of Source/. AmigaDOS uses / for parent (not ../).
+# PosixLib/Python do NOT treat / as parent — never pass /Python paths into Python27.
+RELEASEDIR=/Python
+PLUGIN_SOCKET=lib/lib-dynload/_socket.module
+# Staging zip in Source/ (not Lib/ — Amiga FS is case-insensitive).
+RELEASE_ZIP=python27.zip
 
 all: $(PROGRAM) $(PROGRAM_DEBUG) plugins
 
@@ -109,8 +117,27 @@ amiga_dir:
 
 debug: $(PROGRAM_DEBUG)
 
+# Stage public binary release artifacts into /Python (sibling of Source/).
+# AmigaDOS uses / for parent. PosixLib open()/stat() do not — build the zip
+# as Source/python27.zip then Copy it into the public drawer.
+# Public binary name is Python; build name remains Python27.
+release: $(PROGRAM) plugins
+	@echo "******************** RELEASE -> $(RELEASEDIR)/ "
+	@$(MKDIR) $(RELEASEDIR)
+	@$(MKDIR) $(RELEASEDIR)/lib
+	@$(MKDIR) $(RELEASEDIR)/lib/lib-dynload
+	@$(MKDIR) $(RELEASEDIR)/lib/site-python
+	$(CP) $(PROGRAM) TO $(RELEASEDIR)/Python
+	$(CP) $(PLUGIN_SOCKET) TO $(RELEASEDIR)/$(PLUGIN_SOCKET)
+	$(CP) Lib/site-python/#?.py TO $(RELEASEDIR)/lib/site-python/
+	$(PROGRAM) Tools/amiga/mkpythonzip.py Lib $(RELEASE_ZIP)
+	$(CP) $(RELEASE_ZIP) TO $(RELEASEDIR)/lib/python27.zip
+	-$(RM) $(RELEASE_ZIP)
+	@echo "Copied $(PROGRAM) as Python, plugins, site-python, python27.zip"
+	@echo "******************** RELEASE DONE "
+
 clean:
 	-$(RM) $(ODIR)
 	-$(RM) $(PROGRAM) $(PROGRAM_DEBUG) $(PROGRAM)_debug
 
-.PHONY: all clean debug modules plugins parser_dir python_dir objects_dir amiga_dir
+.PHONY: all clean debug release modules plugins parser_dir python_dir objects_dir amiga_dir

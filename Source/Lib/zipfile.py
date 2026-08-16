@@ -14,6 +14,12 @@ except ImportError:
     zlib = None
     crc32 = binascii.crc32
 
+# Amiga default build has no unicode builtin (Py_USING_UNICODE off).
+try:
+    _zip_unicode = unicode
+except NameError:
+    _zip_unicode = None
+
 __all__ = ["BadZipfile", "error", "ZIP_STORED", "ZIP_DEFLATED", "is_zipfile",
            "ZipInfo", "ZipFile", "PyZipFile", "LargeZipFile" ]
 
@@ -389,7 +395,7 @@ class ZipInfo (object):
         return header + filename + extra
 
     def _encodeFilenameFlags(self):
-        if isinstance(self.filename, unicode):
+        if _zip_unicode is not None and isinstance(self.filename, _zip_unicode):
             try:
                 return self.filename.encode('ascii'), self.flag_bits
             except UnicodeEncodeError:
@@ -1080,7 +1086,7 @@ class ZipFile(object):
         if os.path.sep == '\\':
             # filter illegal characters on Windows
             illegal = ':<>|"?*'
-            if isinstance(arcname, unicode):
+            if _zip_unicode is not None and isinstance(arcname, _zip_unicode):
                 table = {ord(c): ord('_') for c in illegal}
             else:
                 table = string.maketrans(illegal, '_' * len(illegal))
@@ -1220,10 +1226,13 @@ class ZipFile(object):
             if compress_size > ZIP64_LIMIT:
                 raise RuntimeError('Compressed size larger than uncompressed size')
         # Seek backwards and write file header (which will now include
-        # correct CRC and file sizes)
+        # correct CRC and file sizes). Flush first: Amiga/PosixLib seeks can
+        # fail (IOError errno 0) on a dirty stdio buffer.
         position = self.fp.tell()       # Preserve current position in file
+        self.fp.flush()
         self.fp.seek(zinfo.header_offset, 0)
         self.fp.write(zinfo.FileHeader(zip64))
+        self.fp.flush()
         self.fp.seek(position, 0)
         self.filelist.append(zinfo)
         self.NameToInfo[zinfo.filename] = zinfo

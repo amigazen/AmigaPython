@@ -377,6 +377,29 @@ search_for_prefix(char *argv0_path, char *home)
     copy_absolute(prefix, argv0_path);
     do {
         n = strlen(prefix);
+#ifdef _AMIGA
+        /* Release drawer: lib/python27.zip beside the binary (no Lib/os.py). */
+        joinpath(prefix, "lib");
+        joinpath(prefix, "python00.zip");
+        {
+            size_t zlen = strlen(prefix);
+            if (zlen >= 6) {
+                prefix[zlen - 6] = VERSION[0];
+                prefix[zlen - 5] = VERSION[2];
+            }
+        }
+        if (isfile(prefix)) {
+            return 1;
+        }
+        prefix[n] = '\0';
+        /* Source / classic layout: Lib/os.py */
+        joinpath(prefix, "Lib");
+        joinpath(prefix, LANDMARK);
+        if (ismodule(prefix)) {
+            return 1;
+        }
+        prefix[n] = '\0';
+#endif
         joinpath(prefix, lib_python);
         joinpath(prefix, LANDMARK);
         if (ismodule(prefix)) {
@@ -388,17 +411,32 @@ search_for_prefix(char *argv0_path, char *home)
 
     /* Look at configure's PREFIX */
 #ifdef _AMIGA
-    /* For Amiga, fallback to Python:Lib and look for the landmark directly */
+    /* Assign Python: with classic Lib/, or release-style lib/python27.zip */
     strcpy(prefix, "Python:Lib");
     joinpath(prefix, LANDMARK);
+    if (ismodule(prefix)) {
+        return 1;
+    }
+    strcpy(prefix, "Python:lib");
+    joinpath(prefix, "python00.zip");
+    {
+        size_t zlen = strlen(prefix);
+        if (zlen >= 6) {
+            prefix[zlen - 6] = VERSION[0];
+            prefix[zlen - 5] = VERSION[2];
+        }
+    }
+    if (isfile(prefix)) {
+        return 1;
+    }
 #else
     strncpy(prefix, PREFIX, MAXPATHLEN);
     joinpath(prefix, lib_python);
     joinpath(prefix, LANDMARK);
-#endif
     if (ismodule(prefix)) {
         return 1;
     }
+#endif
 
     /* Fail */
     return 0;
@@ -684,9 +722,17 @@ calculate_path(void)
 
     strncpy(zip_path, prefix, MAXPATHLEN);
     zip_path[MAXPATHLEN] = '\0';
-    if (pfound > 0) { /* Use the reduced prefix returned by Py_GetPrefix() */
+    if (pfound > 0) {
+        /* prefix is already reduced once to .../lib or .../Lib.
+         * Unix still has lib/pythonX.Y so needs a second reduce; Amiga
+         * lib_python is just "lib", so one reduce reaches the install root.
+         */
+#ifdef _AMIGA
+        reduce(zip_path);
+#else
         reduce(zip_path);
         reduce(zip_path);
+#endif
     }
     else
 #ifdef _AMIGA
@@ -835,12 +881,19 @@ calculate_path(void)
      * return the compiled-in defaults instead.
      */
     if (pfound > 0) {
+#ifdef _AMIGA
+        /* Already reduced to .../lib or .../Lib; one more -> install root. */
+        reduce(prefix);
+        if (!prefix[0])
+            strcpy(prefix, "Python:");
+#else
         reduce(prefix);
         reduce(prefix);
         /* The prefix is the root directory, but reduce() chopped
          * off the "/". */
         if (!prefix[0])
                 strcpy(prefix, separator);
+#endif
     }
     else
 #ifdef _AMIGA
@@ -850,11 +903,25 @@ calculate_path(void)
 #endif
 
     if (efound > 0) {
+#ifdef _AMIGA
+        /* .../lib/lib-dynload -> two reduces; .../lib-dynload -> one. */
+        reduce(exec_prefix);
+        if (strlen(exec_prefix) >= 3) {
+            size_t elen = strlen(exec_prefix);
+            if (elen >= 3 &&
+                (strcmp(exec_prefix + elen - 3, "lib") == 0 ||
+                 strcmp(exec_prefix + elen - 3, "Lib") == 0))
+                reduce(exec_prefix);
+        }
+        if (!exec_prefix[0])
+            strcpy(exec_prefix, "Python:");
+#else
         reduce(exec_prefix);
         reduce(exec_prefix);
         reduce(exec_prefix);
         if (!exec_prefix[0])
                 strcpy(exec_prefix, separator);
+#endif
     }
     else
 #ifdef _AMIGA
