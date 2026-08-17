@@ -1,6 +1,6 @@
 # Local _ssl / ssl smoke tests (no remote hosts).
 # Needs a rebuilt _ssl.module plus amitls.library (default) or AmiSSL 5
-# (SSL_CFLAGS_AMISSL build). amiga_plugin_rev 12=AmiTLS, 10=AmiSSL.
+# (SSL_CFLAGS_AMISSL build). amiga_plugin_rev 12=AmiTLS, 13=AmiSSL.
 # ASCII only (Python 2.7 / Amiga).
 #
 #   python27 AmigaTests/run.py ssl
@@ -18,8 +18,8 @@ def test_00_dynload_ssl():
     if mod is None:
         return
     rev = getattr(mod, "amiga_plugin_rev", None)
-    check("_ssl.amiga_plugin_rev in (10,12)", rev in (10, 12),
-          "got %r (rebuild _ssl.module; 10=AmiSSL 12=AmiTLS)" % (rev,))
+    check("_ssl.amiga_plugin_rev in (12,13)", rev in (12, 13),
+          "got %r (rebuild _ssl.module; 12=AmiTLS 13=AmiSSL)" % (rev,))
     check("_ssl has _SSLContext", hasattr(mod, "_SSLContext"))
     check("_ssl has CERT_NONE", hasattr(mod, "CERT_NONE"))
     check("_ssl has PROTOCOL_TLS", hasattr(mod, "PROTOCOL_TLS"))

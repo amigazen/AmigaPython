@@ -7,13 +7,21 @@
  *
  * Socket I/O uses host psockets (posix sock_fd over AmiTCP). SSL_set_fd
  * gets the AmiTCP id via PyHost->fn_socket_native_fd. FIONBIO uses host
- * fn_socket_set_nbio (D7-safe IoctlSocket) — not a plugin AmiTCP jsr.
+ * fn_socket_set_nbio (D7-safe IoctlSocket) - not a plugin AmiTCP jsr.
  *
  * AmiSSL I/O (AWeb Assl_* / SDK https.c), opposite of AmiTLS:
- *   - Clear FIONBIO before SSL_set_fd / SSL_do_handshake.
+ *   - Clear FIONBIO before SSL_set_fd / SSL_connect.
  *   - Handshake on a blocking fd; WaitSelect only on WANT_READ/WRITE.
  *   - Around SSL_read (and write): FIONBIO on + BIO NBIO, then restore
  *     blocking. Blocking SSL_read on 68k AmiSSL never returns for Ctrl-C.
+ *
+ * BUG (Aug 2026): With AmiSSL 5 / OpenSSL 3.6.x on OS3, import/_wrap work
+ * but the first SSL_connect returns SSL_ERROR_SSL with an empty ERR queue,
+ * SSL_want=SSL_NOTHING, state=SSLERR (seen on www.google.com within ~0.04s).
+ * Tried: OPENSSL_init_ssl, fresh SSL_CTX at wrap, keep own_ctx, no
+ * SSL_set_connect_state, SSL_connect vs SSL_do_handshake, no FIONBIO before
+ * handshake, no CloseAmiSSL at atexit. Production default remains AmiTLS
+ * (sslmodule_amitls.c / SSL_CFLAGS_AMITLS) until this is resolved.
  *
  * C89 / ANSI; plugin FAR data; no AmiSSL autoinit CRT.
  */
@@ -204,16 +212,10 @@ ssl_nomem(void)
 static void
 amiga_close_amissl(void)
 {
-    if (AmiSSLBase != NULL) {
-        CloseAmiSSL();
-        AmiSSLBase = NULL;
-        AmiSSLExtBase = NULL;
-    }
-    if (AmiSSLMasterBase != NULL) {
-        CloseLibrary(AmiSSLMasterBase);
-        AmiSSLMasterBase = NULL;
-    }
-    amiga_amissl_ready = 0;
+    /* Intentionally empty: CloseAmiSSL/CloseLibrary here wedges AmiTCP
+     * when the interpreter exits with a live SocketBase (AWeb Assl and
+     * AmiTLS follow the same rule). Bases stay open for process lifetime. */
+    (void)0;
 }
 
 static int
@@ -290,7 +292,17 @@ amiga_open_amissl(void)
                         "OpenAmiSSLTagList failed (need AmiSSL 5.x)");
         return -1;
     }
+    /* SDK Examples/https.c: OPENSSL_init_ssl before any SSL_CTX_new.
+     * Without this, 68k AmiSSL leaves SSL objects in SSLERR on the first
+     * SSL_connect (empty ERR queue, want=NOTHING). Pass opts via pyssl_op64
+     * so the uint64 LVO does not see garbage in d1. */
+    OPENSSL_init_ssl(pyssl_op64(
+        OPENSSL_INIT_SSL_DEFAULT |
+        OPENSSL_INIT_ADD_ALL_CIPHERS |
+        OPENSSL_INIT_ADD_ALL_DIGESTS), NULL);
     amiga_amissl_ready = 1;
+    /* Register no-op exit hook so nobody "fixes" this by closing AmiSSL
+     * at atexit (CloseAmiSSL + live SocketBase deadlocks AmiTCP). */
     Py_AtExit(amiga_close_amissl);
     return 0;
 }
@@ -687,10 +699,8 @@ newPySSLSocket(PySSLContext *sslctx, PySocketSockObject *sock,
             return NULL;
         }
     }
-    if (socket_type == PY_SSL_CLIENT)
-        SSL_set_connect_state(self->ssl);
-    else
-        SSL_set_accept_state(self->ssl);
+    /* AWeb Assl_connect / SDK https.c: SSL_connect drives client state.
+     * Do not SSL_set_connect_state first — that left AmiSSL in SSLERR. */
 
     self->Socket = socksaved;
     Py_INCREF(self->Socket);
@@ -734,9 +744,12 @@ PySSL_SSLdo_handshake(PySSLSocket *self)
     /* Blocking fd for handshake (AWeb Assl_connect / SDK https.c). */
     ssl_sock_nbio(sock, 0);
     ssl_deadline_begin(sock, deadline, &have_dl);
-    /* 68k plugin: SSL_connect returns 0 / SSLERR / want=NOTHING with an
-     * empty ERR queue (all three test hosts). The run that completed
-     * TLSv1.3 used SSL_do_handshake. Do not IoctlSocket(FIONBIO) first. */
+    /*
+     * BUG: On AmiSSL 5 / OpenSSL 3.6.x OS3 this first SSL_connect returns
+     * ret=0/SSL_ERROR_SSL, want=SSL_NOTHING, state=SSLERR with an empty ERR
+     * queue (ssl_net wrap_socket vs www.google.com). Same outcome was seen
+     * with SSL_do_handshake. Default builds use AmiTLS instead.
+     */
     for (;;) {
         if (ssl_deadline_hit(deadline, have_dl)) {
             Py_DECREF(sock);
@@ -744,7 +757,10 @@ PySSL_SSLdo_handshake(PySSLSocket *self)
                             "The handshake operation timed out");
             return NULL;
         }
-        ret = SSL_do_handshake(self->ssl);
+        if (self->socket_type == PY_SSL_CLIENT)
+            ret = SSL_connect(self->ssl);
+        else
+            ret = SSL_accept(self->ssl);
         err = SSL_get_error(self->ssl, ret);
         if (PyErr_CheckSignals()) {
             Py_DECREF(sock);
@@ -2600,6 +2616,6 @@ init_ssl(void)
         Py_INCREF(oi);
         PyModule_AddObject(m, "_OPENSSL_API_VERSION", oi);
     }
-    PyModule_AddIntConstant(m, "amiga_plugin_rev", 10);
+    PyModule_AddIntConstant(m, "amiga_plugin_rev", 13);
 }
 #endif /* !PYAMIGA_USE_AMITLS */

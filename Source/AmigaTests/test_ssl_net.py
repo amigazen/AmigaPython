@@ -5,8 +5,9 @@
 #   connect((hostname, 443)) + ssl.wrap_socket(sock) + send/recv
 # Also one SSLContext.wrap_socket(..., server_hostname=) path (SNI).
 #
-# AmiTLS rev 12+ maps peer-close READ_FAILED to recv '' (not 8808).
-# AmiSSL rev 10. Do not settimeout (FIONBIO).
+# AmiTLS rev 12 maps peer-close READ_FAILED to recv ''.
+# AmiSSL rev 13: OPENSSL_init + SSL_connect; never CloseAmiSSL at exit.
+# Do not settimeout (FIONBIO).
 #
 #   python27 AmigaTests/run.py ssl ssl_net
 #   python27 AmigaTests/test_ssl_net.py amiga.com
@@ -42,8 +43,8 @@ def test_00_import_ssl():
         skip("import _ssl", str(e))
         return None
     rev = getattr(_ssl, "amiga_plugin_rev", None)
-    check("_ssl.amiga_plugin_rev in (10,12)", rev in (10, 12),
-          "got %r (10=AmiSSL 12=AmiTLS; rebuild _ssl.module)" % (rev,))
+    check("_ssl.amiga_plugin_rev in (12,13)", rev in (12, 13),
+          "got %r (12=AmiTLS 13=AmiSSL; rebuild _ssl.module)" % (rev,))
     print("    NOTE: OPENSSL_VERSION =",
           getattr(_ssl, "OPENSSL_VERSION", "?"))
     try:

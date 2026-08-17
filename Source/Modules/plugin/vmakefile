@@ -30,11 +30,14 @@ SOCKET_OBJS=$(SRCDIR)/socket_entry.o \
 # Default _ssl backend is AmiTLS (BearSSL). Assign amitlsinclude: to the
 # AmiTLS SDK Include_H directory (libraries/amitls.h, proto/amitls.h).
 # AmiSSL (#ifndef PYAMIGA_USE_AMITLS in sslmodule.c): assign sslinclude: to
-# the AmiSSL SDK include root, then either uncomment SSL_CFLAGS_AMISSL
-# below or override on the smake line:
-#   smake -f Modules/plugin/vmakefile SSL_CFLAGS="$(SSL_CFLAGS_AMISSL)"
+# AmiSSL SDK Developer/include, then select SSL_CFLAGS_AMISSL below.
 # Delete sslmodule_plugin.o and _ssl.module before switching backends.
 # Do not -I a host-side SDK path; the assign is the public include root.
+#
+# AmiSSL note: OpenSSL 3.6.x / AmiSSL 5 builds import and wrap, but the
+# first SSL_connect dies in SSLERR (want=NOTHING, empty ERR) - see the
+# BUG comment at SSL_connect in Modules/sslmodule.c. Production default
+# stays AmiTLS until that handshake path is fixed.
 SSL_CFLAGS_AMITLS=$(CFLAGS) -DPYAMIGA_USE_AMITLS -Iamitlsinclude:
 SSL_CFLAGS_AMISSL=$(CFLAGS) -Isslinclude:
 SSL_CFLAGS=$(SSL_CFLAGS_AMITLS)

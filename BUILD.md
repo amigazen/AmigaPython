@@ -44,8 +44,43 @@ Amiga filesystems are case-insensitive: only one of `arexx.py` /
 | `locale.library` | `amiga.OpenCatalog` | RuntimeError on use |
 | `icon.library` | `amiga.DiskObject` | RuntimeError on use |
 | `rexxsyslib.library` | `_arexx` / `arexx` | ARexx APIs unavailable |
+| `bsdsocket.library` | `_socket.module` | `import _socket` fails cleanly |
+| `amitls.library` | `_ssl.module` (default) | `import _ssl` fails; switch to AmiSSL |
+| AmiSSL 5 (`amisslmaster.library`) | `_ssl.module` (AmiSSL build) | `import _ssl` fails |
 
 The interpreter starts without `crc.library`; install from Aminet when you need hashing.
+
+### LoadSeg plugins (`_socket` / `_ssl`)
+
+Build from `Source/` with VBCC (same as the interpreter):
+
+```
+Assign amitlsinclude: <AmiTLS SDK Include_H>
+; or for AmiSSL:
+Assign sslinclude: <AmiSSL SDK Developer/include>
+
+Delete Modules/plugin/sslmodule_plugin.o lib/lib-dynload/_ssl.module
+smake -f Modules/plugin/vmakefile
+```
+
+`Modules/plugin/vmakefile` selects the `_ssl` backend via `SSL_CFLAGS`:
+
+| `SSL_CFLAGS` | Library | `_ssl.amiga_plugin_rev` |
+|--------------|---------|-------------------------|
+| `SSL_CFLAGS_AMITLS` (default production) | `amitls.library` | 12 |
+| `SSL_CFLAGS_AMISSL` (experimental) | AmiSSL 5 | 13 |
+
+AmiSSL builds import and wrap, but `SSL_connect` currently fails with
+`SSLERR` / `want=NOTHING` (empty ERR queue) on live HTTPS. See the BUG
+comment in `Modules/sslmodule.c`. Keep AmiTLS as the default until fixed.
+
+Flip the commented `SSL_CFLAGS=` line in that vmakefile to switch. After rebuild:
+
+```
+python27 AmigaTests/run.py ssl ssl_net
+```
+
+Expect `OPENSSL_VERSION` to show AmiTLS or OpenSSL/AmiSSL text accordingly.
 
 ## Compiler 
 
