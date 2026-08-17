@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 import sys
-from AmigaTests.support import check, skip, require_import, try_import
+from AmigaTests.support import check, skip, require_import, try_import, is_standard_build
 
 
 def test_math_cmath():
@@ -460,8 +460,10 @@ def test_struct_module_name():
 
 
 def test_pyexpat():
-    # Statically linked Modules/expat - always available on Amiga builds.
-    import sys
+    # Standard: statically linked Modules/expat. Compact omits XML.
+    if not is_standard_build():
+        skip("pyexpat", "SlimPython (BUILD=standard to enable)")
+        return
     check("pyexpat listed builtin", "pyexpat" in sys.builtin_module_names)
     px = require_import("pyexpat")
     check("ParserCreate", callable(getattr(px, "ParserCreate", None)))

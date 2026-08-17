@@ -10,6 +10,7 @@ Contents:
  Requirements
  Installation/Build instructions
  Networking (bsdsocket.library)
+ Native C LoadSeg plugins
  CPU / FPU notes
  Changing other compiler options
  Notes
@@ -48,9 +49,10 @@ Preferred (VBCC / ToolKit):
 	cd to Source/
 	make -f vmakefile
 
-This produces a test binary named Python27 in Source/.
-See BUILD.md for ToolKit, optional libraries (crc.library, asl, etc.),
-and clean targets.
+This produces Python27 (standard / full) and SlimPython (slim / core)
+in Source/, plus Python27_Debug. `make -f vmakefile slim` links only the
+smaller interpreter. See BUILD.md for ToolKit, standard vs SlimPython modules, optional libraries
+(crc.library, asl, etc.), and clean targets.
 
 Legacy (SAS/C):
 
@@ -80,6 +82,24 @@ usergroup.library is needed for pwd / grp / crypt-style modules.
 A fully "no network" SAS/C configuration historically used
 SCOPTIONS_NONET / SMAKEFILE_NONET; prefer the current vmakefile options
 and pyconfig.h defines for the VBCC build.
+
+`_socket` and `_ssl` are not linked into python27: they are LoadSeg
+plugins (`lib/lib-dynload/_socket.module`, `_ssl.module`). `_socket`
+opens bsdsocket via PosixLib on first import. `_ssl` opens AmiSSL 5
+(`amisslmaster.library`) the same way; compile it with `-Isslinclude:`
+(Assign `sslinclude:` to AmiSSL `Developer/include` — do not hardcode
+an SDK tree). Rebuild **python27 and every `.module`** together (ABI v6).
+
+
+Native C LoadSeg plugins
+------------------------
+
+Optional C extensions can ship as `.module` files (FastForward-style
+module head + PyHost vtable). 
+
+Build the reference plugin from this Source/ directory:
+
+  make -f Modules/plugin/vmakefile
 
 
 

@@ -16,9 +16,37 @@ CONFIG=+aos68k_posix
 CFLAGS=-c -g -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -Ivbcc:PosixLib/include -IInclude -Ivincludeos3: -Iinclude: -cpu=68020 -fpu=soft -maxoptpasses=1 -dontkeep-initialized-data
 ODIR=build-vbcc
 
-# Program names
-PROGRAM=Python27
-PROGRAM_DEBUG=Python27_Debug
+# Two interpreters share most .o files. config.c and getcompiler.c are
+# compiled twice (standard vs -DPYAMIGA_SLIM) so `all` can link both.
+#   Python27 / Python27_Debug   standard (full module set)
+#   SlimPython / SlimPython_Debug  slim (homage to SlimPython 1.5.2)
+# BUILD=slim selects SlimPython for `debug` / `release`.
+# BUILD=compact, BUILD=core remain aliases for slim; BUILD=full for standard.
+ifndef BUILD
+BUILD=standard
+endif
+ifeq ($(BUILD),full)
+BUILD=standard
+endif
+ifeq ($(BUILD),compact)
+BUILD=slim
+endif
+ifeq ($(BUILD),core)
+BUILD=slim
+endif
+
+PROGRAM_STANDARD=Python27
+PROGRAM_STANDARD_DEBUG=Python27_Debug
+PROGRAM_SLIM=SlimPython
+PROGRAM_SLIM_DEBUG=SlimPython_Debug
+
+ifeq ($(BUILD),slim)
+PROGRAM=$(PROGRAM_SLIM)
+PROGRAM_DEBUG=$(PROGRAM_SLIM_DEBUG)
+else
+PROGRAM=$(PROGRAM_STANDARD)
+PROGRAM_DEBUG=$(PROGRAM_STANDARD_DEBUG)
+endif
 
 # Libraries
 AMIGAPYTHONLIBNAM=amigapythonamitcp.lib
@@ -33,8 +61,16 @@ CLIBS=-lmieee build-vbcc/Modules/zlib/libz.a
 # Main objects
 OBJECTS=$(ODIR)/Modules/python.o $(ODIR)/Modules/main.o $(ODIR)/Amiga/finite.o
 
-# All the individual object files from each directory
-MODULES_OBJECTS=$(ODIR)/Modules/config.o $(ODIR)/Modules/getpath.o $(ODIR)/Modules/environment.o $(ODIR)/Modules/getbuildinfo.o $(ODIR)/Modules/arraymodule.o $(ODIR)/Modules/mathmodule.o $(ODIR)/Modules/timemodule.o $(ODIR)/Modules/binascii.o $(ODIR)/Modules/_codecsmodule.o $(ODIR)/Modules/cStringIO.o $(ODIR)/Modules/cPickle.o $(ODIR)/Modules/errnomodule.o $(ODIR)/Modules/operator.o $(ODIR)/Modules/_weakref.o $(ODIR)/Modules/_struct.o $(ODIR)/Modules/selectmodule.o $(ODIR)/Modules/zlibmodule.o $(ODIR)/Modules/zipimport.o $(ODIR)/Modules/_io/_iomodule.o $(ODIR)/Modules/_io/iobase.o $(ODIR)/Modules/_io/fileio.o $(ODIR)/Modules/_io/bytesio.o $(ODIR)/Modules/_io/bufferedio.o $(ODIR)/Modules/_io/textio.o $(ODIR)/Modules/_io/stringio.o $(ODIR)/Modules/_io/io_nounicode.o $(ODIR)/Modules/amigamodule.o $(ODIR)/Modules/amigapathmodule.o $(ODIR)/Modules/amiga_ext.o $(ODIR)/Modules/amiga_asl.o $(ODIR)/Modules/amiga_intuition.o $(ODIR)/Modules/amigaguimodule.o $(ODIR)/Modules/amigalibsmodule.o $(ODIR)/Modules/amiga_catalog.o $(ODIR)/Modules/amiga_icon.o $(ODIR)/Modules/pwdmodule.o $(ODIR)/Modules/grpmodule.o $(ODIR)/Modules/cryptmodule.o $(ODIR)/Modules/syslogmodule.o $(ODIR)/Modules/syslog.o $(ODIR)/Modules/gcmodule.o $(ODIR)/Modules/_sre.o $(ODIR)/Modules/md5.o $(ODIR)/Modules/md5module.o $(ODIR)/Modules/cmathmodule.o $(ODIR)/Modules/shamodule.o $(ODIR)/Modules/_hashcrc.o $(ODIR)/Modules/_collectionsmodule.o $(ODIR)/Modules/itertoolsmodule.o $(ODIR)/Modules/_functoolsmodule.o $(ODIR)/Modules/_randommodule.o $(ODIR)/Modules/datetimemodule.o $(ODIR)/Modules/symtablemodule.o $(ODIR)/Modules/_bisectmodule.o $(ODIR)/Modules/_heapqmodule.o $(ODIR)/Modules/_csv.o $(ODIR)/Modules/stropmodule.o $(ODIR)/Modules/Doslibmodule.o $(ODIR)/Modules/ARexxmodule.o $(ODIR)/Modules/pyexpat.o $(ODIR)/Modules/xmlparse.o $(ODIR)/Modules/xmlrole.o $(ODIR)/Modules/xmltok.o $(ODIR)/Modules/posix_helpers.o $(ODIR)/Modules/_math.o
+# C modules in both builds (Amiga OS + stdlib boot). Standard extras optional.
+COMMON_MODULES_OBJECTS=$(ODIR)/Modules/config.o $(ODIR)/Modules/getpath.o $(ODIR)/Modules/environment.o $(ODIR)/Modules/getbuildinfo.o $(ODIR)/Modules/arraymodule.o $(ODIR)/Modules/mathmodule.o $(ODIR)/Modules/timemodule.o $(ODIR)/Modules/binascii.o $(ODIR)/Modules/_codecsmodule.o $(ODIR)/Modules/cStringIO.o $(ODIR)/Modules/cPickle.o $(ODIR)/Modules/errnomodule.o $(ODIR)/Modules/operator.o $(ODIR)/Modules/_weakref.o $(ODIR)/Modules/_struct.o $(ODIR)/Modules/selectmodule.o $(ODIR)/Modules/zlibmodule.o $(ODIR)/Modules/zipimport.o $(ODIR)/Modules/_io/_iomodule.o $(ODIR)/Modules/_io/iobase.o $(ODIR)/Modules/_io/fileio.o $(ODIR)/Modules/_io/bytesio.o $(ODIR)/Modules/_io/bufferedio.o $(ODIR)/Modules/_io/textio.o $(ODIR)/Modules/_io/stringio.o $(ODIR)/Modules/_io/io_nounicode.o $(ODIR)/Modules/amigamodule.o $(ODIR)/Modules/amigapathmodule.o $(ODIR)/Modules/amiga_ext.o $(ODIR)/Modules/amiga_asl.o $(ODIR)/Modules/amiga_intuition.o $(ODIR)/Modules/amigaguimodule.o $(ODIR)/Modules/amigalibsmodule.o $(ODIR)/Modules/amiga_catalog.o $(ODIR)/Modules/amiga_icon.o $(ODIR)/Modules/gcmodule.o $(ODIR)/Modules/_sre.o $(ODIR)/Modules/_collectionsmodule.o $(ODIR)/Modules/itertoolsmodule.o $(ODIR)/Modules/_functoolsmodule.o $(ODIR)/Modules/_randommodule.o $(ODIR)/Modules/symtablemodule.o $(ODIR)/Modules/stropmodule.o $(ODIR)/Modules/Doslibmodule.o $(ODIR)/Modules/ARexxmodule.o $(ODIR)/Modules/posix_helpers.o $(ODIR)/Modules/_math.o
+
+EXTRA_MODULES_OBJECTS=$(ODIR)/Modules/pwdmodule.o $(ODIR)/Modules/grpmodule.o $(ODIR)/Modules/cryptmodule.o $(ODIR)/Modules/syslogmodule.o $(ODIR)/Modules/syslog.o $(ODIR)/Modules/md5.o $(ODIR)/Modules/md5module.o $(ODIR)/Modules/cmathmodule.o $(ODIR)/Modules/shamodule.o $(ODIR)/Modules/_hashcrc.o $(ODIR)/Modules/datetimemodule.o $(ODIR)/Modules/_bisectmodule.o $(ODIR)/Modules/_heapqmodule.o $(ODIR)/Modules/_csv.o $(ODIR)/Modules/pyexpat.o $(ODIR)/Modules/xmlparse.o $(ODIR)/Modules/xmlrole.o $(ODIR)/Modules/xmltok.o
+
+# SlimPython substitutes config_slim.o / getcompiler_slim.o and drops extras.
+CONFIG_SLIM=$(ODIR)/Modules/config_slim.o
+GETCOMPILER_SLIM=$(ODIR)/Python/getcompiler_slim.o
+SLIM_MODULES_OBJECTS=$(filter-out $(ODIR)/Modules/config.o,$(COMMON_MODULES_OBJECTS)) $(CONFIG_SLIM)
+SLIM_PYTHON_OBJECTS=$(filter-out $(ODIR)/Python/getcompiler.o,$(PYTHON_OBJECTS)) $(GETCOMPILER_SLIM)
 
 PARSER_OBJECTS=$(ODIR)/Parser/acceler.o $(ODIR)/Parser/grammar1.o $(ODIR)/Parser/myreadline.o $(ODIR)/Parser/node.o $(ODIR)/Parser/parser.o $(ODIR)/Parser/parsetok.o $(ODIR)/Parser/tokenizer.o $(ODIR)/Parser/intrcheck.o
 
@@ -47,7 +83,8 @@ AMIGA_OBJECTS=$(ODIR)/Amiga/envvars.o $(ODIR)/Amiga/fmod.o $(ODIR)/Amiga/rexxvar
 # All objects together (link line). Build each subdirectory once via a
 # single phony target — do not list every .o as a rule target or make
 # re-enters that subdirectory once per object.
-ALL_OBJECTS=$(OBJECTS) $(MODULES_OBJECTS) $(PARSER_OBJECTS) $(PYTHON_OBJECTS) $(OBJECTS_OBJECTS) $(AMIGA_OBJECTS)
+STANDARD_LINK=$(OBJECTS) $(COMMON_MODULES_OBJECTS) $(EXTRA_MODULES_OBJECTS) $(PARSER_OBJECTS) $(PYTHON_OBJECTS) $(OBJECTS_OBJECTS) $(AMIGA_OBJECTS)
+SLIM_LINK=$(OBJECTS) $(SLIM_MODULES_OBJECTS) $(PARSER_OBJECTS) $(SLIM_PYTHON_OBJECTS) $(OBJECTS_OBJECTS) $(AMIGA_OBJECTS)
 OBJS_READY=$(OBJECTS) modules parser_dir python_dir objects_dir amiga_dir
 
 # Prepare variables for target 'clean'
@@ -61,15 +98,21 @@ PLUGIN_SSL=lib/lib-dynload/_ssl.module
 # Staging zip in Source/ (not Lib/ — Amiga FS is case-insensitive).
 RELEASE_ZIP=python27.zip
 
-all: $(PROGRAM) $(PROGRAM_DEBUG) plugins
+all: $(PROGRAM_STANDARD) $(PROGRAM_SLIM) $(PROGRAM_STANDARD_DEBUG) plugins
 
 # Release: no -g => vc inserts -ldnodb (-s -Rshort) and strips symbols.
-$(PROGRAM): $(OBJS_READY)
-	$(CC) $(CONFIG) -o $(PROGRAM) $(ALL_OBJECTS) $(CLIBS)
+$(PROGRAM_STANDARD): $(OBJS_READY)
+	$(CC) $(CONFIG) -o $(PROGRAM_STANDARD) $(STANDARD_LINK) $(CLIBS)
+
+$(PROGRAM_SLIM): $(OBJS_READY)
+	$(CC) $(CONFIG) -o $(PROGRAM_SLIM) $(SLIM_LINK) $(CLIBS)
 
 # Debug: -g keeps Amiga hunk debug/symbols (-hunkdebug from +aos68k_posix).
-$(PROGRAM_DEBUG): $(OBJS_READY)
-	$(CC) $(CONFIG) -g -o $(PROGRAM_DEBUG) $(ALL_OBJECTS) $(CLIBS)
+$(PROGRAM_STANDARD_DEBUG): $(OBJS_READY)
+	$(CC) $(CONFIG) -g -o $(PROGRAM_STANDARD_DEBUG) $(STANDARD_LINK) $(CLIBS)
+
+$(PROGRAM_SLIM_DEBUG): $(OBJS_READY)
+	$(CC) $(CONFIG) -g -o $(PROGRAM_SLIM_DEBUG) $(SLIM_LINK) $(CLIBS)
 
 plugins:
 	@echo "******************** ENTERING Modules/plugin/ "
@@ -118,6 +161,10 @@ amiga_dir:
 
 debug: $(PROGRAM_DEBUG)
 
+# Convenience: link one flavour without waiting for the other.
+slim compact core: $(PROGRAM_SLIM)
+standard full: $(PROGRAM_STANDARD)
+
 # Stage public binary release artifacts into /Python (sibling of Source/).
 # AmigaDOS uses / for parent. PosixLib open()/stat() do not — build the zip
 # as Source/python27.zip then Copy it into the public drawer.
@@ -140,6 +187,7 @@ release: $(PROGRAM) plugins
 
 clean:
 	-$(RM) $(ODIR)
-	-$(RM) $(PROGRAM) $(PROGRAM_DEBUG) $(PROGRAM)_debug
+	-$(RM) $(PROGRAM_STANDARD) $(PROGRAM_STANDARD_DEBUG) $(PROGRAM_SLIM) $(PROGRAM_SLIM_DEBUG)
+	-$(RM) Python27_Compact Python27_Compact_Debug
 
-.PHONY: all clean debug release modules plugins parser_dir python_dir objects_dir amiga_dir
+.PHONY: all clean debug release modules plugins parser_dir python_dir objects_dir amiga_dir slim compact core standard full

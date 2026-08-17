@@ -76,6 +76,11 @@ def try_import(name, report=False):
         return None
 
 
+def is_standard_build():
+    # Standard links pyexpat; SlimPython does not (compile-time omit).
+    return "pyexpat" in sys.builtin_module_names
+
+
 def require_import(name, report=False):
     mod = try_import(name, report=report)
     if mod is None:

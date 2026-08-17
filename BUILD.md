@@ -100,7 +100,29 @@ cd Source/
 make -f vmakefile
 ```
 
-This creates a test binary called Python27 in the Source folder.
+This creates **Python27** (standard / full) and **SlimPython** (slim / core, named after SlimPython 1.5.2) in the Source folder, plus **Python27_Debug**.
+
+## Standard vs SlimPython
+
+Two compile-time builds. C modules that own a `PyTypeObject` (or Expat callbacks) cannot be LoadSeg plugins, so extras are omitted from the **SlimPython** link instead.
+
+```
+make -f vmakefile                  # Python27 + SlimPython + Python27_Debug
+make -f vmakefile slim             # SlimPython only (aliases: compact, core)
+make -f vmakefile standard         # Python27 only (alias: full)
+make -f vmakefile debug BUILD=slim # SlimPython_Debug
+```
+
+`BUILD=compact` and `BUILD=core` remain aliases for slim; `BUILD=full` remains an alias for standard (`debug` / `release` use `BUILD` to pick which binary to stage).
+
+`config.c` and `getcompiler.c` are compiled twice (`config.o` / `config_slim.o`, `getcompiler.o` / `getcompiler_slim.o`) so both interpreters can share the rest of the objects.
+
+| Build | Binary | Use |
+|---------|--------|-----|
+| **slim** | `SlimPython` | Amiga scripting: `amiga` / GUI / ARexx / ENV / DOS, zip stdlib (`zipimport`+`zlib`+`_io`+`_sre`), pickle, collections/itertools, `select` for the `_socket` plugin |
+| **standard** | `Python27` | SlimPython plus XML (`pyexpat`+Expat), `datetime`, `cmath`, md5/sha/`_hashlib`, `_csv`/`_bisect`/`_heapq`, `pwd`/`grp`/`crypt`/`syslog` |
+
+LoadSeg `_socket.module` / `_ssl.module` are built for both. `sys.version` shows `[VBCC-SlimPython]` or `[VBCC-standard]`.
 
 ## How to Clean
 

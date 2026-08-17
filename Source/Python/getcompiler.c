@@ -13,6 +13,20 @@
 
 #ifndef COMPILER
 
+/* Amiga shell splits -DCOMPILER="[VBCC standard]" on the space and globs [].
+ * Stamp the build here; vmakefile.python passes -DPYAMIGA_SLIM for SlimPython. */
+#ifdef __VBCC__
+#ifdef PYAMIGA_SLIM
+#define COMPILER "[VBCC-SlimPython]"
+#else
+#define COMPILER "[VBCC-standard]"
+#endif
+#endif
+
+#endif /* !COMPILER */
+
+#ifndef COMPILER
+
 #ifdef __cplusplus
 #define COMPILER "[C++]"
 #else

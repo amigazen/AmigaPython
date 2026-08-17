@@ -10,6 +10,9 @@ CONFIG=+aos68k_posix
 # -IAmiga for libcheck.h (usergroup/bsdsocket open checks).
 CFLAGS=-c -g -O2 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -D__USE_NEW_TIMEVAL__ -D__NO_NETINCLUDE_TIMEVAL -Ivbcc:PosixLib/include -IInclude -IAmiga -Ivincludeos3: -Iinclude: -I$(SRCDIR) -Inetinclude: -cpu=68020 -fpu=soft
 
+# Always compile COMMON + EXTRA. The parent links extras only into Python27.
+# config.c is built twice: config.o (standard inittab) and config_slim.o.
+
 # Bundled Modules/expat (static). Compile pyexpat + xml*.c against this tree.
 EXPAT_DIR=$(SRCDIR)/expat
 EXPAT_CFLAGS=-I$(EXPAT_DIR) -DHAVE_EXPAT_CONFIG_H -DXML_POOR_ENTROPY=1 -c99
@@ -17,8 +20,8 @@ EXPAT_CFLAGS=-I$(EXPAT_DIR) -DHAVE_EXPAT_CONFIG_H -DXML_POOR_ENTROPY=1 -c99
 # Source directory
 SRCDIR=Modules
 
-# Core modules for Amiga Python 2.7.18
-OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
+# Amiga OS + stdlib boot (both SlimPython and BUILD=standard).
+COMMON_OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
     arraymodule.o mathmodule.o timemodule.o \
     binascii.o _codecsmodule.o cStringIO.o cPickle.o \
     errnomodule.o operator.o _weakref.o _struct.o \
@@ -26,32 +29,37 @@ OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
     amigamodule.o amigapathmodule.o amiga_ext.o amiga_asl.o \
     amiga_intuition.o amigaguimodule.o amigalibsmodule.o \
     amiga_catalog.o amiga_icon.o \
-	pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o syslog.o \
     gcmodule.o \
     _sre.o \
+    _collectionsmodule.o \
+    itertoolsmodule.o \
+    _functoolsmodule.o \
+    _randommodule.o \
+    symtablemodule.o \
+    Doslibmodule.o \
+    ARexxmodule.o \
+    stropmodule.o \
+    posix_helpers.o \
+    _math.o
+
+# XML, datetime, hashing, csv/bisect/heapq accels, cmath, AmiTCP extras.
+EXTRA_OBJECTS = \
+	pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o syslog.o \
     md5.o \
     md5module.o \
     cmathmodule.o \
     shamodule.o \
     _hashcrc.o \
-    _collectionsmodule.o \
-    itertoolsmodule.o \
-    _functoolsmodule.o \
-    _randommodule.o \
     datetimemodule.o \
-    symtablemodule.o \
     _bisectmodule.o \
     _heapqmodule.o \
     _csv.o \
-    Doslibmodule.o \
-    ARexxmodule.o \
     pyexpat.o \
     xmlparse.o \
     xmlrole.o \
-    xmltok.o \
-    stropmodule.o \
-    posix_helpers.o \
-    _math.o
+    xmltok.o
+
+OBJECTS = $(COMMON_OBJECTS) $(EXTRA_OBJECTS)
 
 # _io objects live under Modules/_io/ (built with dedicated rules below)
 IO_OBJECTS = _io/_iomodule.o _io/iobase.o _io/fileio.o _io/bytesio.o \
@@ -61,7 +69,7 @@ IO_OBJECTS = _io/_iomodule.o _io/iobase.o _io/fileio.o _io/bytesio.o \
 OBJ=$(patsubst %,$(ODIR)/%,$(OBJECTS)) $(patsubst %,$(ODIR)/%,$(IO_OBJECTS))
 
 # Default target - build zlib first, then compile all .c files
-all: zlib $(OBJ)
+all: zlib $(OBJ) $(ODIR)/config_slim.o
 
 $(ODIR)/%.o: $(SRCDIR)/%.c
 	@$(MKDIR) $(ODIR)
@@ -74,6 +82,12 @@ $(ODIR)/config.o: $(SRCDIR)/config.c
 	@echo "Compiling config.c to config.o"
 	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
 	@echo "Config compilation completed"
+
+$(ODIR)/config_slim.o: $(SRCDIR)/config.c
+	@$(MKDIR) $(ODIR)
+	@echo "Compiling config.c to config_slim.o"
+	$(CC) $(CONFIG) $(CFLAGS) -DPYAMIGA_SLIM -o $@ $<
+	@echo "Config SlimPython compilation completed"
 
 $(ODIR)/getbuildinfo.o: $(SRCDIR)/getbuildinfo.c
 	@$(MKDIR) $(ODIR)
@@ -360,4 +374,6 @@ $(ODIR)/_math.o: $(SRCDIR)/_math.c
 clean:
 	delete $(ODIR)/*.o
 
-.PHONY: clean zlib 
+FORCE:
+
+.PHONY: clean zlib FORCE 

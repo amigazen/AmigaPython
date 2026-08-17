@@ -18,6 +18,7 @@ Work on the tree after `7689479` (VBCC / PosixLib upgrade hardening, docs, tests
 ### Added
 
 - `Docs/PLUGIN_GUIDE.md` — LoadSeg native C module / PyHost plugin system (ABI, build, hard rules, carve-out checklist); reference `_socket.module`
+- Compile-time **SlimPython** vs **standard** interpreter (`make -f vmakefile BUILD=slim|standard`; `compact`/`core`/`full` remain aliases): SlimPython keeps Amiga OS modules and stdlib boot; standard adds pyexpat/Expat, datetime, hashing, csv/bisect/heapq, cmath, pwd/grp/crypt/syslog
 - PyHost ABI v2 + FastForward-style LoadSeg module head (security word + ID) for real `.module` plugins
 - Real `_socket.module` built from `socketmodule.c` (host trampolines for Python C API, PosixLib sockets, and libc); `socketmodule.o` no longer linked into `Python27`
 - Real `_ssl.module` implementing the CPython 2.7 `_ssl` API for `ssl.py`; default backend is `amitls.library` (`-DPYAMIGA_USE_AMITLS`, headers via `amitlsinclude:`); AmiSSL 5 remains an `#ifndef PYAMIGA_USE_AMITLS` branch; TLS I/O uses the AmiTCP native fd from host PosixLib `__fdesc`
@@ -28,6 +29,7 @@ Work on the tree after `7689479` (VBCC / PosixLib upgrade hardening, docs, tests
 
 ### Changed
 
+- Default `make -f vmakefile` links **Python27** (standard) and **SlimPython** (slim, named after SlimPython 1.5.2) plus **Python27_Debug**; `config.c` / `getcompiler.c` are compiled twice so both share the other objects
 - `dynload_amiga.c`: scan for module ID preceded by security word (FastForward `ff_loader` pattern)
 - Plugin build: `-nostdlib`, no `-lposix`/`-lvc` in the `.module` (shared `SocketBase`/`__fdesc` via host)
 - VBCC makefiles: PosixLib `-I` before `vincludeos3:` before NDK `include:` so PosixLib `#include_next` reaches vbcc headers while `libraries/*.h` still resolve

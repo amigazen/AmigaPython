@@ -1,13 +1,14 @@
 # Inventory: every module enabled in Modules/config.c.
+# SlimPython (BUILD=slim) omits EXTRA_BUILTIN; BUILD=standard has both lists.
 # LoadSeg _socket / _ssl are covered by optional groups "socket" and "ssl".
 # ASCII only (Python 2.7 / Amiga).
 
 from __future__ import print_function
 
 import sys
-from AmigaTests.support import check, skip, try_import
+from AmigaTests.support import check, skip, try_import, is_standard_build
 
-# Always linked as builtins (see Modules/config.c).
+# Always linked (SlimPython and standard). Amiga OS modules stay in SlimPython.
 ALWAYS_BUILTIN = (
     "amiga",
     "amigagui",
@@ -28,23 +29,14 @@ ALWAYS_BUILTIN = (
     "zipimport",
     "_io",
     "_sre",
-    "md5",
-    "cmath",
-    "sha",
-    "_hashlib",
     "_collections",
     "itertools",
     "_functools",
     "_random",
-    "datetime",
     "_symtable",
-    "_bisect",
-    "_heapq",
-    "_csv",
     "environment",
     "strop",
     "_arexx",
-    "pyexpat",
     "marshal",
     "imp",
     "_ast",
@@ -56,7 +48,20 @@ ALWAYS_BUILTIN = (
     "exceptions",
 )
 
-# Present in config.c when AMITCP is defined at build time.
+# Linked only for BUILD=standard (see Modules/config.c).
+EXTRA_BUILTIN = (
+    "md5",
+    "cmath",
+    "sha",
+    "_hashlib",
+    "datetime",
+    "_bisect",
+    "_heapq",
+    "_csv",
+    "pyexpat",
+)
+
+# Present in config.c when AMITCP is defined at build time (standard only).
 AMITCP_BUILTIN = (
     "pwd",
     "grp",
@@ -69,13 +74,21 @@ def test_builtin_module_names():
     check("builtin_module_names tuple", isinstance(names, tuple) and len(names) > 0)
     for name in ALWAYS_BUILTIN:
         check("builtin " + name, name in names)
+    if is_standard_build():
+        check("standard build", True)
+        for name in EXTRA_BUILTIN:
+            check("builtin " + name, name in names)
+    else:
+        check("SlimPython build", True)
+        for name in EXTRA_BUILTIN:
+            check(name + " not in SlimPython", name not in names)
 
 
 def test_amitcp_builtins():
     names = sys.builtin_module_names
     missing = [n for n in AMITCP_BUILTIN if n not in names]
     if missing:
-        # Build without AMITCP: skip rather than fail.
+        # SlimPython, or a build without AMITCP.
         for n in missing:
             skip("builtin " + n, "not in this build")
         return
@@ -84,7 +97,10 @@ def test_amitcp_builtins():
 
 
 def test_import_all_builtins():
-    for name in ALWAYS_BUILTIN:
+    names = ALWAYS_BUILTIN
+    if is_standard_build():
+        names = ALWAYS_BUILTIN + EXTRA_BUILTIN
+    for name in names:
         if name in ("__main__", "__builtin__", "sys", "exceptions"):
             # Always present; import forms differ.
             continue

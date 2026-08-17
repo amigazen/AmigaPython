@@ -243,8 +243,15 @@ def test_symtable():
 
 def test_builtin_names_present():
     import sys
+    from AmigaTests.support import is_standard_build
     names = sys.builtin_module_names
     for name in ("_collections", "itertools", "_functools", "_random",
-                 "datetime", "zipimport",
-                 "_symtable", "_bisect", "_heapq", "_csv"):
+                 "zipimport", "_symtable"):
         check("builtin " + name, name in names, repr(names[:12]))
+    extra = ("datetime", "_bisect", "_heapq", "_csv")
+    if is_standard_build():
+        for name in extra:
+            check("builtin " + name, name in names, repr(names[:12]))
+    else:
+        for name in extra:
+            skip("builtin " + name, "SlimPython")

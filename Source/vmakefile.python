@@ -28,8 +28,8 @@ OBJECTS = modsupport.o pythonrun.o errors.o bltinmodule.o \
 # Convert to full paths
 OBJ=$(patsubst %,$(ODIR)/%,$(OBJECTS))
 
-# Default target - just compile all .c files
-all: $(OBJ)
+# Default target - compile all .c files plus SlimPython getcompiler
+all: $(OBJ) $(ODIR)/getcompiler_slim.o
 
 # Generic rule for .c files
 $(ODIR)/%.o: $(SRCDIR)/%.c
@@ -63,7 +63,11 @@ $(ODIR)/getargs.o: $(SRCDIR)/getargs.c
 
 $(ODIR)/getcompiler.o: $(SRCDIR)/getcompiler.c
 	@$(MKDIR) $(ODIR)
-	$(CC) $(CONFIG) $(CFLAGS) -DCOMPILER="[VBCC]" -o $@ $<
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $<
+
+$(ODIR)/getcompiler_slim.o: $(SRCDIR)/getcompiler.c
+	@$(MKDIR) $(ODIR)
+	$(CC) $(CONFIG) $(CFLAGS) -DPYAMIGA_SLIM -o $@ $<
 
 $(ODIR)/getcopyright.o: $(SRCDIR)/getcopyright.c
 	@$(MKDIR) $(ODIR)
@@ -204,4 +208,6 @@ $(ODIR)/formatter_string.o: $(SRCDIR)/formatter_string.c
 clean:
 	delete $(ODIR)/*.o
 
-.PHONY: clean 
+FORCE:
+
+.PHONY: clean FORCE 
