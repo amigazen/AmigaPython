@@ -52,14 +52,22 @@ def expect_raises(name, exc_type, fn):
     return check(name, False, "no exception raised")
 
 
-def try_import(name):
+def try_import(name, report=False):
     # Soft-fail any init error so one broken builtin (e.g. pyexpat) does not
     # abort inventory; drop a half-inited entry from sys.modules if present.
     try:
         return __import__(name)
     except ImportError:
+        if report:
+            et, ev = sys.exc_info()[:2]
+            print("  NOTE: ImportError %s: %s" % (name, ev))
+            sys.stdout.flush()
         return None
     except Exception:
+        if report:
+            et, ev = sys.exc_info()[:2]
+            print("  NOTE: import %s failed: %s: %s" % (name, et.__name__, ev))
+            sys.stdout.flush()
         if name in sys.modules:
             try:
                 del sys.modules[name]
@@ -68,8 +76,8 @@ def try_import(name):
         return None
 
 
-def require_import(name):
-    mod = try_import(name)
+def require_import(name, report=False):
+    mod = try_import(name, report=report)
     if mod is None:
         skip("import " + name, "not available")
     return mod
@@ -103,6 +111,7 @@ def run_module_tests(mod):
         if not callable(fn):
             continue
         print("==", mod.__name__ + "." + name, "==")
+        sys.stdout.flush()
         try:
             fn()
         except Exception, e:
@@ -110,6 +119,7 @@ def run_module_tests(mod):
             FAILED += 1
             ok = False
             print("  FAIL:", name, "- uncaught:", type(e).__name__ + ":", e)
+            sys.stdout.flush()
     return ok
 
 

@@ -56,11 +56,16 @@ SUITE = [
 # Optional groups (not in default suite):
 # netmods = pwd/grp/crypt/syslog; socket* = TCP; gui = interactive Intuition/ASL
 # Prefer standalone: python27 AmigaTests/test_amiga_gui.py
-# Prefer standalone: python27 AmigaTests/test_socket_net.py
+# Prefer: python27 AmigaTests/run.py socket socket_net
+#   (socket_net = DNS + HTTP GET - full _socket.module proof)
+# Prefer: python27 AmigaTests/run.py ssl ssl_net
+#   (ssl_net = TLS handshake + HTTPS GET - full _ssl.module / AmiTLS proof)
 OPTIONAL = [
-    ("netmods", "AmigaTests.test_net_modules"),
     ("socket", "AmigaTests.test_socket_local"),
     ("socket_net", "AmigaTests.test_socket_net"),
+    ("ssl", "AmigaTests.test_ssl_local"),
+    ("ssl_net", "AmigaTests.test_ssl_net"),
+    ("netmods", "AmigaTests.test_net_modules"),
     ("gui", "AmigaTests.test_amiga_gui"),
     ("amigalibs", "AmigaTests.test_amigalibs"),
     ("ziplib", "AmigaTests.test_ziplib"),
@@ -117,15 +122,18 @@ def main(argv=None):
     reset_counters()
     for name, modname in selected:
         print("#### group:", name)
+        sys.stdout.flush()
         try:
             mod = _load(modname)
         except Exception, e:
             support.FAILED += 1
             print("  FAIL: load", modname, "-", e)
+            sys.stdout.flush()
             continue
         run_module_tests(mod)
 
     ok = summary()
+    sys.stdout.flush()
     if ok:
         print("ALL AMIGA PORT TESTS PASSED")
         return 0

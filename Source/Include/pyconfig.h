@@ -567,6 +567,8 @@
  */
 #define HAVE_GETADDRINFO 1
 #define HAVE_GETNAMEINFO 1
+/* PosixLib sockaddr / sockaddr_in include sa_len / sin_len. */
+#define HAVE_SOCKADDR_SA_LEN 1
 
 /* Define printf format for long long on AmigaOS */
 #define PY_FORMAT_LONG_LONG "ll"

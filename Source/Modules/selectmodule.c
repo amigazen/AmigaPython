@@ -57,6 +57,12 @@ extern void bzero(void *, int);
 #  endif
 #endif
 
+#ifdef _AMIGA
+#include <sys/select.h>
+extern int pyamiga_host_select(int nfds, fd_set *rd, fd_set *wr, fd_set *ex,
+                               struct timeval *tv);
+#endif
+
 static PyObject *SelectError;
 
 /* list of Python objects and their file descriptor */
@@ -264,7 +270,12 @@ select_select(PyObject *self, PyObject *args)
     if (emax > max) max = emax;
 
     Py_BEGIN_ALLOW_THREADS
+#ifdef _AMIGA
+    /* Psockets posix fds; host maps to AmiTCP ids for WaitSelect. */
+    n = pyamiga_host_select(max, &ifdset, &ofdset, &efdset, tvp);
+#else
     n = select(max, &ifdset, &ofdset, &efdset, tvp);
+#endif
     Py_END_ALLOW_THREADS
 
 #ifdef MS_WINDOWS

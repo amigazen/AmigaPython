@@ -25,7 +25,7 @@ OBJECTS = config.o getpath.o environment.o getbuildinfo.o \
     selectmodule.o zlibmodule.o zipimport.o \
     amigamodule.o amigapathmodule.o amiga_ext.o amiga_asl.o \
     amiga_intuition.o amigaguimodule.o amigalibsmodule.o \
-    amiga_catalog.o amiga_icon.o socketmodule.o \
+    amiga_catalog.o amiga_icon.o \
 	pwdmodule.o grpmodule.o cryptmodule.o syslogmodule.o syslog.o \
     gcmodule.o \
     _sre.o \

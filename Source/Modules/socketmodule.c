@@ -323,18 +323,58 @@ int h_errno; /* not used */
 
 #ifdef _AMIGA
 /*
- * Use PosixLib's __P* socket APIs (macros in sys/socket.h). Do NOT switch
- * to AmiTCP proto/socket.h LVOs: those return raw stack descriptors that
- * are not in PosixLib __fdesc[], so select()/fcntl() return EBADF and
- * settimeout() cannot bound connect/recv — HTTP GETs hang forever.
- *
- * PosixLib netdb.h lacks addrinfo/EAI_*; keep local getaddrinfo wrappers
- * that call PosixLib gethostbyname/inet_ntoa (safe LVOs via posix.lib).
+ * unix.lib2 psockets: _socket sock_fd is a posix slot over AmiTCP.
+ * Close with closesocket (CloseSocket of the native id). AmiTLS uses
+ * fn_socket_native_fd. WaitSelect/IoctlSocket on the native id.
  */
+#ifndef HAVE_SOCKADDR_SA_LEN
+#define HAVE_SOCKADDR_SA_LEN 1
+#endif
+
 #include <sys/ioctl.h>
 #include <sys/filio.h>
 
+#ifdef PYAMIGA_PLUGIN_BUILD
+#undef socket
+#undef bind
+#undef listen
+#undef accept
+#undef connect
+#undef shutdown
+#undef close
+#undef closesocket
+#undef select
+#undef recv
+#undef send
+#undef recvfrom
+#undef sendto
+#undef setsockopt
+#undef getsockopt
+#undef getsockname
+#undef getpeername
+#undef gethostname
+#undef gethostbyname
+#undef gethostbyaddr
+#undef getservbyname
+#undef getservbyport
+#undef getprotobyname
+#undef inet_addr
+#undef inet_ntoa
+#undef htons
+#undef htonl
+#undef ntohs
+#undef ntohl
+#undef ioctl
+#undef fcntl
+#undef dup
+#undef fdopen
+#undef fclose
+#undef strerror
+/* Prototypes for pyamiga_posix trampolines (no longer macros). */
+#include "pyamiga_sockproto.h"
+#else
 extern int h_errno;
+#endif
 
 #ifndef INADDR_LOOPBACK
 #define INADDR_LOOPBACK 0x7f000001UL
@@ -387,6 +427,34 @@ amiga_freeaddrinfo(struct addrinfo *ai)
     }
 }
 
+/*
+ * AmiTCP GetPeerName/GetSockName sometimes write sockaddr_in without
+ * sa_len (first byte = AF_INET). With HAVE_SOCKADDR_SA_LEN that reads
+ * as sin_len=2, sin_family=0 — makesockaddr then fails / mis-parses.
+ * Port and address sit at the same offsets either way on big-endian.
+ */
+static void
+amiga_fix_ipv4_sockaddr(struct sockaddr *addr, socklen_t *addrlen)
+{
+    struct sockaddr_in *sin;
+    unsigned char *raw;
+
+    if (addr == NULL || addrlen == NULL)
+        return;
+    if (*addrlen < (socklen_t)8)
+        return;
+    sin = (struct sockaddr_in *)addr;
+    raw = (unsigned char *)addr;
+    if (sin->sin_family != AF_INET && raw[0] == (unsigned char)AF_INET) {
+        sin->sin_family = AF_INET;
+    }
+    if (sin->sin_family == AF_INET) {
+        sin->sin_len = (unsigned char)sizeof(*sin);
+        if (*addrlen < (socklen_t)sizeof(*sin))
+            *addrlen = (socklen_t)sizeof(*sin);
+    }
+}
+
 static int
 amiga_h_errno_to_gai(void)
 {
@@ -421,6 +489,9 @@ amiga_make_ai(int socktype, int protocol, struct sockaddr_in *sin,
         return NULL;
     }
     memcpy(addr, sin, sizeof(*addr));
+    /* Force BSD sockaddr layout fields (sa_len + family). */
+    addr->sin_len = (unsigned char)sizeof(*addr);
+    addr->sin_family = AF_INET;
     ai->ai_family = AF_INET;
     ai->ai_socktype = socktype;
     ai->ai_protocol = protocol;
@@ -452,6 +523,7 @@ amiga_getaddrinfo(const char *hostname, const char *servname,
     const char *proto;
     int d1, d2, d3, d4;
     char ch;
+    char hostcopy[256];
 
     if (res == NULL)
         return EAI_FAIL;
@@ -506,6 +578,12 @@ amiga_getaddrinfo(const char *hostname, const char *servname,
         return 0;
     }
 
+    /* Host trampolines must not see a char* that lives in a scratch reg. */
+    if (strlen(hostname) >= sizeof(hostcopy))
+        return EAI_MEMORY;
+    strcpy(hostcopy, hostname);
+    hostname = hostcopy;
+
     if (sscanf(hostname, "%d.%d.%d.%d%c", &d1, &d2, &d3, &d4, &ch) == 4 &&
         d1 >= 0 && d1 <= 255 && d2 >= 0 && d2 <= 255 &&
         d3 >= 0 && d3 <= 255 && d4 >= 0 && d4 <= 255) {
@@ -525,7 +603,10 @@ amiga_getaddrinfo(const char *hostname, const char *servname,
     he = gethostbyname((char *)hostname);
     if (he == NULL)
         return amiga_h_errno_to_gai();
-    if (he->h_addrtype != AF_INET || he->h_length != 4)
+    /* Some stacks disagree on h_addrtype vs AF_INET; IPv4 is length 4. */
+    if (he->h_addr_list == NULL || he->h_addr_list[0] == NULL)
+        return EAI_NODATA;
+    if (he->h_length != 4)
         return EAI_FAMILY;
     memcpy(&sin.sin_addr, he->h_addr_list[0], 4);
     ai = amiga_make_ai(socktype, protocol, &sin,
@@ -541,6 +622,7 @@ amiga_getnameinfo(const struct sockaddr *sa, socklen_t salen,
                   char *host, size_t hostlen,
                   char *serv, size_t servlen, int flags)
 {
+    struct sockaddr_in sinbuf;
     const struct sockaddr_in *sin;
     struct hostent *he;
     struct servent *se;
@@ -548,11 +630,19 @@ amiga_getnameinfo(const struct sockaddr *sa, socklen_t salen,
     char buf[32];
     const char *proto;
     unsigned port;
+    socklen_t fixlen;
 
-    if (sa == NULL || salen < (socklen_t)sizeof(struct sockaddr_in) ||
-        sa->sa_family != AF_INET)
+    if (sa == NULL || salen < (socklen_t)8)
         return EAI_FAMILY;
-    sin = (const struct sockaddr_in *)sa;
+    memset(&sinbuf, 0, sizeof(sinbuf));
+    if (salen > (socklen_t)sizeof(sinbuf))
+        salen = (socklen_t)sizeof(sinbuf);
+    memcpy(&sinbuf, sa, (size_t)salen);
+    fixlen = salen;
+    amiga_fix_ipv4_sockaddr((struct sockaddr *)&sinbuf, &fixlen);
+    sin = &sinbuf;
+    if (sin->sin_family != AF_INET)
+        return EAI_FAMILY;
 
     if (host != NULL && hostlen > 0) {
         p = NULL;
@@ -715,6 +805,11 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 #define NO_DUP /* Sockets are Not Actual File Handles under OS/2 */
 #endif
 
+#ifdef _AMIGA
+#define SOCKETCLOSE closesocket
+#define NO_DUP
+#endif
+
 #ifndef SOCKETCLOSE
 #define SOCKETCLOSE close
 #endif
@@ -803,7 +898,13 @@ static PyTypeObject sock_type;
 #else
 /* If there's no timeout left, we don't have to call select, so it's a safe,
  * little white lie. */
+#ifdef PYAMIGA_PLUGIN_BUILD
+#define IS_SELECTABLE(s) \
+    (_PyIsSelectable_fd((s)->sock_fd) || \
+     PyAmiga_Host->fn_sock_timeout_cmp0(&(s)->sock_timeout) <= 0)
+#else
 #define IS_SELECTABLE(s) (_PyIsSelectable_fd((s)->sock_fd) || (s)->sock_timeout <= 0.0)
+#endif
 #endif
 
 static PyObject*
@@ -985,15 +1086,19 @@ internal_setblocking(PySocketSockObject *s, int block)
     ioctl(s->sock_fd, FIONBIO, (unsigned int *)&block);
 #elif defined(_AMIGA)
     /*
-     * PosixLib fcntl(F_SETFL) only tweaks open_flags; it does not call
-     * IoctlSocket(FIONBIO). Use ioctl so settimeout() actually makes the
-     * AmiTCP socket non-blocking and select-based timeouts can work.
+     * AmiTCP IoctlSocket(FIONBIO) on sock_fd (the stack id, Python 2.0).
      */
     {
         int nonblock;
+        int posix_fd;
 
         nonblock = !block;
-        ioctl(s->sock_fd, FIONBIO, (char *)&nonblock);
+        posix_fd = s->sock_fd;
+#ifdef PYAMIGA_PLUGIN_BUILD
+        (void)PyAmiga_Host->fn_socket_set_nbio(posix_fd, nonblock);
+#else
+        ioctl(posix_fd, FIONBIO, (char *)&nonblock);
+#endif
     }
 #else  /* !PYOS_OS2 && !__VMS && !_AMIGA */
     delay_flag = fcntl(s->sock_fd, F_GETFL, 0);
@@ -1026,20 +1131,42 @@ internal_setblocking(PySocketSockObject *s, int block)
 static int
 internal_select_ex(PySocketSockObject *s, int writing, double interval)
 {
+#ifdef PYAMIGA_PLUGIN_BUILD
+    /* Host builds fd_set; see fn_sock_select1. */
+#else
     int n;
+    struct timeval tv;
+#endif
 
     /* Nothing to do unless we're in timeout mode (not non-blocking) */
+#ifdef PYAMIGA_PLUGIN_BUILD
+    if (PyAmiga_Host->fn_sock_timeout_cmp0(&s->sock_timeout) <= 0)
+        return 0;
+#else
     if (s->sock_timeout <= 0.0)
         return 0;
+#endif
 
     /* Guard against closed socket */
     if (s->sock_fd < 0)
         return 0;
 
     /* Handling this condition here simplifies the select loops */
+#ifdef PYAMIGA_PLUGIN_BUILD
+    if (PyAmiga_Host->fn_sock_timeout_cmp0(&interval) < 0)
+        return 1;
+#else
     if (interval < 0.0)
         return 1;
+#endif
 
+#ifdef PYAMIGA_PLUGIN_BUILD
+    /*
+     * Host builds the fd_set (PosixLib FD_SETSIZE). Building it in the
+     * LoadSeg image risks stack smash when netinclude vs PosixLib disagree.
+     */
+    return PyAmiga_Host->fn_sock_select1(s->sock_fd, writing, &interval);
+#else
     /* Prefer poll, if available, since you can poll() any fd
      * which can't be done with select(). */
 #ifdef HAVE_POLL
@@ -1058,7 +1185,6 @@ internal_select_ex(PySocketSockObject *s, int writing, double interval)
     {
         /* Construct the arguments to select */
         fd_set fds;
-        struct timeval tv;
         tv.tv_sec = (int)interval;
         tv.tv_usec = (int)((interval - tv.tv_sec) * 1e6);
         FD_ZERO(&fds);
@@ -1077,6 +1203,7 @@ internal_select_ex(PySocketSockObject *s, int writing, double interval)
     if (n == 0)
         return 1;
     return 0;
+#endif /* !PYAMIGA_PLUGIN_BUILD */
 }
 
 static int
@@ -1103,6 +1230,29 @@ internal_select(PySocketSockObject *s, int writing)
     }
     END_SELECT_LOOP(s)
 */
+#ifdef PYAMIGA_PLUGIN_BUILD
+#define BEGIN_SELECT_LOOP(s) \
+    { \
+        double deadline = 0, interval; \
+        int has_timeout; \
+        memcpy(&interval, &(s)->sock_timeout, sizeof(double)); \
+        has_timeout = (PyAmiga_Host->fn_sock_timeout_cmp0(&(s)->sock_timeout) > 0); \
+        if (has_timeout) { \
+            PyAmiga_Host->fn_sock_deadline_init(&(s)->sock_timeout, &deadline); \
+        } \
+        while (1) { \
+            errno = 0;
+
+#define END_SELECT_LOOP(s) \
+            if (!has_timeout || \
+                (!CHECK_ERRNO(EWOULDBLOCK) && !CHECK_ERRNO(EAGAIN) \
+                 && !CHECK_ERRNO(EINTR))) \
+                break; \
+            if (PyAmiga_Host->fn_sock_deadline_remaining(&deadline, &interval)) \
+                break; \
+        } \
+    }
+#else
 #define BEGIN_SELECT_LOOP(s) \
     { \
         double deadline = 0, interval = s->sock_timeout; \
@@ -1121,10 +1271,42 @@ internal_select(PySocketSockObject *s, int writing)
             interval = deadline - _PyTime_FloatTime(); \
         } \
     }
+#endif
 
 /* Initialize a new socket object. */
 
 static double defaulttimeout = -1.0; /* Default timeout for new sockets */
+
+#ifdef PYAMIGA_PLUGIN_BUILD
+/*
+ * Soft-float in the LoadSeg image uses -lmieee near data; neither the
+ * plugin FAR A4 nor the host CRT A4 is reliable for those helpers.
+ * Copy IEEE doubles with memcpy; compare bytes without memcmp (-nostdlib).
+ */
+static void
+amiga_sock_set_timeout(PySocketSockObject *s, const double *value)
+{
+    memcpy(&s->sock_timeout, value, sizeof(double));
+}
+
+static int
+amiga_sock_timeout_is_none(const double *value)
+{
+    static const double none_timeout = -1.0;
+    const unsigned char *a;
+    const unsigned char *b;
+    size_t i;
+
+    /* No memcmp in -nostdlib plugins; compare IEEE bytes directly. */
+    a = (const unsigned char *)value;
+    b = (const unsigned char *)&none_timeout;
+    for (i = 0; i < sizeof(double); i++) {
+        if (a[i] != b[i])
+            return 0;
+    }
+    return 1;
+}
+#endif
 
 PyMODINIT_FUNC
 init_sockobject(PySocketSockObject *s,
@@ -1137,12 +1319,21 @@ init_sockobject(PySocketSockObject *s,
     s->sock_family = family;
     s->sock_type = type;
     s->sock_proto = proto;
+#ifdef PYAMIGA_PLUGIN_BUILD
+    amiga_sock_set_timeout(s, &defaulttimeout);
+#else
     s->sock_timeout = defaulttimeout;
+#endif
 
     s->errorhandler = &set_error;
 
+#ifdef PYAMIGA_PLUGIN_BUILD
+    if (!amiga_sock_timeout_is_none(&defaulttimeout))
+        internal_setblocking(s, 0);
+#else
     if (defaulttimeout >= 0.0)
         internal_setblocking(s, 0);
+#endif
 
 #ifdef RISCOS
     if (taskwindow)
@@ -1266,6 +1457,56 @@ setipaddr(char *name, struct sockaddr *addr_ret, size_t addr_ret_size, int af)
 #endif
         return 4;
     }
+#ifdef _AMIGA
+    /*
+     * connect(("hostname", port)) / setipaddr: use the same gethostbyname
+     * path as socket.gethostbyname(). Avoids "unknown address family" from
+     * the getaddrinfo/sa_len path that ssl.wrap_socket then trips over.
+     */
+    {
+        struct sockaddr_in *sin;
+        struct hostent *h;
+        char hostcopy[256];
+
+        if (af != AF_INET && af != AF_UNSPEC) {
+            PyErr_SetString(socket_error, "unknown address family");
+            return -1;
+        }
+        if (strlen(name) >= sizeof(hostcopy)) {
+            PyErr_SetString(socket_error, "hostname too long");
+            return -1;
+        }
+        strcpy(hostcopy, name);
+        Py_BEGIN_ALLOW_THREADS
+        ACQUIRE_GETADDRINFO_LOCK
+        h = gethostbyname(hostcopy);
+        Py_END_ALLOW_THREADS
+        RELEASE_GETADDRINFO_LOCK
+        if (h == NULL) {
+            set_herror(h_errno);
+            return -1;
+        }
+        if (h->h_addr_list == NULL || h->h_addr_list[0] == NULL) {
+            PyErr_SetString(socket_error,
+                            "gethostbyname returned no address");
+            return -1;
+        }
+        if (h->h_length != 4) {
+            PyErr_SetString(socket_error, "unknown address family");
+            return -1;
+        }
+        if (addr_ret_size < sizeof(struct sockaddr_in)) {
+            PyErr_SetString(socket_error, "unknown address family");
+            return -1;
+        }
+        sin = (struct sockaddr_in *)addr_ret;
+        memset(sin, 0, sizeof(*sin));
+        sin->sin_len = (unsigned char)sizeof(*sin);
+        sin->sin_family = AF_INET;
+        memcpy(&sin->sin_addr, h->h_addr_list[0], 4);
+        return 4;
+    }
+#else
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = af;
     Py_BEGIN_ALLOW_THREADS
@@ -1300,6 +1541,7 @@ setipaddr(char *name, struct sockaddr *addr_ret, size_t addr_ret_size, int af)
         PyErr_SetString(socket_error, "unknown address family");
         return -1;
     }
+#endif
 }
 
 
@@ -1312,6 +1554,23 @@ makeipaddr(struct sockaddr *addr, int addrlen)
 {
     char buf[NI_MAXHOST];
     int error;
+#ifdef _AMIGA
+    struct sockaddr_in *sin;
+    char *p;
+    socklen_t alen;
+
+    /* IPv4-only port: format via inet_ntoa (avoid getnameinfo sa_family). */
+    if (addr != NULL && addrlen >= 8) {
+        alen = (socklen_t)addrlen;
+        amiga_fix_ipv4_sockaddr(addr, &alen);
+        sin = (struct sockaddr_in *)addr;
+        if (sin->sin_family == AF_INET) {
+            p = inet_ntoa(sin->sin_addr);
+            if (p != NULL)
+                return PyString_FromString(p);
+        }
+    }
+#endif
 
     error = getnameinfo(addr, addrlen, buf, sizeof(buf), NULL, 0,
         NI_NUMERICHOST);
@@ -1387,6 +1646,16 @@ makesockaddr(int sockfd, struct sockaddr *addr, int addrlen, int proto)
     /* XXX: BeOS version of accept() doesn't set family correctly */
     addr->sa_family = AF_INET;
 #endif /* __BEOS__ */
+
+#ifdef _AMIGA
+    {
+        socklen_t alen;
+
+        alen = (socklen_t)addrlen;
+        amiga_fix_ipv4_sockaddr(addr, &alen);
+        addrlen = (int)alen;
+    }
+#endif
 
     switch (addr->sa_family) {
 
@@ -1682,7 +1951,11 @@ getsockaddrarg(PySocketSockObject *s, PyObject *args,
             return 0;
         }
         addr->sin_family = AF_INET;
-        addr->sin_port = htons((short)port);
+#ifdef HAVE_SOCKADDR_SA_LEN
+        /* setipaddr may have set this; keep it correct after family/port. */
+        addr->sin_len = (unsigned char)sizeof(*addr);
+#endif
+        addr->sin_port = htons((unsigned short)port);
         *len_ret = sizeof *addr;
         return 1;
     }
@@ -2119,12 +2392,20 @@ static PyObject *
 sock_setblocking(PySocketSockObject *s, PyObject *arg)
 {
     long block;
+#ifdef PYAMIGA_PLUGIN_BUILD
+    static const double none_timeout = -1.0;
+    static const double zero_timeout = 0.0;
+#endif
 
     block = PyInt_AsLong(arg);
     if (block == -1 && PyErr_Occurred())
         return NULL;
 
+#ifdef PYAMIGA_PLUGIN_BUILD
+    amiga_sock_set_timeout(s, block ? &none_timeout : &zero_timeout);
+#else
     s->sock_timeout = block ? -1.0 : 0.0;
+#endif
     internal_setblocking(s, block);
 
     Py_INCREF(Py_None);
@@ -2148,7 +2429,14 @@ static PyObject *
 sock_settimeout(PySocketSockObject *s, PyObject *arg)
 {
     double timeout;
+#ifdef PYAMIGA_PLUGIN_BUILD
+    int block;
 
+    if (PyAmiga_Host->fn_sock_timeout_from_arg(arg, &timeout, &block) < 0)
+        return NULL;
+    amiga_sock_set_timeout(s, &timeout);
+    internal_setblocking(s, block);
+#else
     if (arg == Py_None)
         timeout = -1.0;
     else {
@@ -2163,6 +2451,7 @@ sock_settimeout(PySocketSockObject *s, PyObject *arg)
 
     s->sock_timeout = timeout;
     internal_setblocking(s, timeout < 0.0);
+#endif
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -2181,12 +2470,16 @@ Setting a timeout of zero is the same as setblocking(0).");
 static PyObject *
 sock_gettimeout(PySocketSockObject *s)
 {
+#ifdef PYAMIGA_PLUGIN_BUILD
+    return PyAmiga_Host->fn_sock_timeout_to_obj(&s->sock_timeout);
+#else
     if (s->sock_timeout < 0.0) {
         Py_INCREF(Py_None);
         return Py_None;
     }
     else
         return PyFloat_FromDouble(s->sock_timeout);
+#endif
 }
 
 PyDoc_STRVAR(gettimeout_doc,
@@ -2435,7 +2728,11 @@ internal_connect(PySocketSockObject *s, struct sockaddr *addr, int addrlen,
 
 #else
 
+#ifdef PYAMIGA_PLUGIN_BUILD
+    if (PyAmiga_Host->fn_sock_timeout_cmp0(&s->sock_timeout) > 0) {
+#else
     if (s->sock_timeout > 0.0) {
+#endif
         if (res < 0 && errno == EINPROGRESS && IS_SELECTABLE(s)) {
             timeout = internal_select(s, 1);
             if (timeout == 0) {
@@ -2598,6 +2895,9 @@ sock_getsockname(PySocketSockObject *s)
     Py_END_ALLOW_THREADS
     if (res < 0)
         return s->errorhandler();
+#ifdef _AMIGA
+    amiga_fix_ipv4_sockaddr(SAS2SA(&addrbuf), &addrlen);
+#endif
     return makesockaddr(s->sock_fd, SAS2SA(&addrbuf), addrlen,
                         s->sock_proto);
 }
@@ -2627,6 +2927,10 @@ sock_getpeername(PySocketSockObject *s)
     Py_END_ALLOW_THREADS
     if (res < 0)
         return s->errorhandler();
+#ifdef _AMIGA
+    /* ssl.wrap_socket probes getpeername(); fix AmiTCP sa_len packing. */
+    amiga_fix_ipv4_sockaddr(SAS2SA(&addrbuf), &addrlen);
+#endif
     return makesockaddr(s->sock_fd, SAS2SA(&addrbuf), addrlen,
                         s->sock_proto);
 }
@@ -2831,8 +3135,10 @@ static PyObject *
 sock_recv(PySocketSockObject *s, PyObject *args)
 {
     int recvlen, flags = 0;
-    ssize_t outlen;
     PyObject *buf;
+#ifndef PYAMIGA_PLUGIN_BUILD
+    ssize_t outlen;
+#endif
 
     if (!PyArg_ParseTuple(args, "i|i:recv", &recvlen, &flags))
         return NULL;
@@ -2843,6 +3149,24 @@ sock_recv(PySocketSockObject *s, PyObject *args)
         return NULL;
     }
 
+#ifdef PYAMIGA_PLUGIN_BUILD
+    /*
+     * Entire select+recv+PyString on the host (ABI v4). Avoids plugin-side
+     * write buffers that produced heap garbage and GC crashes.
+     */
+    {
+        int timed_out;
+
+        timed_out = 0;
+        buf = PyAmiga_Host->fn_sock_recv(s->sock_fd, recvlen, flags,
+                                         &s->sock_timeout, &timed_out);
+        if (buf == NULL && timed_out) {
+            PyErr_SetString(socket_timeout, "timed out");
+            return NULL;
+        }
+        return buf;
+    }
+#else
     /* Allocate a new string. */
     buf = PyString_FromStringAndSize((char *) 0, recvlen);
     if (buf == NULL)
@@ -2865,6 +3189,7 @@ sock_recv(PySocketSockObject *s, PyObject *args)
     }
 
     return buf;
+#endif
 }
 
 PyDoc_STRVAR(recv_doc,
@@ -3016,6 +3341,9 @@ sock_recvfrom(PySocketSockObject *s, PyObject *args)
     PyObject *ret = NULL;
     int recvlen, flags = 0;
     ssize_t outlen;
+#ifdef PYAMIGA_PLUGIN_BUILD
+    char *tmp;
+#endif
 
     if (!PyArg_ParseTuple(args, "i|i:recvfrom", &recvlen, &flags))
         return NULL;
@@ -3026,6 +3354,45 @@ sock_recvfrom(PySocketSockObject *s, PyObject *args)
         return NULL;
     }
 
+#ifdef PYAMIGA_PLUGIN_BUILD
+    if (recvlen == 0) {
+        buf = PyString_FromStringAndSize("", 0);
+        if (buf == NULL)
+            return NULL;
+        outlen = sock_recvfrom_guts(s, PyString_AS_STRING(buf),
+                                    0, flags, &addr);
+        if (outlen < 0) {
+            Py_DECREF(buf);
+            Py_XDECREF(addr);
+            return NULL;
+        }
+        ret = PyTuple_Pack(2, buf, addr);
+        Py_DECREF(buf);
+        Py_XDECREF(addr);
+        return ret;
+    }
+    tmp = (char *)PyMem_Malloc((size_t)recvlen);
+    if (tmp == NULL) {
+        PyErr_SetString(PyExc_MemoryError, "out of memory");
+        return NULL;
+    }
+    outlen = sock_recvfrom_guts(s, tmp, recvlen, flags, &addr);
+    if (outlen < 0) {
+        PyMem_Free(tmp);
+        Py_XDECREF(addr);
+        return NULL;
+    }
+    buf = PyString_FromStringAndSize(tmp, outlen);
+    PyMem_Free(tmp);
+    if (buf == NULL) {
+        Py_XDECREF(addr);
+        return NULL;
+    }
+    ret = PyTuple_Pack(2, buf, addr);
+    Py_DECREF(buf);
+    Py_XDECREF(addr);
+    return ret;
+#else
     buf = PyString_FromStringAndSize((char *) 0, recvlen);
     if (buf == NULL)
         return NULL;
@@ -3050,6 +3417,7 @@ finally:
     Py_XDECREF(buf);
     Py_XDECREF(addr);
     return ret;
+#endif
 }
 
 PyDoc_STRVAR(recvfrom_doc,
@@ -3120,11 +3488,37 @@ Like recv_into(buffer[, nbytes[, flags]]) but also return the sender's address i
 static PyObject *
 sock_send(PySocketSockObject *s, PyObject *args)
 {
+#ifdef PYAMIGA_PLUGIN_BUILD
+    PyObject *data;
+    int flags = 0;
+    int timed_out;
+    Py_ssize_t n;
+#else
     char *buf;
     int flags = 0, timeout;
     Py_ssize_t len, n = -1;
     Py_buffer pbuf;
+#endif
 
+#ifdef PYAMIGA_PLUGIN_BUILD
+    /*
+     * Pass the PyString into the host send helper. Do not keep a char*
+     * across host select trampolines (68k scratch regs clobber it).
+     */
+    if (!PyArg_ParseTuple(args, "S|i:send", &data, &flags))
+        return NULL;
+    timed_out = 0;
+    n = PyAmiga_Host->fn_sock_send(s->sock_fd, data, flags,
+                                   &s->sock_timeout, &timed_out);
+    if (n < 0) {
+        if (timed_out) {
+            PyErr_SetString(socket_timeout, "timed out");
+            return NULL;
+        }
+        return NULL;
+    }
+    return PyInt_FromSsize_t(n);
+#else
     if (!PyArg_ParseTuple(args, "s*|i:send", &pbuf, &flags))
         return NULL;
 
@@ -3162,6 +3556,7 @@ sock_send(PySocketSockObject *s, PyObject *args)
     if (n < 0)
         return s->errorhandler();
     return PyInt_FromSsize_t(n);
+#endif
 }
 
 PyDoc_STRVAR(send_doc,
@@ -3177,11 +3572,34 @@ sent; this may be less than len(data) if the network is busy.");
 static PyObject *
 sock_sendall(PySocketSockObject *s, PyObject *args)
 {
+#ifdef PYAMIGA_PLUGIN_BUILD
+    PyObject *data;
+    int flags = 0;
+    int timed_out;
+    Py_ssize_t n;
+#else
     char *buf;
     int flags = 0, timeout, saved_errno;
     Py_ssize_t len, n = -1;
     Py_buffer pbuf;
+#endif
 
+#ifdef PYAMIGA_PLUGIN_BUILD
+    if (!PyArg_ParseTuple(args, "S|i:sendall", &data, &flags))
+        return NULL;
+    timed_out = 0;
+    n = PyAmiga_Host->fn_sock_send(s->sock_fd, data, flags,
+                                   &s->sock_timeout, &timed_out);
+    if (n < 0) {
+        if (timed_out) {
+            PyErr_SetString(socket_timeout, "timed out");
+            return NULL;
+        }
+        return NULL;
+    }
+    Py_INCREF(Py_None);
+    return Py_None;
+#else
     if (!PyArg_ParseTuple(args, "s*|i:sendall", &pbuf, &flags))
         return NULL;
     buf = pbuf.buf;
@@ -3242,6 +3660,7 @@ sock_sendall(PySocketSockObject *s, PyObject *args)
 
     Py_INCREF(Py_None);
     return Py_None;
+#endif
 }
 
 PyDoc_STRVAR(sendall_doc,
@@ -3522,11 +3941,18 @@ static PyObject *
 sock_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 {
     PyObject *new;
+#ifdef PYAMIGA_PLUGIN_BUILD
+    static const double none_timeout = -1.0;
+#endif
 
     new = type->tp_alloc(type, 0);
     if (new != NULL) {
         ((PySocketSockObject *)new)->sock_fd = -1;
+#ifdef PYAMIGA_PLUGIN_BUILD
+        amiga_sock_set_timeout((PySocketSockObject *)new, &none_timeout);
+#else
         ((PySocketSockObject *)new)->sock_timeout = -1.0;
+#endif
         ((PySocketSockObject *)new)->errorhandler = &set_error;
         ((PySocketSockObject *)new)->weakreflist = NULL;
     }
@@ -3640,6 +4066,54 @@ static PyObject *
 socket_gethostbyname(PyObject *self, PyObject *args)
 {
     char *name;
+#ifdef _AMIGA
+    /*
+     * Bypass setipaddr/getaddrinfo/makeipaddr: those trip over BSD
+     * sa_len vs sa_family packing on this port. PosixLib gethostbyname
+     * + inet_ntoa is the reliable IPv4 path (and the HTTP smoke test).
+     */
+    struct hostent *h;
+    struct in_addr addr;
+    char *p;
+    int d1, d2, d3, d4;
+    char ch;
+
+    if (!PyArg_ParseTuple(args, "s:gethostbyname", &name))
+        return NULL;
+
+    if (sscanf(name, "%d.%d.%d.%d%c", &d1, &d2, &d3, &d4, &ch) == 4 &&
+        d1 >= 0 && d1 <= 255 && d2 >= 0 && d2 <= 255 &&
+        d3 >= 0 && d3 <= 255 && d4 >= 0 && d4 <= 255) {
+        addr.s_addr = htonl(
+            ((unsigned long)d1 << 24) | ((unsigned long)d2 << 16) |
+            ((unsigned long)d3 << 8) | (unsigned long)d4);
+        p = inet_ntoa(addr);
+        if (p == NULL)
+            return set_error();
+        return PyString_FromString(p);
+    }
+
+    Py_BEGIN_ALLOW_THREADS
+    h = gethostbyname(name);
+    Py_END_ALLOW_THREADS
+    if (h == NULL) {
+        set_herror(h_errno);
+        return NULL;
+    }
+    if (h->h_addr_list == NULL || h->h_addr_list[0] == NULL) {
+        PyErr_SetString(socket_error, "gethostbyname returned no address");
+        return NULL;
+    }
+    if (h->h_length != 4) {
+        PyErr_SetString(socket_error, "unknown address family");
+        return NULL;
+    }
+    memcpy(&addr, h->h_addr_list[0], 4);
+    p = inet_ntoa(addr);
+    if (p == NULL)
+        return set_error();
+    return PyString_FromString(p);
+#else
     sock_addr_t addrbuf;
 
     if (!PyArg_ParseTuple(args, "s:gethostbyname", &name))
@@ -3647,6 +4121,7 @@ socket_gethostbyname(PyObject *self, PyObject *args)
     if (setipaddr(name, SAS2SA(&addrbuf),  sizeof(addrbuf), AF_INET) < 0)
         return NULL;
     return makeipaddr(SAS2SA(&addrbuf), sizeof(struct sockaddr_in));
+#endif
 }
 
 PyDoc_STRVAR(gethostbyname_doc,
@@ -4509,6 +4984,10 @@ socket_getaddrinfo(PyObject *self, PyObject *args)
     PyObject *all = (PyObject *)NULL;
     PyObject *single = (PyObject *)NULL;
     PyObject *idna = NULL;
+#ifdef _AMIGA
+    char hcopy[256];
+    char pcopy[32];
+#endif
 
     family = socktype = protocol = flags = 0;
     family = AF_UNSPEC;
@@ -4548,6 +5027,25 @@ socket_getaddrinfo(PyObject *self, PyObject *args)
                         "getaddrinfo() argument 2 must be integer or string");
         goto err;
     }
+#ifdef _AMIGA
+    /* Copy out of host PyString before further trampolines (68k scratch). */
+    if (hptr != NULL) {
+        if (strlen(hptr) >= sizeof(hcopy)) {
+            PyErr_SetString(PyExc_ValueError, "getaddrinfo hostname too long");
+            goto err;
+        }
+        strcpy(hcopy, hptr);
+        hptr = hcopy;
+    }
+    if (pptr != NULL && pptr != pbuf) {
+        if (strlen(pptr) >= sizeof(pcopy)) {
+            PyErr_SetString(PyExc_ValueError, "getaddrinfo servname too long");
+            goto err;
+        }
+        strcpy(pcopy, pptr);
+        pptr = pcopy;
+    }
+#endif
 #if defined(__APPLE__) && defined(AI_NUMERICSERV)
     if ((flags & AI_NUMERICSERV) && (pptr == NULL || (pptr[0] == '0' && pptr[1] == 0))) {
         /* On OSX upto at least OSX 10.8 getaddrinfo crashes
@@ -4709,12 +5207,16 @@ Get host and port for a sockaddr.");
 static PyObject *
 socket_getdefaulttimeout(PyObject *self)
 {
+#ifdef PYAMIGA_PLUGIN_BUILD
+    return PyAmiga_Host->fn_sock_timeout_to_obj(&defaulttimeout);
+#else
     if (defaulttimeout < 0.0) {
         Py_INCREF(Py_None);
         return Py_None;
     }
     else
         return PyFloat_FromDouble(defaulttimeout);
+#endif
 }
 
 PyDoc_STRVAR(getdefaulttimeout_doc,
@@ -4728,7 +5230,14 @@ static PyObject *
 socket_setdefaulttimeout(PyObject *self, PyObject *arg)
 {
     double timeout;
+#ifdef PYAMIGA_PLUGIN_BUILD
+    int block;
 
+    if (PyAmiga_Host->fn_sock_timeout_from_arg(arg, &timeout, &block) < 0)
+        return NULL;
+    memcpy(&defaulttimeout, &timeout, sizeof(double));
+    (void)block;
+#else
     if (arg == Py_None)
         timeout = -1.0;
     else {
@@ -4742,6 +5251,7 @@ socket_setdefaulttimeout(PyObject *self, PyObject *arg)
     }
 
     defaulttimeout = timeout;
+#endif
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -4987,6 +5497,11 @@ init_socket(void)
     if (PyModule_AddObject(m, "socket",
                            (PyObject *)&sock_type) != 0)
         return;
+
+#ifdef PYAMIGA_PLUGIN_BUILD
+    /* Bump when plugin/host recv ABI changes — tests print this. */
+    PyModule_AddIntConstant(m, "amiga_plugin_rev", 6);
+#endif
 
 #ifdef ENABLE_IPV6
     has_ipv6 = Py_True;

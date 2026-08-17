@@ -17,10 +17,19 @@ Work on the tree after `7689479` (VBCC / PosixLib upgrade hardening, docs, tests
 
 ### Added
 
+- `Docs/PLUGIN_GUIDE.md` — LoadSeg native C module / PyHost plugin system (ABI, build, hard rules, carve-out checklist); reference `_socket.module`
+- PyHost ABI v2 + FastForward-style LoadSeg module head (security word + ID) for real `.module` plugins
+- Real `_socket.module` built from `socketmodule.c` (host trampolines for Python C API, PosixLib sockets, and libc); `socketmodule.o` no longer linked into `Python27`
+- Real `_ssl.module` implementing the CPython 2.7 `_ssl` API for `ssl.py`; default backend is `amitls.library` (`-DPYAMIGA_USE_AMITLS`, headers via `amitlsinclude:`); AmiSSL 5 remains an `#ifndef PYAMIGA_USE_AMITLS` branch; TLS I/O uses the AmiTCP native fd from host PosixLib `__fdesc`
+- PyHost ABI v6: `ptr_SocketBase`, `fn_socket_native_fd`, PyCapsule/dict/bool/write-buffer trampolines
+- PyHost ABI v8: `fn_socket_set_nbio` (host AmiTCP `IoctlSocket`/`FIONBIO`), `fn_object_gc_untrack`
+- AmigaTests groups `ssl` / `ssl_net` (AmiTLS + optional live HTTPS GET)
 - AmigaTests coverage for `_io` / text I/O and expanded legacy Amiga cases (where present in the working tree)
 
 ### Changed
 
+- `dynload_amiga.c`: scan for module ID preceded by security word (FastForward `ff_loader` pattern)
+- Plugin build: `-nostdlib`, no `-lposix`/`-lvc` in the `.module` (shared `SocketBase`/`__fdesc` via host)
 - VBCC makefiles: PosixLib `-I` before `vincludeos3:` before NDK `include:` so PosixLib `#include_next` reaches vbcc headers while `libraries/*.h` still resolve
 - `pyamiga_host.c`: open bsdsocket via PosixLib `__init_bsdsocket(-1)` instead of AmiTCP `proto/socket.h` (avoids macro clashes with PosixLib first on `-I`)
 - `libcheck.c`: `SocketBase` owned by PosixLib under `HAVE_POSIXLIB`; do not `CloseLibrary` it on cleanup
@@ -29,6 +38,7 @@ Work on the tree after `7689479` (VBCC / PosixLib upgrade hardening, docs, tests
 
 ### Fixed
 
+- `pyamiga_host.c` / `_socket.module`: host A4 for PosixLib trampolines; timeout soft-float via host (`fn_sock_timeout_*`); Amiga `HAVE_SOCKADDR_SA_LEN` + `sin_family` so DNS `gethostbyname` no longer fails with "unknown address family"
 - `libcheck.c`: stop using fake `UserGroupBase`/`UtilityBase` pointer `1` (AmiTCP LVOs through a dummy base hard-crash). Open `usergroup.library` / `utility.library` on demand; `checksocketlib()` only succeeds when PosixLib `SocketBase` is already live (gated `_socket` / `__init_bsdsocket`)
 - `crypt` / `syslog`: call usergroup/bsdsocket LVOs only after a real library open; soft-fail with `SystemError` otherwise
 - `socketmodule.c`: use PosixLib `__P*` sockets (fds in `__fdesc`) so `select`/`settimeout` work; `ioctl(FIONBIO)` for non-blocking; retry `EINTR` in select loops (HTTP GET no longer hangs forever)
@@ -37,6 +47,7 @@ Work on the tree after `7689479` (VBCC / PosixLib upgrade hardening, docs, tests
 - `strftime` / `datetime.strftime`: `_conv` in `Amiga/strftime.c` now NUL-terminates its digit buffer (fixes empty/garbage `%Y-%m-%d` output)
 - `socketmodule.c`: undef PosixLib `__P*` socket / netdb macros before AmiTCP `proto/socket.h`; supply `addrinfo` / `EAI_*` / `NI_*` from `addrinfo.h` when PosixLib `netdb.h` lacks them
 - Duplicate link symbols after newer PosixLib: `_umask` (`amiga.lib` vs `posix.lib`) and `_SocketBase` (`libcheck.o` vs `posix.lib`)
+- `_ssl` AmiTLS: host `IoctlSocket(FIONBIO)` so Python `settimeout` nbio is actually cleared on the AmiTCP fd AmiTLS `recv`s; GC-untrack SSL objects before `DisposeTls*` (fixes 8808 on slow HTTPS hosts and `gcmodule.c:331` at shutdown)
 
 ---
 

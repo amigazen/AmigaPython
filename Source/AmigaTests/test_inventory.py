@@ -1,5 +1,5 @@
 # Inventory: every module enabled in Modules/config.c.
-# LoadSeg _socket is covered by optional group "socket" (test_socket_local).
+# LoadSeg _socket / _ssl are covered by optional groups "socket" and "ssl".
 # ASCII only (Python 2.7 / Amiga).
 
 from __future__ import print_function
@@ -97,7 +97,7 @@ def test_import_all_builtins():
 
 def test_import_amitcp_modules():
     # Import is safe (no LVO through a dummy base). crypt/syslog *calls*
-    # need live usergroup/bsdsocket — optional group "netmods".
+    # need live usergroup/bsdsocket - optional group "netmods".
     names = sys.builtin_module_names
     for name in AMITCP_BUILTIN:
         if name not in names:
@@ -111,6 +111,10 @@ def test_socket_not_builtin():
     # Dynload exercise lives in optional "socket" group; inventory only
     # confirms gated _socket is not linked as a builtin.
     check("_socket not builtin", "_socket" not in sys.builtin_module_names)
+
+
+def test_ssl_not_builtin():
+    check("_ssl not builtin", "_ssl" not in sys.builtin_module_names)
 
 
 def test_dynamic_loading_flag():

@@ -73,7 +73,7 @@ extern void initamigagui(void);
 extern void initamigalibs(void);
 extern void init_arexx(void);
 extern void initpyexpat(void);
-/* _socket is a LoadSeg plugin (lib-dynload/_socket.module), not builtin */
+/* _socket / _ssl are LoadSeg plugins (lib-dynload/*.module), not builtin */
 #if defined(AMITCP) /* || defined(INET225) */
 /* Network modules - only if networking is available */
 extern void initpwd(void);

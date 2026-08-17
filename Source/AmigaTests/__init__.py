@@ -2,3 +2,4 @@
 #
 # Default: python27 AmigaTests/run.py
 # Socket (separate): python27 AmigaTests/test_socket_net.py
+# SSL (separate): python27 AmigaTests/test_ssl_net.py

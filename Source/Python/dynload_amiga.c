@@ -1,9 +1,9 @@
 /*
  * Amiga dynamic loader for Python C extensions (LoadSeg plugins).
  *
- * Plugin files are fully linked hunk binaries containing
- * struct PyAmigaModuleInfo (magic PYAMIGA_MODULE_MAGIC). The returned
- * init thunk runs in the host and calls plugin->entry(PyHost *).
+ * Scan every hunk for PYAMIGA_MODULE_ID preceded by the security word,
+ * then call info->entry(PyHost *). Plugins must be fully linked with
+ * no unresolved symbols (host services arrive only via the vtable).
  */
 #include "Python.h"
 #include "importdl.h"
@@ -56,15 +56,17 @@ find_module_info(BPTR seglist)
 
     /*
      * LoadSeg builds a chain: each block is BPTR next, then hunk bytes.
-     * Initialized PyAmiga_Module lives in DATA, not the first CODE hunk,
-     * so every segment must be scanned (CODE alone only has immediates
-     * like 'PyHs' from comparisons).
+     * Scans for the ID word and backs up to the security
+     * word (first field of the module head). PyAmiga_Module is in DATA,
+     * not the first CODE hunk, so every segment must be scanned.
      */
     for (seg = seglist; seg != 0; seg = *(BPTR *)BADDR(seg)) {
         p = (ULONG *)BADDR(seg) + 1;
-        for (i = 0; i < 256UL; i++) {
-            if (p[i] == PYAMIGA_MODULE_MAGIC)
-                return (struct PyAmigaModuleInfo *)(p + i);
+        for (i = 1; i < 256UL; i++) {
+            if (p[i] == PYAMIGA_MODULE_ID &&
+                p[i - 1] == PYAMIGA_MODULE_SECURITY) {
+                return (struct PyAmigaModuleInfo *)(p + i - 1);
+            }
         }
     }
     return NULL;

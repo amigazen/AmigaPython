@@ -1,27 +1,100 @@
 # vmakefile for Amiga Python LoadSeg plugins (VBCC)
 # Invoked from Source/ (no -C): make -f Modules/plugin/vmakefile
-# Builds lib-dynload/_socket.module - networking gate opened only on import.
+#
+# Pattern from FastForward (Docs/PLUGIN_GUIDE.md, plugins/*_extheader.c):
+#   - first object is the module head (security + ID)
+#   - -nostdlib: no C startup / no libc in the plugin
+#   - host vtable provides Python C API, AmiTCP sockets, and libc helpers
+#   - do NOT link -lposix (a second SocketBase would break AmiTCP fds)
+#   - pyamiga_minirt.o supplies SysBase/abort/exit/__aprintf for -lmieee
 
 CC=vc
 CONFIG=+aos68k_posix
-# No -stack-check: that needs ___stack_check from the C runtime, absent with -nostdlib
-CFLAGS=-c -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -D__USE_NEW_TIMEVAL__ -IInclude -Inetinclude: -cpu=68020 -fpu=soft
+# No -stack-check / no small-data: FastForward DATA=FARONLY equivalent.
+CFLAGS=-c -O1 -D_AMIGA -DHAVE_CONFIG_H -DHAVE_POSIXLIB -D__USE_NEW_TIMEVAL__ \
+	-D__NO_NETINCLUDE_TIMEVAL -DPYAMIGA_PLUGIN_BUILD \
+	-IModules/plugin -Ivbcc:PosixLib/include -IInclude -IModules \
+	-Ivincludeos3: -Iinclude: -Inetinclude: -cpu=68020 -fpu=soft
 SRCDIR=Modules/plugin
-# getpath adds lib/lib-dynload to sys.path (Lib/lib-dynload on Amiga FS)
 OUTDIR=lib/lib-dynload
 MKDIR=MakeDir ALL
 
-all: $(OUTDIR)/_socket.module
+# socket_entry.o first = FastForward extheader link order.
+SOCKET_OBJS=$(SRCDIR)/socket_entry.o \
+	$(SRCDIR)/socketmodule_plugin.o \
+	$(SRCDIR)/pyamiga_api.o \
+	$(SRCDIR)/pyamiga_posix.o \
+	$(SRCDIR)/pyamiga_libc.o \
+	$(SRCDIR)/pyamiga_minirt.o
 
-# Link with -nostdlib: LoadSeg plugin, no C startup (FastForward-style)
-$(OUTDIR)/_socket.module: $(SRCDIR)/socket_gate.o
+# Default _ssl backend is AmiTLS (BearSSL). Assign amitlsinclude: to the
+# AmiTLS SDK Include_H directory (libraries/amitls.h, proto/amitls.h).
+# AmiSSL (#ifndef PYAMIGA_USE_AMITLS in sslmodule.c): assign sslinclude: to
+# the AmiSSL SDK include root, then either uncomment SSL_CFLAGS_AMISSL
+# below or override on the smake line:
+#   smake -f Modules/plugin/vmakefile SSL_CFLAGS="$(SSL_CFLAGS_AMISSL)"
+# Delete sslmodule_plugin.o and _ssl.module before switching backends.
+# Do not -I a host-side SDK path; the assign is the public include root.
+SSL_CFLAGS_AMITLS=$(CFLAGS) -DPYAMIGA_USE_AMITLS -Iamitlsinclude:
+SSL_CFLAGS_AMISSL=$(CFLAGS) -Isslinclude:
+SSL_CFLAGS=$(SSL_CFLAGS_AMITLS)
+#SSL_CFLAGS=$(SSL_CFLAGS_AMISSL)
+
+SSL_OBJS=$(SRCDIR)/ssl_entry.o \
+	$(SRCDIR)/sslmodule_plugin.o \
+	$(SRCDIR)/pyamiga_api.o \
+	$(SRCDIR)/pyamiga_posix.o \
+	$(SRCDIR)/pyamiga_libc.o \
+	$(SRCDIR)/pyamiga_minirt.o
+
+all: $(OUTDIR)/_socket.module $(OUTDIR)/_ssl.module
+
+$(OUTDIR)/_socket.module: $(SOCKET_OBJS)
 	@$(MKDIR) $(OUTDIR)
-	$(CC) $(CONFIG) -nostdlib -o $@ $(SRCDIR)/socket_gate.o -lamiga
+	$(CC) $(CONFIG) -nostdlib -o $@ $(SOCKET_OBJS) -lamiga
 
-$(SRCDIR)/socket_gate.o: $(SRCDIR)/socket_gate.c Include/pyamiga_plugin.h
-	$(CC) $(CONFIG) $(CFLAGS) -o $@ $(SRCDIR)/socket_gate.c
+$(OUTDIR)/_ssl.module: $(SSL_OBJS)
+	@$(MKDIR) $(OUTDIR)
+	$(CC) $(CONFIG) -nostdlib -o $@ $(SSL_OBJS) -lamiga
+
+$(SRCDIR)/socket_entry.o: $(SRCDIR)/socket_entry.c Include/pyamiga_plugin.h \
+		$(SRCDIR)/pyamiga_redir.h
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $(SRCDIR)/socket_entry.c
+
+$(SRCDIR)/socketmodule_plugin.o: $(SRCDIR)/socketmodule_plugin.c \
+		Modules/socketmodule.c Include/pyamiga_plugin.h \
+		$(SRCDIR)/pyamiga_redir.h
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $(SRCDIR)/socketmodule_plugin.c
+
+$(SRCDIR)/ssl_entry.o: $(SRCDIR)/ssl_entry.c Include/pyamiga_plugin.h \
+		$(SRCDIR)/pyamiga_redir.h
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $(SRCDIR)/ssl_entry.c
+
+$(SRCDIR)/sslmodule_plugin.o: $(SRCDIR)/sslmodule_plugin.c \
+		Modules/sslmodule.c Modules/sslmodule_amitls.c \
+		Include/pyamiga_plugin.h $(SRCDIR)/pyamiga_redir.h
+	$(CC) $(CONFIG) $(SSL_CFLAGS) -o $@ $(SRCDIR)/sslmodule_plugin.c
+
+$(SRCDIR)/pyamiga_api.o: $(SRCDIR)/pyamiga_api.c Include/pyamiga_plugin.h \
+		$(SRCDIR)/pyamiga_redir.h
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $(SRCDIR)/pyamiga_api.c
+
+$(SRCDIR)/pyamiga_posix.o: $(SRCDIR)/pyamiga_posix.c Include/pyamiga_plugin.h \
+		$(SRCDIR)/pyamiga_redir.h
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $(SRCDIR)/pyamiga_posix.c
+
+$(SRCDIR)/pyamiga_libc.o: $(SRCDIR)/pyamiga_libc.c Include/pyamiga_plugin.h \
+		$(SRCDIR)/pyamiga_redir.h
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $(SRCDIR)/pyamiga_libc.c
+
+$(SRCDIR)/pyamiga_minirt.o: $(SRCDIR)/pyamiga_minirt.c Include/pyamiga_plugin.h
+	$(CC) $(CONFIG) $(CFLAGS) -o $@ $(SRCDIR)/pyamiga_minirt.c
 
 clean:
-	-Delete $(SRCDIR)/socket_gate.o $(OUTDIR)/_socket.module
+	-Delete $(SRCDIR)/socket_entry.o $(SRCDIR)/socketmodule_plugin.o \
+		$(SRCDIR)/ssl_entry.o $(SRCDIR)/sslmodule_plugin.o \
+		$(SRCDIR)/pyamiga_api.o $(SRCDIR)/pyamiga_posix.o \
+		$(SRCDIR)/pyamiga_libc.o $(SRCDIR)/pyamiga_minirt.o \
+		$(OUTDIR)/_socket.module $(OUTDIR)/_ssl.module
 
 .PHONY: all clean

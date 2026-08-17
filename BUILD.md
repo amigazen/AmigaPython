@@ -104,6 +104,7 @@ into `Python27` — PosixLib treats `/` as volume root, not parent.
 |----------------|--------------|
 | `Python27` (stripped release link) | `Python` |
 | `lib/lib-dynload/_socket.module` | `lib/lib-dynload/_socket.module` |
+| `lib/lib-dynload/_ssl.module` | `lib/lib-dynload/_ssl.module` |
 | `Lib/site-python/#?.py` | `lib/site-python/` |
 | `Lib/` via `mkpythonzip` -> `python27.zip`, then Copy | `lib/python27.zip` |
 

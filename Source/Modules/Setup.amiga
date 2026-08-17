@@ -4,8 +4,8 @@
 amiga amiga/amigamodule.c
 amigapath amiga/amigapathmodule.c
 
-# Network modules when compiled with AMITCP/Genesis
-socket socketmodule.c
+# Network modules when compiled with AMITCP/Genesis — LoadSeg plugin, not linked
+# socket socketmodule.c
 
 # Standard modules that should work on Amiga
 array arraymodule.c
